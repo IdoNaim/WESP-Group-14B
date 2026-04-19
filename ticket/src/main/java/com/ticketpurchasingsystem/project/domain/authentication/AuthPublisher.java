@@ -2,7 +2,7 @@ package com.ticketpurchasingsystem.project.domain.authentication;
 
 import org.springframework.context.ApplicationEventPublisher;
 
-class AuthPublisher {
+public class AuthPublisher {
     private final ApplicationEventPublisher eventPublisher;
 
     public AuthPublisher(ApplicationEventPublisher eventPublisher) {

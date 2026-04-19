@@ -1,20 +1,29 @@
 package com.ticketpurchasingsystem.project.application;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.function.Function;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.ticketpurchasingsystem.project.domain.authentication.AuthListener;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+
 import com.ticketpurchasingsystem.project.domain.authentication.*;
 @Service
 
 
 public class AuthenticationService {
     
-    ISessionRepo sessionRepo;
+    private ISessionRepo sessionRepo;
+    private AuthListener authListener;
+    private AuthPublisher authPublisher;
 
    @Value("${jwt.secret}")
     private String secret;
