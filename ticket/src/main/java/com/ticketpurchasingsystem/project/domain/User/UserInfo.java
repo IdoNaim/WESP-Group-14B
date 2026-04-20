@@ -10,7 +10,7 @@ public class UserInfo {
     String name;
     String email;
     String password;
-    UserType userType;
+    UserState userType;
     UserGroupDiscount userGroupDiscount;
 
     public UserInfo(String name, String email, String password) {
@@ -35,7 +35,7 @@ public class UserInfo {
      public UserGroupDiscount getUserGroupDiscount() {
         return userGroupDiscount;
     }
-    public void setUserType(UserType userType) {
+    public void setUserType(UserState userType) {
         this.userType = userType;
     }
 

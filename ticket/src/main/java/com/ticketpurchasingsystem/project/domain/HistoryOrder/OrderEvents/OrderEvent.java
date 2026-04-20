@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.Orders.OrderEvents;
+package com.ticketpurchasingsystem.project.domain.HistoryOrder.OrderEvents;
 
 public abstract  class OrderEvent {
         private String orderId;

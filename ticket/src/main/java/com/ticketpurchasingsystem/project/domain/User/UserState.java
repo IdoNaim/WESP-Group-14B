@@ -1,7 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
 
-public enum UserType {
+public enum UserState {
     MEMBER,
     GUEST,
     OWNER,
