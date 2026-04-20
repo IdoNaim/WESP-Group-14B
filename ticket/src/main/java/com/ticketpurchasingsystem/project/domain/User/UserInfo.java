@@ -11,6 +11,7 @@ public class UserInfo {
     String email;
     String password;
     UserType userType;
+    UserGroupDiscount userGroupDiscount;
 
     public UserInfo(String name, String email, String password) {
         this.name = name;
@@ -26,6 +27,13 @@ public class UserInfo {
 
      public String getName() {
         return name;
+    }
+    public void setUserGroupDiscount(UserGroupDiscount userGroupDiscount) {
+        this.userGroupDiscount = userGroupDiscount;
+    }
+
+     public UserGroupDiscount getUserGroupDiscount() {
+        return userGroupDiscount;
     }
     public void setUserType(UserType userType) {
         this.userType = userType;
