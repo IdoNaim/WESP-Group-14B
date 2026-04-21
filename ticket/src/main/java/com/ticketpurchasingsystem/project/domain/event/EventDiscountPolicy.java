@@ -1,154 +1,115 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import java.time.LocalDateTime;
+import java.util.Date;
 /**
  * Represents the discount policy attached to an Event.
  * Holds all discounts and defines how they combine.
  */
 public class EventDiscountPolicy {
 
-    private final List<Discount> discounts;
-    private DiscountCompositionPolicy compositionPolicy;
+}
+class visibileDiscount {
+    private final String discountName;
+    private final double discountPercentage;
+    private final Date validUntil;
 
-    // Required by JPA/Hibernate
-    protected EventDiscountPolicy() {
-        this.discounts = new ArrayList<>();
+    public visibileDiscount(String discountName, double discountPercentage, Date validUntil) {
+        this.discountName = discountName;
+        this.discountPercentage = discountPercentage;
+        this.validUntil = validUntil;
     }
 
-    public EventDiscountPolicy(DiscountCompositionPolicy compositionPolicy) {
-        this.discounts = new ArrayList<>();
-        this.compositionPolicy = compositionPolicy;
+    public String getDiscountName() {
+        return discountName;
     }
 
-    public void addDiscount(Discount discount) {
-        discounts.add(discount);
-        validateDiscountConflicts();
-        validateTotalDiscountLimit();
+    public double getDiscountPercentage() {
+        return discountPercentage;
     }
 
-    public double calculateDiscount(Set<String> userDiscountGroups) {
-        List<Discount> eligibleDiscounts = discounts.stream()
-                .filter(d -> d.isEligible(userDiscountGroups))
-                .collect(Collectors.toList());
+    public Date getValidUntil() {
+        return validUntil;
+    }
+}
+interface Discount {
+    String getDiscountName();
+    boolean isApplicable();
+    double calculateDiscountAmount();
+}
+class VisibleDiscount implements Discount {
+    private final String discountName;
+    private final double discountPercentage;
+    private final LocalDateTime validUntil;
 
-        return compositionPolicy.apply(eligibleDiscounts);
+    public VisibleDiscount(String discountName, double discountPercentage, LocalDateTime validUntil) {
+        this.discountName = discountName;
+        this.discountPercentage = discountPercentage;
+        this.validUntil = validUntil;
     }
 
-    private void validateDiscountConflicts() {
-        Map<String, List<Discount>> grouped = discounts.stream()
-                .collect(Collectors.groupingBy(Discount::getGroupId));
+    @Override
+    public String getDiscountName() { return discountName; }
 
-        for (List<Discount> group : grouped.values()) {
-            long nonCombinableCount = group.stream()
-                    .filter(d -> !d.isCombinable())
-                    .count();
-
-            if (nonCombinableCount > 1) {
-                throw new IllegalArgumentException("Conflicting non-combinable discounts in same group");
-            }
-        }
+    @Override
+    public boolean isApplicable() {
+        return true;
     }
 
-    private void validateTotalDiscountLimit() {
-        if (compositionPolicy == DiscountCompositionPolicy.SUM) {
-            // Validation only applies to combinable discounts
-            double totalCombinable = discounts.stream()
-                    .filter(Discount::isCombinable)
-                    .mapToDouble(Discount::getPercentage)
-                    .sum();
-
-            if (totalCombinable > 100) {
-                throw new IllegalArgumentException("Total combinable discount exceeds 100%");
-            }
-        }
-    }
-
-    public List<Discount> getDiscounts() {
-        return Collections.unmodifiableList(discounts);
-    }
-
-    public void setCompositionPolicy(DiscountCompositionPolicy policy) {
-        this.compositionPolicy = policy;
+    @Override
+    public double calculateDiscountAmount() {
+        return discountPercentage;
     }
 }
 
+class DependentDiscount implements Discount {
+    private final String discountName;
+    private final int haveToBuyAmount;
+    private final int getForFreeAmount; 
 
-/**
- * Defines how multiple discounts combine.
- */
-enum DiscountCompositionPolicy {
+    public DependentDiscount(String discountName, int haveToBuyAmount, int getForFreeAmount) {
+        this.discountName = discountName;
+        this.haveToBuyAmount = haveToBuyAmount;
+        this.getForFreeAmount = getForFreeAmount;
+    }
 
-    MAX {
-        @Override
-        public double apply(List<Discount> discounts) {
-            return discounts.stream()
-                    .mapToDouble(Discount::getPercentage)
-                    .max()
-                    .orElse(0);
-        }
-    },
+    @Override
+    public String getDiscountName() { return discountName; }
 
-    SUM {
-        @Override
-        public double apply(List<Discount> discounts) {
-            // FIX: Handle combinable vs non-combinable logic properly
-            double maxNonCombinable = discounts.stream()
-                    .filter(d -> !d.isCombinable())
-                    .mapToDouble(Discount::getPercentage)
-                    .max()
-                    .orElse(0);
+    @Override
+    public boolean isApplicable() {
+        return true;
+    }
 
-            double sumCombinable = discounts.stream()
-                    .filter(Discount::isCombinable)
-                    .mapToDouble(Discount::getPercentage)
-                    .sum();
-
-            // The user gets the best deal between their max non-combinable and the sum of their combinable
-            double total = Math.max(maxNonCombinable, sumCombinable);
-            
-            // Cap at 100% instead of throwing error during user purchase flow
-            return Math.min(total, 100.0);
-        }
-    };
-
-    public abstract double apply(List<Discount> discounts);
+    @Override
+    public double calculateDiscountAmount() {
+        return 5.6;
+    }
 }
 
+class CouponDiscount implements Discount {
+    private final String discountName;
+    private final String couponCode;
+    private final double discountPercentage;
+    private final LocalDateTime validUntil;
 
-/**
- * Represents a single discount rule inside Event aggregate.
- */
-class Discount {
-
-    private double percentage;
-    private String targetGroup;
-    private boolean combinable;
-    private String groupId;
-
-    // Required by JPA/Hibernate
-    protected Discount() {}
-
-    public Discount(double percentage, String targetGroup, boolean combinable, String groupId) {
-        if (percentage <= 0 || percentage > 100) {
-            throw new IllegalArgumentException("Invalid discount percentage");
-        }
-        this.percentage = percentage;
-        this.targetGroup = targetGroup;
-        this.combinable = combinable;
-        this.groupId = groupId;
+    public CouponDiscount(String discountName, String couponCode, double discountPercentage, LocalDateTime validUntil) {
+        this.discountName = discountName;
+        this.couponCode = couponCode;
+        this.discountPercentage = discountPercentage;
+        this.validUntil = validUntil;
     }
 
-    public boolean isEligible(Set<String> userDiscountGroups) {
-        return userDiscountGroups.contains(targetGroup);
+    @Override
+    public String getDiscountName() { return discountName; }
+
+    @Override
+    public boolean isApplicable() {
+        return true;
     }
 
-    public double getPercentage() { return percentage; }
-    public boolean isCombinable() { return combinable; }
-    public String getGroupId() { return groupId; }
+    @Override
+    public double calculateDiscountAmount() {
+        return 4.6;
+    }
 }

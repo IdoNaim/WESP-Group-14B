@@ -1,103 +1,64 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+
 /**
  * EventPurchasePolicy is a Value Object belonging to the Event aggregate.
- * It defines all rules that must be satisfied before a ticket purchase is allowed.
+ * It uses a composite of rules to validate a purchase attempt, making it 
+ * flexible for both production companies and specific events.
  */
 public class EventPurchasePolicy {
 
-    // Using Integer to allow nulls in case a specific rule is not applied to an event
-    private final Integer minTickets;
-    private final Integer maxTickets;
-    private final Integer minAge;
-    private final Integer maxAge;
-    private final Set<String> allowedGroups;
+    private final List<PurchaseRule> rules;
 
-    public EventPurchasePolicy(Integer minTickets, Integer maxTickets, Integer minAge, Integer maxAge, Set<String> allowedGroups) {
-        validateConsistency(minTickets, maxTickets, minAge, maxAge);
-        
-        this.minTickets = minTickets;
-        this.maxTickets = maxTickets;
-        this.minAge = minAge;
-        this.maxAge = maxAge;
-        this.allowedGroups = allowedGroups == null ? Collections.emptySet() : Set.copyOf(allowedGroups);
-    }
-
-    /**
-     * Ensures there are no conflicting constraints.
-     */
-    private void validateConsistency(Integer minTickets, Integer maxTickets, Integer minAge, Integer maxAge) {
-        if (minTickets != null && maxTickets != null && minTickets > maxTickets) {
-            throw new IllegalArgumentException("Conflicting ticket rules: minTickets > maxTickets");
-        }
-        if (minAge != null && maxAge != null && minAge > maxAge) {
-            throw new IllegalArgumentException("Conflicting age rules: minAge > maxAge");
-        }
+    public EventPurchasePolicy(List<PurchaseRule> rules) {
+        this.rules = rules != null ? new ArrayList<>(rules) : Collections.emptyList();
     }
 
     /**
      * Validates a purchase attempt against all configured rules.
      */
     public void validatePurchase(PurchaseContext context) {
-        if (minTickets != null && context.getTicketAmount() < minTickets) {
-            throw new IllegalArgumentException("Minimum ticket amount not met");
-        }
-        if (maxTickets != null && context.getTicketAmount() > maxTickets) {
-            throw new IllegalArgumentException("Maximum ticket amount exceeded");
-        }
-        if (minAge != null && context.getUserAge() < minAge) {
-            throw new IllegalArgumentException("User does not meet minimum age requirement");
-        }
-        if (maxAge != null && context.getUserAge() > maxAge) {
-            throw new IllegalArgumentException("User exceeds maximum age limit");
-        }
-        
-        if (!allowedGroups.isEmpty()) {
-            boolean allowed = context.getUserGroups().stream()
-                    .anyMatch(allowedGroups::contains);
-            if (!allowed) {
-                throw new IllegalArgumentException("User is not allowed to purchase tickets");
-            }
+        for (PurchaseRule rule : rules) {
+            rule.validate(context);
         }
     }
-
-    // Getters
-    public Integer getMinTickets() { return minTickets; }
-    public Integer getMaxTickets() { return maxTickets; }
-    public Integer getMinAge() { return minAge; }
-    public Integer getMaxAge() { return maxAge; }
-    public Set<String> getAllowedGroups() { return allowedGroups; }
+    
+    public List<PurchaseRule> getRules() {
+        return Collections.unmodifiableList(rules);
+    }
 }
+
 /**
  * Context of a purchase attempt.
- * Comes from application/service layer.
+ * Comes from the application/service layer.
  */
 class PurchaseContext {
 
     private final int ticketAmount;
     private final int userAge;
     private final Set<String> userGroups;
+    private final String purchaseRoute; // e.g., "ONLINE", "BOX_OFFICE", "PRESALE"
+    private final boolean leavesSingleOrphanSeat; // Calculated by the seating/venue domain service
 
-    public PurchaseContext(int ticketAmount, int userAge, Set<String> userGroups) {
+    public PurchaseContext(int ticketAmount, int userAge, Set<String> userGroups, String purchaseRoute, boolean leavesSingleOrphanSeat) {
         this.ticketAmount = ticketAmount;
         this.userAge = userAge;
-        this.userGroups = userGroups;
+        this.userGroups = userGroups != null ? userGroups : Collections.emptySet();
+        this.purchaseRoute = purchaseRoute;
+        this.leavesSingleOrphanSeat = leavesSingleOrphanSeat;
     }
 
-    public int getTicketAmount() {
-        return ticketAmount;
-    }
-
-    public int getUserAge() {
-        return userAge;
-    }
-
-    public Set<String> getUserGroups() {
-        return userGroups;
-    }
+    public int getTicketAmount() { return ticketAmount; }
+    public int getUserAge() { return userAge; }
+    public Set<String> getUserGroups() { return userGroups; }
+    public String getPurchaseRoute() { return purchaseRoute; }
+    public boolean isLeavesSingleOrphanSeat() { return leavesSingleOrphanSeat; }
 }
+
 /**
  * Base interface for all purchase rules.
  */
@@ -105,123 +66,121 @@ interface PurchaseRule {
     void validate(PurchaseContext context);
 }
 
-
 /**
  * Minimum ticket constraint rule.
  */
 class MinTicketsRule implements PurchaseRule {
-
     private final int minTickets;
 
-    public MinTicketsRule(int minTickets) {
-        this.minTickets = minTickets;
-    }
+    public MinTicketsRule(int minTickets) { this.minTickets = minTickets; }
 
     @Override
     public void validate(PurchaseContext context) {
         if (context.getTicketAmount() < minTickets) {
-            throw new IllegalArgumentException("Minimum ticket amount not met");
+            throw new IllegalArgumentException("Minimum ticket amount not met.");
         }
     }
-
-    public int getMinTickets() {
-        return minTickets;
-    }
 }
-
 
 /**
  * Maximum ticket constraint rule.
  */
 class MaxTicketsRule implements PurchaseRule {
-
     private final int maxTickets;
 
-    public MaxTicketsRule(int maxTickets) {
-        this.maxTickets = maxTickets;
-    }
+    public MaxTicketsRule(int maxTickets) { this.maxTickets = maxTickets; }
 
     @Override
     public void validate(PurchaseContext context) {
         if (context.getTicketAmount() > maxTickets) {
-            throw new IllegalArgumentException("Maximum ticket amount exceeded");
+            throw new IllegalArgumentException("Maximum ticket amount exceeded.");
         }
     }
-
-    public int getMaxTickets() {
-        return maxTickets;
-    }
 }
-
 
 /**
  * Minimum age constraint rule.
  */
 class MinAgeRule implements PurchaseRule {
-
     private final int minAge;
 
-    public MinAgeRule(int minAge) {
-        this.minAge = minAge;
-    }
+    public MinAgeRule(int minAge) { this.minAge = minAge; }
 
     @Override
     public void validate(PurchaseContext context) {
         if (context.getUserAge() < minAge) {
-            throw new IllegalArgumentException("User does not meet minimum age requirement");
+            throw new IllegalArgumentException("User does not meet minimum age requirement.");
         }
     }
-
-    public int getMinAge() {
-        return minAge;
-    }
 }
-
 
 /**
  * Maximum age constraint rule.
  */
 class MaxAgeRule implements PurchaseRule {
-
     private final int maxAge;
 
-    public MaxAgeRule(int maxAge) {
-        this.maxAge = maxAge;
-    }
+    public MaxAgeRule(int maxAge) { this.maxAge = maxAge; }
 
     @Override
     public void validate(PurchaseContext context) {
         if (context.getUserAge() > maxAge) {
-            throw new IllegalArgumentException("User exceeds maximum age limit");
+            throw new IllegalArgumentException("User exceeds maximum age limit.");
         }
-    }
-
-    public int getMaxAge() {
-        return maxAge;
     }
 }
 
-
 /**
- * Allowed user groups rule.
+ * Allowed user groups rule (e.g., VIP, Student, General).
  */
 class AllowedGroupsRule implements PurchaseRule {
-
     private final Set<String> allowedGroups;
 
     public AllowedGroupsRule(Set<String> allowedGroups) {
-        this.allowedGroups = allowedGroups;
+        this.allowedGroups = allowedGroups != null ? allowedGroups : Collections.emptySet();
     }
 
     @Override
     public void validate(PurchaseContext context) {
-
-        boolean allowed = context.getUserGroups()
-                .stream()
+        if (allowedGroups.isEmpty()) return; // If no specific groups defined, assume all are allowed.
+        
+        boolean allowed = context.getUserGroups().stream()
                 .anyMatch(allowedGroups::contains);
 
         if (!allowed) {
-            throw new IllegalArgumentException("User is not allowed to purchase tickets");
+            throw new IllegalArgumentException("User is not in an allowed group to purchase these tickets.");
+        }
+    }
+}
+
+/**
+ * Allowed purchase routes rule (e.g., can only be bought at Box Office).
+ */
+class AllowedRoutesRule implements PurchaseRule {
+    private final Set<String> allowedRoutes;
+
+    public AllowedRoutesRule(Set<String> allowedRoutes) {
+        this.allowedRoutes = allowedRoutes != null ? allowedRoutes : Collections.emptySet();
+    }
+
+    @Override
+    public void validate(PurchaseContext context) {
+        if (allowedRoutes.isEmpty()) return; 
+
+        if (!allowedRoutes.contains(context.getPurchaseRoute())) {
+            throw new IllegalArgumentException("Purchase route '" + context.getPurchaseRoute() + "' is not allowed for this event.");
+        }
+    }
+}
+
+/**
+ * Prohibition on leaving a single empty seat.
+ */
+class NoOrphanSeatRule implements PurchaseRule {
+    @Override
+    public void validate(PurchaseContext context) {
+        if (context.isLeavesSingleOrphanSeat()) {
+            throw new IllegalArgumentException("Seat selection is invalid: it leaves a single empty seat behind.");
         }
     }
 }
