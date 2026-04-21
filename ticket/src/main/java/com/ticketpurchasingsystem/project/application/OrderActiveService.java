@@ -1,0 +1,12 @@
+package com.ticketpurchasingsystem.project.application;
+
+public interface  OrderActiveService {
+    public String createActiveOrder(String userId, String eventId, int quantity) ;
+    public void cancelActiveOrder(String orderId) ;
+    public void getActiveOrders(String userId) ;
+    public void getActiveOrder(String orderId) ;
+    public void completeActiveOrder(String orderId) ; // maybe add payment info as parameter?
+    public void updateActiveOrder(String orderId, int quantity) ;
+
+    
+}
