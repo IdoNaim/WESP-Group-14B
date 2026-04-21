@@ -69,23 +69,8 @@ public class Event {
             PurchaseContext context,
             double basePrice
     ) {
-
-        validatePurchase(context);
-
-        double finalPrice = basePrice;
-
-        if (discountPolicy != null) {
-
-            double discountPercentage =
-                    discountPolicy.calculateDiscount(
-                            context.getUserGroups()
-                    );
-
-            finalPrice =
-                    basePrice - (basePrice * discountPercentage / 100);
-        }
-
-        return finalPrice;
+        //TODO 
+        return 0;
     }
 
 
