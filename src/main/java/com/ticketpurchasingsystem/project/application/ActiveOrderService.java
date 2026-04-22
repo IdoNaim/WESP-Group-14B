@@ -10,44 +10,48 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderRepo = activeOrderRepo;
     }
     @Override
-    public String createActiveOrder(String userId, String eventId, int quantity) {
+    public String createActiveOrder(int userId, int eventId, int quantity) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public void cancelActiveOrder(String orderId) {
+    public void cancelActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void getActiveOrders(String userId) {
+    public void getActiveOrders(int userId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void getActiveOrder(String orderId) {
+    public void getActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void completeActiveOrder(String orderId) {
+    public void completeActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void updateActiveOrder(String orderId, int quantity) {
+    public void updateActiveOrder(int orderId, int quantity) {
         // TODO Auto-generated method stub
         
     }
     @Override
     public boolean saveOrder(ActiveOrderItem order) {
-        // TODO Auto-generated method stub
-        return false;
+        try{
+        return activeOrderRepo.save(order);
+        }catch(Exception e){
+
+            return false;
+        }
     }
     
 }
