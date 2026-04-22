@@ -15,7 +15,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public ActiveOrderItem findById(int orderId) {
+    public ActiveOrderItem findById(String orderId) {
         for(ActiveOrderItem order : activeOrders)
         {
             if(order.getOrderId() == orderId) {
@@ -26,7 +26,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public void delete(int orderId) {
+    public void delete(String orderId) {
         for(ActiveOrderItem order : activeOrders) {
             if(order.getOrderId() == orderId) {
                 activeOrders.remove(order);
