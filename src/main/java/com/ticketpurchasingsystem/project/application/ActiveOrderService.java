@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
 
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
@@ -11,13 +12,13 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderRepo = activeOrderRepo;
     }
     @Override
-    public String createActiveOrder(String userId, String eventId, int quantity) {
+    public String createActiveOrder(String userId, int eventId, int quantity) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public void cancelActiveOrder(String orderId) {
+    public void cancelActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
@@ -29,35 +30,35 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void getActiveOrder(String orderId) {
+    public void getActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void completeActiveOrder(String orderId) {
+    public void completeActiveOrder(int orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void updateActiveOrder(String orderId, int quantity) {
+    public void updateActiveOrder(int orderId, int quantity) {
         // TODO Auto-generated method stub
         
     }
     @Override
     public boolean saveOrder(ActiveOrderItem order) {
         try{
-            
-            int orderId = Integer.parseInt(order.getOrderId());
-            int eventId = Integer.parseInt(order.getEventId());
-            int userId = Integer.parseInt(order.getUserId());
+            if(order == null){
+                System.out.println("Order cannot be null");
+                return false;
+            }
             if(order.getQuantity() <= 0){
                 System.out.println("Quantity must be greater than 0");
                 return false;
             }
-            if(orderId < 0 || userId < 0 || eventId < 0){
-                System.out.println("Order ID, User ID, and Event ID must be greater than 0");
+            if(!isValidEventID(order.getEventId()) || !isValidOrderID(order.getOrderId())) {
+                System.out.println("bad order ID or event ID");
                 return false;
             }
         return activeOrderRepo.save(order);
@@ -65,6 +66,14 @@ public class ActiveOrderService implements IActiveOrderService {
 
             return false;
         }
+    }
+    private boolean isValidEventID(int eventId) {
+        
+        return activeOrderPublisher.publishIsValidEventIDEvent(eventId);
+    }
+    private boolean isValidOrderID(int orderId) {
+        
+        return orderId > 0;
     }
     
 }
