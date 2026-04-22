@@ -1,6 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
-public interface  OrderActiveService {
+public interface  IActiveOrderService {
     public String createActiveOrder(String userId, String eventId, int quantity) ;
     public void cancelActiveOrder(String orderId) ;
     public void getActiveOrders(String userId) ;
