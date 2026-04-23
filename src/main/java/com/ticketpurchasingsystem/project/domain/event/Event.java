@@ -1,9 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class Event {
 
@@ -23,8 +20,6 @@ public class Event {
     private EventDiscountPolicy discountPolicy;
 
     private EventPurchasePolicy purchasePolicy;
-
-    private final transient List<Object> domainEvents = new ArrayList<>();
 
 
     public Event(
@@ -55,130 +50,6 @@ public class Event {
         this.purchasePolicy = purchasePolicy;
         this.discountPolicy = discountPolicy;
         this.isActive = true;
-    }
-
-
-    // ---------------- BUSINESS LOGIC ----------------
-
-    public boolean isAvailable() {
-        return isActive && eventCapacity > 0;
-    }
-
-
-    public double calculatePriceForUser(
-            PurchaseContext context,
-            double basePrice
-    ) {
-        //TODO 
-        return 0;
-    }
-
-
-    public void reserveTickets(PurchaseContext context) {
-
-        if (!isAvailable()) {
-            throw new IllegalStateException(
-                    "Event inactive or sold out"
-            );
-        }
-
-        validatePurchase(context);
-
-        if (eventCapacity < context.getTicketAmount()) {
-            throw new IllegalStateException(
-                    "Not enough tickets available"
-            );
-        }
-
-        eventCapacity -= context.getTicketAmount();
-    }
-
-
-    private void validatePurchase(PurchaseContext context) {
-
-        if (purchasePolicy != null) {
-            purchasePolicy.validatePurchase(context);
-        }
-    }
-
-
-    // ---------------- EVENT MANAGEMENT ----------------
-
-    public void updateInventory(int newCapacity) {
-
-        if (newCapacity < 0) {
-            throw new IllegalArgumentException(
-                    "Capacity cannot be negative"
-            );
-        }
-
-        if (newCapacity < this.eventCapacity) {
-            throw new IllegalStateException(
-                    "Cannot reduce capacity below current reserved tickets"
-            );
-        }
-
-        this.eventCapacity = newCapacity;
-    }
-
-
-    public void updateEventDate(LocalDateTime newDate) {
-
-        if (newDate == null) {
-            throw new IllegalArgumentException(
-                    "Event date cannot be null"
-            );
-        }
-
-        this.eventDate = newDate;
-    }
-
-
-    public void configureSeatingMap(SeatingMap seatingMap) {
-
-        if (seatingMap == null) {
-            throw new IllegalArgumentException(
-                    "Seating map cannot be null"
-            );
-        }
-
-        this.seatingMap = seatingMap;
-    }
-
-
-    public void activate() {
-        this.isActive = true;
-    }
-
-
-    public void deactivate() {
-        this.isActive = false;
-    }
-
-
-    public void updatePurchasePolicy(
-            EventPurchasePolicy purchasePolicy
-    ) {
-        this.purchasePolicy = purchasePolicy;
-    }
-
-
-    public void updateDiscountPolicy(
-            EventDiscountPolicy discountPolicy
-    ) {
-        this.discountPolicy = discountPolicy;
-    }
-
-
-    // ---------------- DOMAIN EVENTS ----------------
-
-    public List<Object> getDomainEvents() {
-        return Collections.unmodifiableList(domainEvents);
-    }
-
-
-    public void clearDomainEvents() {
-        domainEvents.clear();
     }
 
 

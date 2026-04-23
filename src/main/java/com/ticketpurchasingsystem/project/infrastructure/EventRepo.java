@@ -17,7 +17,16 @@ public class EventRepo implements IEventRepo {
     private final AtomicInteger idGenerator =
             new AtomicInteger(1);
 
+    private static EventRepo instance;
 
+    public static EventRepo getInstance() {
+
+        if (instance == null) {
+            instance = new EventRepo();
+        }
+
+        return instance;
+    }
     @Override
     public Event save(Event event) {
 
