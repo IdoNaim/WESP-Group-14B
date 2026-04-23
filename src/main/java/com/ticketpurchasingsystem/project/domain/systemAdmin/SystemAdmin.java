@@ -2,7 +2,8 @@ package com.ticketpurchasingsystem.project.domain.systemAdmin;
 
 import java.util.List;
 
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 
 public class SystemAdmin {
 
@@ -14,7 +15,10 @@ public class SystemAdmin {
         this.adminPublisher = adminPublisher;
     }
 
-    public List<UserInfo> getUsersInfo() {
-        return adminPublisher.publishGetAllUsers(this.adminInfo.getId());
+    public List<ActiveOrderItem> getAllActiveOrders() {
+        return adminPublisher.publishGetAllActiveOrders(this.adminInfo.getId());
+    }
+    public List<HistoryOrderItem> getAllHistoryOrderItems() {
+        return adminPublisher.publishGetAllOrdersHistory(this.adminInfo.getId());
     }
 }

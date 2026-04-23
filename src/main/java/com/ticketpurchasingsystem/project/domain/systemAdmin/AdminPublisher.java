@@ -4,8 +4,10 @@ import java.util.List;
 
 import org.springframework.context.ApplicationEventPublisher;
 
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllActiveOrdersEvent;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
 
 class AdminPublisher {
     private final ApplicationEventPublisher eventPublisher;
@@ -14,9 +16,17 @@ class AdminPublisher {
         this.eventPublisher = eventPublisher;
     }
 
-    public List<UserInfo> publishGetAllUsers(String reqId) {
-        GetAllUsersEvent event = new GetAllUsersEvent(this);
+
+
+    public List<ActiveOrderItem> publishGetAllActiveOrders(String reqId) {
+        GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(reqId);
         eventPublisher.publishEvent(event);
-        return event.getResult(reqId);
+        return event.getResult();
+    }
+
+    public List<HistoryOrderItem> publishGetAllOrdersHistory(String reqId) {
+        GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(reqId);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
     }
 }

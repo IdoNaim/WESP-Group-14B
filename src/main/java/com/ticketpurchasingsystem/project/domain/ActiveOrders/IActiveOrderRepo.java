@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 
-public class IActiveOrderRepo {
-    
+import java.util.List;
+
+public interface IActiveOrderRepo {
+    List<ActiveOrderItem> findAll();
 }
