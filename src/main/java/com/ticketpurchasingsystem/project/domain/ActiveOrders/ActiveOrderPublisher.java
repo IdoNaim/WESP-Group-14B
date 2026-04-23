@@ -12,4 +12,9 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.isValid();
     }
+    public Discount publishIsDiscountEvent(ActiveOrderItem order) {
+        IsDiscountEvent event = new IsDiscountEvent(this, order);
+        eventPublisher.publishEvent(event);
+        return event.getDiscount();
+    }
 }

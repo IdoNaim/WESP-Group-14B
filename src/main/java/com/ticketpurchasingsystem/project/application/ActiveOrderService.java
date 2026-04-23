@@ -1,7 +1,7 @@
 package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
-
+//import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
     ActiveOrderPublisher activeOrderPublisher;
@@ -76,4 +76,18 @@ public class ActiveOrderService implements IActiveOrderService {
         return orderId > 0;
     }
     
+    
+    public Discount isDiscount(int orderId) {
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            System.out.println("Order not found");
+            return null;
+        }
+
+        return activeOrderPublisher.publishIsDiscountEvent(order);
+    }
+
+    private boolean activeOrderExists(int orderId) {
+        return activeOrderRepo.findById(orderId) != null;
+    }
 }
