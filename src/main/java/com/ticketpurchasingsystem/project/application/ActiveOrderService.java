@@ -1,16 +1,20 @@
 package com.ticketpurchasingsystem.project.application;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
-
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublisher;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
     ActiveOrderPublisher activeOrderPublisher;
     IActiveOrderRepo activeOrderRepo;
+
     public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
     }
+    
     @Override
     public String createActiveOrder(String userId, int eventId, int quantity) {
         // TODO Auto-generated method stub
@@ -74,6 +78,15 @@ public class ActiveOrderService implements IActiveOrderService {
     private boolean isValidOrderID(int orderId) {
         
         return orderId > 0;
+    }
+
+    public ActiveOrderDTO getOrderInfo(int orderId) {
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            System.out.println("Order not found");
+            return null;
+        }
+        return new ActiveOrderDTO(order.getOrderId(), order.getUserId(), order.getEventId(), order.getQuantity(), order.getStatus(), order.getCreatedAt());
     }
     
 }
