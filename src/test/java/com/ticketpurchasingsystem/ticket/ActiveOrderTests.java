@@ -80,5 +80,28 @@ public class ActiveOrderTests {
         boolean result = activeOrderService.saveOrder(activeOrder);
         assertFalse(result);
     }
+    @Test
+    public void GivenValidOrderId_WhenGetOrderInfo_thenReturnOrderInfo() {
+        int orderId = 1;
+        String userId = "0";
+        int eventId = 0;
+        int quantity = 2;
+        
+        ActiveOrderItem activeOrder = new ActiveOrderItem(orderId, userId, eventId, quantity);
+        when(activeOrderRepoMock.findById(orderId)).thenReturn(activeOrder);
+        ActiveOrderDTO result = activeOrderService.getOrderInfo(orderId);
+        assertNotNull(result);
+        assertEquals(orderId, result.getOrderId());
+        assertEquals(userId, result.getUserId());
+        assertEquals(eventId, result.getEventId());
+        assertEquals(quantity, result.getQuantity());
+    }
+    @Test
+    public void GivenInvalidOrderId_WhenGetOrderInfo_thenReturnNull() {
+        int orderId = 1;
+        when(activeOrderRepoMock.findById(orderId)).thenReturn(null);
+        ActiveOrderDTO result = activeOrderService.getOrderInfo(orderId);
+        assertNull(result);
+    }
 
 }
