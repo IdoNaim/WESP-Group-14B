@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
@@ -12,8 +13,9 @@ import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
+import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
-public class EventService {
+public class EventService implements IEventService {
     IEventRepo eventRepo = EventRepo.getInstance();
     EventPublisher eventPublisher = EventPublisher.getInstance();
     EventListener eventListener = EventListener.getInstance();
@@ -50,6 +52,35 @@ public class EventService {
             // Handle exceptions (e.g., log the error)
             return false;
         }
+    }
+    public EventDTO searchEvent(int eventId) {
+        //TOOD implement this
+        throw new UnsupportedOperationException("Unimplemented method 'searchEvent'");
+    }
+    @Override
+    public List<EventDTO> searchEventsByCompany(int companyId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'searchEventsByCompany'");
+    }
+    @Override
+    public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'editEventDate'");
+    }
+    @Override
+    public boolean removeEvent(int eventId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'removeEvent'");
+    }
+    @Override
+    public boolean editEventInventory(int eventId, int newCapacity) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'editEventInventory'");
+    }
+    @Override
+    public boolean configureEventSeatinMap(int eventId, SeatingMap seatingMapDTO) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'configureEventSeatinMap'");
     }
     
 
