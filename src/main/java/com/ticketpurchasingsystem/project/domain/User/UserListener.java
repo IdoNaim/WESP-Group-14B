@@ -1,19 +1,23 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-import com.ticketpurchasingsystem.project.domain.User.UserEvents.userEvents;
+import org.springframework.context.ApplicationListener;
+import org.springframework.stereotype.Component;
 
-public class UserListener {
-        private IUserRepo userRepo;
-        private UserPublisher publisher;
-    
-        public UserListener(IUserRepo userRepo, UserPublisher publisher) {
-            this.userRepo = userRepo;
-            this.publisher = publisher;
-        }
-    
-        public void onUserCreated(userEvents event) {
-            // Handle the event, e.g., update the read model or notify other services
-            System.out.println("User created: " + event.getUserId());
-        }
-    
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
+
+@Component
+public class UserListener implements ApplicationListener<GetAllUsersEvent> {
+
+    private final IUserRepo userRepo;
+
+    public UserListener(IUserRepo userRepo) {
+        this.userRepo = userRepo;
+    }
+
+    //need to add Auth check to make sure only system admin can call this method
+    //in the event there is a request id.
+    @Override
+    public void onApplicationEvent(GetAllUsersEvent event) {
+        event.setResult(userRepo.findAll());
+    }
 }
