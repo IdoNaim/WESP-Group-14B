@@ -1,12 +1,13 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllEvent;
+
 
 @Component
-public class UserListener implements ApplicationListener<GetAllUsersEvent> {
+public class UserListener {
 
     private final IUserRepo userRepo;
 
@@ -14,10 +15,9 @@ public class UserListener implements ApplicationListener<GetAllUsersEvent> {
         this.userRepo = userRepo;
     }
 
-    //need to add Auth check to make sure only system admin can call this method
-    //in the event there is a request id.
-    @Override
-    public void onApplicationEvent(GetAllUsersEvent event) {
+    @EventListener
+    public void handleGetAllUsers(GetAllEvent<UserInfo> event) {
         event.setResult(userRepo.findAll());
     }
+
 }
