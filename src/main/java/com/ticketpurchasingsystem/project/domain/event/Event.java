@@ -88,4 +88,8 @@ public class Event {
     public SeatingMap getSeatingMap() {
         return seatingMap;
     }
+
+    public void setEventId(Integer eventId) {
+        this.eventId = eventId;
+    }
 }

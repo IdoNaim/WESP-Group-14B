@@ -30,23 +30,7 @@ public class EventRepo implements IEventRepo {
     @Override
     public Event save(Event event) {
 
-        if (event.getEventId() == null) {
-
-            try {
-
-                var field =
-                        Event.class.getDeclaredField("eventId");
-
-                field.setAccessible(true);
-
-                field.set(event, idGenerator.getAndIncrement());
-
-            } catch (Exception e) {
-                throw new RuntimeException(
-                        "Failed assigning ID to event"
-                );
-            }
-        }
+        event.setEventId(idGenerator.getAndIncrement());
 
         storage.put(event.getEventId(), event);
 
