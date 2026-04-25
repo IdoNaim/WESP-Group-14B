@@ -33,7 +33,7 @@ class SystemAdminTests {
 
     @Test
     void WhenGetAllActiveOrdersGivenPublisherReturnsOrders_ThenReturnOrders() {
-        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem());
+        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1", 1));
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(mockOrders);
 
         List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
