@@ -3,15 +3,15 @@ package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import java.sql.Timestamp;
 
 public class ActiveOrderItem {
-    private int orderId;
+    private String orderId;
     private String userId;
-    private int eventId;
+    private String eventId;
     private int quantity;
     private String status;
     private Timestamp createdAt;
 
 
-    public ActiveOrderItem(int orderId, String userId, int eventId, int quantity) {
+    public ActiveOrderItem(String orderId, String userId, String eventId, int quantity) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
@@ -20,11 +20,11 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(System.currentTimeMillis());
     }
 
-    public int getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(int orderId) {
+    public void setOrderId(String orderId) {
         this.orderId = orderId;
     }
 
@@ -36,7 +36,7 @@ public class ActiveOrderItem {
         this.userId = userId;
     }
 
-    public int getEventId() {
+    public String getEventId() {
         return eventId;
     }
 
@@ -44,7 +44,7 @@ public class ActiveOrderItem {
         return createdAt;
     }
 
-    public void setEventId(int eventId) {
+    public void setEventId(String eventId) {
         this.eventId = eventId;
     }
 
