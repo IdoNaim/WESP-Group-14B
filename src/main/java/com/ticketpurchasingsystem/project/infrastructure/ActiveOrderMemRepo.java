@@ -49,5 +49,10 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             activeOrders.add(order);
         }
     }
-    
+
+    @Override
+    public List<ActiveOrderItem> findAll() {
+        return List.copyOf(activeOrders);
+    }
+
 }
