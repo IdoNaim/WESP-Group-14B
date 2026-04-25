@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import com.ticketpurchasingsystem.project.domain.Utils.Publisher;
+import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 import org.springframework.context.ApplicationEventPublisher;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 public class ActiveOrderPublisher {
@@ -11,5 +12,8 @@ public class ActiveOrderPublisher {
         IsValidEventIDEvent event = new IsValidEventIDEvent(this, eventId);
         eventPublisher.publishEvent(event);
         return event.isValid();
+    }
+    public SeatingMapDTO publishGetSeatingMapEvent(String eventId){
+
     }
 }

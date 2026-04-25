@@ -1,6 +1,9 @@
 package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+
+import java.util.Scanner;
 
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
@@ -10,11 +13,6 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
-    }
-    @Override
-    public String createActiveOrder(String userId, String eventId, int quantity) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -76,5 +74,42 @@ public class ActiveOrderService implements IActiveOrderService {
         // Implement your logic to validate the order ID here
         return true; // Placeholder return value
     }
-    
+
+    public boolean startOrder(SessionToken sessionToken, String eventID)
+    {
+//        if(AuthenticationService.validateToken(sessionToken.getToken())){
+//
+//        }
+//        else{
+//            return false;
+//        }
+        //check if user is member, if he is then need to save his order
+        boolean isMemeber = activeOrderPublisher.publishIsMember(sessionToken.getUserId());
+
+        // get Seating map of event and show it
+        // SeatingMapDTO map = activeOrderPublisher.publishGetSeatingMapEvent(eventID);
+        // user choose the tickets
+        /**
+         *  need to make sure the same user cant reserve different seats/tickets from different session
+         */
+        /**
+         * need to start a thread that checks always if the timer has ended
+         */
+        /**
+         * need to publish a message to unreserve tickets if guest disconnects or 10 minutes pass for memeber
+         */
+        ActiveOrderItem orderItem = new ActiveOrderItem(,sessionToken.getUserId(),eventID,0 );
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("choose how many tickets");
+        String input = scanner.nextLine();
+        int inputInt = Integer.parseInt(input);
+        boolean reservedTickets = activeOrderPublisher.publishReserveTickets(eventId, inputInt);
+        if(!reservedTickets){
+            System.out.println("there are not enough tickets left currently, try again later ");
+        }
+        orderItem.setQuantity(inputInt);
+        if(isMemeber){
+            saveOrder(orderItem);
+        }
+    }
 }
