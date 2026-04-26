@@ -53,6 +53,9 @@ public class ActiveOrderItem {
     }
 
     public void setQuantity(int quantity) {
+        if(quantity <= 0) {
+            throw  new IllegalArgumentException("cant buy negative number of tickets");
+        }
         this.quantity = quantity;
     }
 
