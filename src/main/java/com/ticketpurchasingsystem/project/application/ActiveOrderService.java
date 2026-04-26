@@ -4,6 +4,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
 
 
@@ -38,10 +39,21 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void completeActiveOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
+    public boolean completeActiveOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
         boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
+        if(!reserved){
+            return false;
+        }
+        String orderId = ""+ IdGenerator.getInstance().nextId();
+        ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
+        saveOrder(orderItem);
+        return true;
+    }
 
-        
+    @Override
+    public boolean paymentActiveOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount)
+    {
+        return true;
     }
 
     @Override
