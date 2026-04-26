@@ -38,28 +38,90 @@ public class ActiveOrderService implements IActiveOrderService {
         
     }
 
+
+    //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
     @Override
-    public boolean completeActiveOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
+    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
         boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
         if(!reserved){
-            return false;
+            return null;
         }
         String orderId = ""+ IdGenerator.getInstance().nextId();
         ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
         saveOrder(orderItem);
-        return true;
+        return orderItem;
     }
-
+    // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
     @Override
-    public boolean paymentActiveOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount)
+    public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
     {
-        return true;
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            throw new IllegalArgumentException("Order not found");
+        }
+        checkIfExpiredAndThrowException(order);
+        
+        //boolean paymentResult = activeOrderPublisher.publishPaymentEvent(paymentGateway, sessionToken, amount);
+        boolean paymentResult = payment(paymentGateway, sessionToken, amount);
+        if(paymentResult) {
+            activeOrderRepo.delete(orderId);
+        }
+        else
+        {
+            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
+            activeOrderRepo.delete(orderId);
+            throw new IllegalStateException("Payment failed");
+        }
+    }
+    //TODO: we may need to publish an event about the succesful purchase so that eventService can update the number of tickets sold for the event,but we can do that in the completeOrder method after the payment is successful
+
+    public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
+        // TODO Auto-generated method stub
+        return true; // Placeholder return value, replace with actual payment processing logic
+        //throw new UnsupportedOperationException("Unimplemented method 'payment'");
     }
 
+
     @Override
-    public void updateActiveOrder(String orderId, int quantity) {
-        // TODO Auto-generated method stub
-        
+    public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
+    {
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            throw new IllegalArgumentException("Order not found");
+        }
+        checkIfExpiredAndThrowException(order);
+        if(newQuantity <= 0){
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        if(newQuantity == order.getQuantity()){
+            return;
+        }
+        if(newQuantity < order.getQuantity()) {
+            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity() - newQuantity);
+            order.setQuantity(newQuantity);
+            activeOrderRepo.update(order);
+            return;
+        }
+        else{
+            boolean reserved = activeOrderPublisher.publishReserveTickets(order.getEventId(), newQuantity - order.getQuantity());
+            if(!reserved){
+                throw new IllegalStateException("Not enough tickets available");
+            }
+            order.setQuantity(newQuantity); 
+            activeOrderRepo.update(order);
+        }   
+    }
+   
+
+    
+    private void checkIfExpiredAndThrowException(ActiveOrderItem order){
+        if(order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis())
+        {
+            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
+            activeOrderRepo.delete(order.getOrderId());
+            throw new IllegalStateException("Order has expired");
+        }
     }
     @Override
     public boolean saveOrder(ActiveOrderItem order) {

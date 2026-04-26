@@ -7,8 +7,9 @@ public class ActiveOrderItem {
     private String userId;
     private String eventId;
     private int quantity;
-    private String status;
     private Timestamp createdAt;
+
+    public final static int EXPIRATION_TIME_MINUTES = 15;
 
 
     public ActiveOrderItem(String orderId, String userId, String eventId, int quantity) {
@@ -16,7 +17,6 @@ public class ActiveOrderItem {
         this.userId = userId;
         this.eventId = eventId;
         this.quantity = quantity;
-        this.status = "active";
         this.createdAt = new Timestamp(System.currentTimeMillis());
     }
 
@@ -59,18 +59,10 @@ public class ActiveOrderItem {
         this.quantity = quantity;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
     public void editOrder(ActiveOrderItem order) {
         if(order.getOrderId() != this.orderId) {
             throw new IllegalArgumentException("Order ID cannot be changed");
         }
         this.quantity = order.getQuantity();
-        this.status = order.getStatus();
     }
 }

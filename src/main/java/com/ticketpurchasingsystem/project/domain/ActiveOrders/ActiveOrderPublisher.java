@@ -1,6 +1,9 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import org.springframework.context.ApplicationEventPublisher;
+
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
 
@@ -31,4 +34,9 @@ public class ActiveOrderPublisher {
         TicketUnreservationEvent event = new TicketUnreservationEvent(this, eventID, quantity);
         eventPublisher.publishEvent(event);
     }
+
+    // public boolean publishPaymentEvent(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
+    //     // TODO Auto-generated method stub
+    //     throw new UnsupportedOperationException("Unimplemented method 'publishPaymentEvent'");
+    // }
 }
