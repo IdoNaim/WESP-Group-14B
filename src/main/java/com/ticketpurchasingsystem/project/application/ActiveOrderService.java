@@ -2,7 +2,7 @@ package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-
+import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
 import java.util.Scanner;
 
 public class ActiveOrderService implements IActiveOrderService {
@@ -98,18 +98,46 @@ public class ActiveOrderService implements IActiveOrderService {
         /**
          * need to publish a message to unreserve tickets if guest disconnects or 10 minutes pass for memeber
          */
-        ActiveOrderItem orderItem = new ActiveOrderItem(,sessionToken.getUserId(),eventID,0 );
+        String orderId = "" +IdGenerator.getInstance().nextId();
+
+        ActiveOrderItem orderItem = new ActiveOrderItem(orderId,sessionToken.getUserId(),eventID,0 );
         Scanner scanner = new Scanner(System.in);
-        System.out.println("choose how many tickets");
-        String input = scanner.nextLine();
-        int inputInt = Integer.parseInt(input);
-        boolean reservedTickets = activeOrderPublisher.publishReserveTickets(eventId, inputInt);
-        if(!reservedTickets){
-            System.out.println("there are not enough tickets left currently, try again later ");
+        boolean finished = false;
+        while(!finished) {
+            System.out.println("choose the number of tickets to buy, or choose 'finish' ");
+            String input = scanner.nextLine();
+            if(input.toLowerCase().equals("finish")){
+                break;
+            }
+            int inputInt;
+            try {
+                inputInt = Integer.parseInt(input);
+                if(inputInt <= 0){
+                    System.out.println("please enter a positive number of tickets");
+                }
+            }catch (NumberFormatException e){
+                System.out.println("please enter either 'finish' or a number of tickets to buy");
+                continue;
+            }
+            boolean reservedTickets = activeOrderPublisher.publishReserveTickets(eventID, inputInt);
+            if (!reservedTickets) {
+                System.out.println("there are not enough tickets left currently ");
+            }
+            else {
+                orderItem.setQuantity(inputInt);
+                if (isMemeber) {
+                    saveOrder(orderItem);
+                }
+            }
         }
-        orderItem.setQuantity(inputInt);
-        if(isMemeber){
-            saveOrder(orderItem);
+        System.out.println("you have " + orderItem.getQuantity() + " tickets in your order, would you like to checkout? (y/n)");
+        String choice = scanner.nextLine();
+        if(choice.toLowerCase().equals("y") || choice.toLowerCase().equals("yes")){
+            completeActiveOrder(orderId);
+        }
+        else{
+            System.out.println("order canceled");
+            activeOrderPublisher.publishUnreserveTickets(eventID, orderItem.getQuantity());
         }
     }
 }

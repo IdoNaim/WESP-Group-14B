@@ -5,15 +5,22 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
+
     public ActiveOrderPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
+
     public boolean publishIsValidEventIDEvent(String eventId) {
         IsValidEventIDEvent event = new IsValidEventIDEvent(this, eventId);
         eventPublisher.publishEvent(event);
         return event.isValid();
     }
-    public SeatingMapDTO publishGetSeatingMapEvent(String eventId){
 
+
+
+    public boolean publishReserveTickets(String eventId, int quantity)
+    {
+        TicketReservationEvent eventPublisher = new TicketReservationEvent(eventId, quantity);
+        eventPublisher.publishEvent
     }
 }
