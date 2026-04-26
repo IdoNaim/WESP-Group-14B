@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
@@ -36,8 +37,9 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void completeActiveOrder(String orderId) {
-        // TODO Auto-generated method stub
+    public void completeActiveOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
+        boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
+
         
     }
 
