@@ -84,7 +84,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //            return false;
 //        }
         //check if user is member, if he is then need to save his order
-        boolean isMemeber = activeOrderPublisher.publishIsMember(sessionToken.getUserId());
+        boolean isMember = activeOrderPublisher.publishIsMember(sessionToken.getUserId());
 
         // get Seating map of event and show it
         // SeatingMapDTO map = activeOrderPublisher.publishGetSeatingMapEvent(eventID);
@@ -125,7 +125,7 @@ public class ActiveOrderService implements IActiveOrderService {
             }
             else {
                 orderItem.setQuantity(inputInt);
-                if (isMemeber) {
+                if (isMember) {
                     saveOrder(orderItem);
                 }
             }

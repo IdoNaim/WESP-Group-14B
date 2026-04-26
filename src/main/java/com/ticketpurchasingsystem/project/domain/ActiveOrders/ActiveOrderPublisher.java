@@ -1,6 +1,4 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
-import com.ticketpurchasingsystem.project.domain.Utils.Publisher;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 import org.springframework.context.ApplicationEventPublisher;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 public class ActiveOrderPublisher {
@@ -20,7 +18,16 @@ public class ActiveOrderPublisher {
 
     public boolean publishReserveTickets(String eventId, int quantity)
     {
-        TicketReservationEvent eventPublisher = new TicketReservationEvent(eventId, quantity);
-        eventPublisher.publishEvent
+        TicketReservationEvent event = new TicketReservationEvent(this,eventId, quantity);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public boolean publishIsMember(String userId){
+        IsMemberEvent event = new IsMemberEvent(this, userId);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishUnreserveTickets(String eventID, int quantity){
+        TicketUnreservationEvent event = new Tick
     }
 }

@@ -1,14 +1,17 @@
-package com.ticketpurchasingsystem.project.domain.ActiveOrders;
+package com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents;
+
+import org.springframework.context.ApplicationEvent;
 
 import java.util.concurrent.CompletableFuture;
 
-public class TicketReservationEvent {
+public class TicketReservationEvent extends ApplicationEvent {
     private final String eventId;
     private final int quantity;
 
     private Boolean result;
 
-    public TicketReservationEvent(String eventId, int quantity) {
+    public TicketReservationEvent(Object source, String eventId, int quantity) {
+        super(source);
         this.eventId = eventId;
         this.quantity = quantity;
     }
