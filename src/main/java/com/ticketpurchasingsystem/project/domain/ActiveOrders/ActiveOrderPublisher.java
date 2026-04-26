@@ -28,6 +28,7 @@ public class ActiveOrderPublisher {
         return event.getResult();
     }
     public void publishUnreserveTickets(String eventID, int quantity){
-        TicketUnreservationEvent event = new Tick
+        TicketUnreservationEvent event = new TicketUnreservationEvent(this, eventID, quantity);
+        eventPublisher.publishEvent(event);
     }
 }
