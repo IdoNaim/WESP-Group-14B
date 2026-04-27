@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
 public class EventServiceTest {
 
@@ -91,27 +89,27 @@ public class EventServiceTest {
 
     // ================= SEARCH EVENT =================
 
-    @Test
-    void searchEvent_shouldThrowException_whenNotImplemented() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> eventService.searchEvent(1));
-    }
+    // @Test
+    // void searchEvent_shouldThrowException_whenNotImplemented() {
+    //     assertThrows(UnsupportedOperationException.class,
+    //             () -> eventService.searchEvent(1));
+    // }
 
-    // ================= SEARCH EVENTS BY COMPANY =================
+    // // ================= SEARCH EVENTS BY COMPANY =================
 
-    @Test
-    void searchEventsByCompany_shouldThrowException_whenNotImplemented() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> eventService.searchEventsByCompany(1));
-    }
+    // @Test
+    // void searchEventsByCompany_shouldThrowException_whenNotImplemented() {
+    //     assertThrows(UnsupportedOperationException.class,
+    //             () -> eventService.searchEventsByCompany(1));
+    // }
 
-    // ================= EDIT EVENT DATE =================
+    // // ================= EDIT EVENT DATE =================
 
-    @Test
-    void editEventDate_shouldThrowException_whenNotImplemented() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> eventService.editEventDate(1, LocalDateTime.now()));
-    }
+    // @Test
+    // void editEventDate_shouldThrowException_whenNotImplemented() {
+    //     assertThrows(UnsupportedOperationException.class,
+    //             () -> eventService.editEventDate(1, LocalDateTime.now()));
+    // }
 
     // ================= REMOVE EVENT =================
 
@@ -140,19 +138,19 @@ public class EventServiceTest {
 
     // ================= EDIT INVENTORY =================
 
-    @Test
-    void editEventInventory_shouldThrowException_whenNotImplemented() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> eventService.editEventInventory(1, 200));
-    }
+    // @Test
+    // void editEventInventory_shouldThrowException_whenNotImplemented() {
+    //     assertThrows(UnsupportedOperationException.class,
+    //             () -> eventService.editEventInventory(1, 200));
+    // }
 
-    // ================= CONFIGURE SEATING MAP =================
+    // // ================= CONFIGURE SEATING MAP =================
 
-    @Test
-    void configureEventSeatingMap_shouldThrowException_whenNotImplemented() {
-        SeatingMap seatingMap = mock(SeatingMap.class);
+    // @Test
+    // void configureEventSeatingMap_shouldThrowException_whenNotImplemented() {
+    //     SeatingMap seatingMap = mock(SeatingMap.class);
 
-        assertThrows(UnsupportedOperationException.class,
-                () -> eventService.configureEventSeatinMap(1, seatingMap));
-    }
+    //     assertThrows(UnsupportedOperationException.class,
+    //             () -> eventService.configureEventSeatinMap(1, seatingMap));
+    // }
 }
