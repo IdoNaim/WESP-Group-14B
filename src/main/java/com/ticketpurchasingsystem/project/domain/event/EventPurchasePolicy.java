@@ -40,7 +40,7 @@ public class EventPurchasePolicy {
         if (maxAge != null && buyerAge > maxAge) {
             return false;
         }
-        if(canLeaveEmptySeats && !isSeatEmpty) {
+        if(!canLeaveEmptySeats && isSeatEmpty) {
             return false;
         }
         //Add more rule checks as needed
