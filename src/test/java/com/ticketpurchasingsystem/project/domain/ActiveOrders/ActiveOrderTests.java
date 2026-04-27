@@ -1,6 +1,9 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.IActiveOrderService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 
 import org.junit.jupiter.api.Test;
@@ -12,17 +15,20 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
 import com.ticketpurchasingsystem.project.application.ActiveOrderService;
+import org.springframework.boot.web.servlet.server.Session;
 
 public class ActiveOrderTests {
     private IActiveOrderRepo activeOrderRepoMock;
     private IActiveOrderService activeOrderService;
     //private ActiveOrderListener activeOrderListener;
     private ActiveOrderPublisher activeOrderPublisher;
+    private AuthenticationService authenticationService;
     @BeforeEach
     public void setUp() {
         activeOrderRepoMock = mock(IActiveOrderRepo.class);
         activeOrderPublisher = mock(ActiveOrderPublisher.class);
-        activeOrderService = new ActiveOrderService(new ActiveOrderListener(activeOrderRepoMock), activeOrderPublisher, activeOrderRepoMock);
+        authenticationService = mock(AuthenticationService.class);
+        activeOrderService = new ActiveOrderService(new ActiveOrderListener(activeOrderRepoMock), activeOrderPublisher, activeOrderRepoMock,authenticationService);
 
     }
     @Test
@@ -80,5 +86,65 @@ public class ActiveOrderTests {
         boolean result = activeOrderService.saveOrder(activeOrder);
         assertFalse(result);
     }
+
+    @Test
+    public void GivenValidOrder_WhenCreatePendingOrder_thenGetOrderWithValidDetails(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "1";
+        String userId = "user";
+        int quantity = 5 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+        ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId,quantity);
+        assertEquals(order.getQuantity(), quantity);
+        assertEquals(order.getEventId(), eventId);
+        assertEquals(order.getUserId(), userId);
+    }
+    @Test
+    public void GivenValidOrder_WhenCreatePendingOrder_thenOrderIsSavedInRepo(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "1";
+        String userId = "user";
+        int quantity = 5 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+        ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId,quantity);
+        verify(activeOrderService.saveOrder(order));
+    }
+    @Test
+    public void GivenInvalidSessionToken_WhenCreatePendingOrder_thenReturnErrorMessage(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "1";
+        String userId = "user";
+        int quantity = 5 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(false);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+        assertThrows(RuntimeException.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
+    }
+    @Test
+    public void GivenInvalidEventId_WhenCreatePendingOrder_thenReturnErrorMessage(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "-1";
+        String userId = "user";
+        int quantity = 5 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(false);
+        assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
+    }
+        @Test
+        public void GivenInvalidQuantity_WhenCreatePendingOrder_thenReturnErrorMessage(){
+            SessionToken sessionToken = mock(SessionToken.class);
+            when(sessionToken.getToken()).thenReturn("user");
+            String eventId = "1";
+            String userId = "user";
+            int quantity = -4 ;
+            when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(false);
+            when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+            assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
+        }
 
 }

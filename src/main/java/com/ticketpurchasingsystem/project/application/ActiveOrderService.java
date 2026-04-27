@@ -6,18 +6,20 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
+import javax.naming.AuthenticationException;
 
 
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
     ActiveOrderPublisher activeOrderPublisher;
     IActiveOrderRepo activeOrderRepo;
+    AuthenticationService authenticationService;
     //AuthenticationService authenticationService;
-    public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo) {
+    public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
-//        this.authenticationService = authenticationService;
+        this.authenticationService = authenticationService;
     }
 
     @Override
@@ -35,82 +37,102 @@ public class ActiveOrderService implements IActiveOrderService {
     @Override
     public void getActiveOrder(String orderId) {
         // TODO Auto-generated method stub
-        
+
     }
 
 
     //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
+    //called after "checkout" is pressed in UI
     @Override
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
-        boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
-        if(!reserved){
-            return null;
+        if(authenticationService.validateToken(sessionToken.getToken())){
+            boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
+            if(!reserved){
+                return null;
+            }
+            String orderId = ""+ IdGenerator.getInstance().nextId();
+            ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
+            saveOrder(orderItem);
+            return orderItem;
+            }
+        else{
+            throw new RuntimeException("the session has ended");
         }
-        String orderId = ""+ IdGenerator.getInstance().nextId();
-        ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
-        saveOrder(orderItem);
-        return orderItem;
     }
     // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
     @Override
     public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
     {
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
-        if(order == null){
-            throw new IllegalArgumentException("Order not found");
+        if(authenticationService.validateToken(sessionToken.getToken())){
+            ActiveOrderItem order = activeOrderRepo.findById(orderId);
+            if(order == null){
+                throw new IllegalArgumentException("Order not found");
+            }
+            checkIfExpiredAndThrowException(order);
+            
+            //boolean paymentResult = activeOrderPublisher.publishPaymentEvent(paymentGateway, sessionToken, amount);
+            boolean paymentResult = payment(paymentGateway, sessionToken, amount);
+            if(paymentResult) {
+                //add to history order repo and delete from active order repo
+                
+                activeOrderRepo.delete(orderId);
+            }
+            else
+            {
+                activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
+                activeOrderRepo.delete(orderId);
+                throw new IllegalStateException("Payment failed");
+            }
         }
-        checkIfExpiredAndThrowException(order);
-        
-        //boolean paymentResult = activeOrderPublisher.publishPaymentEvent(paymentGateway, sessionToken, amount);
-        boolean paymentResult = payment(paymentGateway, sessionToken, amount);
-        if(paymentResult) {
-            activeOrderRepo.delete(orderId);
-        }
-        else
-        {
-            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
-            activeOrderRepo.delete(orderId);
-            throw new IllegalStateException("Payment failed");
+        else{
+            throw new RuntimeException("the session has ended");
         }
     }
     //TODO: we may need to publish an event about the succesful purchase so that eventService can update the number of tickets sold for the event,but we can do that in the completeOrder method after the payment is successful
 
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
         // TODO Auto-generated method stub
-        return true; // Placeholder return value, replace with actual payment processing logic
-        //throw new UnsupportedOperationException("Unimplemented method 'payment'");
+        if(authenticationService.validateToken(sessionToken.getToken())) {
+            return true; // Placeholder return value, replace with actual payment processing login
+            //throw new UnsupportedOperationException("Unimplemented method 'payment'");
+        }else{
+            throw new RuntimeException("the session has ended");
+        }
     }
 
 
     @Override
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
     {
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
-        if(order == null){
-            throw new IllegalArgumentException("Order not found");
-        }
-        checkIfExpiredAndThrowException(order);
-        if(newQuantity <= 0){
-            throw new IllegalArgumentException("Quantity must be greater than 0");
-        }
-
-        if(newQuantity == order.getQuantity()){
-            return;
-        }
-        if(newQuantity < order.getQuantity()) {
-            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity() - newQuantity);
-            order.setQuantity(newQuantity);
-            activeOrderRepo.update(order);
-            return;
-        }
-        else{
-            boolean reserved = activeOrderPublisher.publishReserveTickets(order.getEventId(), newQuantity - order.getQuantity());
-            if(!reserved){
-                throw new IllegalStateException("Not enough tickets available");
+        if(authenticationService.validateToken(sessionToken.getToken())) {
+            ActiveOrderItem order = activeOrderRepo.findById(orderId);
+            if (order == null) {
+                throw new IllegalArgumentException("Order not found");
             }
-            order.setQuantity(newQuantity); 
-            activeOrderRepo.update(order);
-        }   
+            checkIfExpiredAndThrowException(order);
+            if (newQuantity <= 0) {
+                throw new IllegalArgumentException("Quantity must be greater than 0");
+            }
+
+            if (newQuantity == order.getQuantity()) {
+                return;
+            }
+            if (newQuantity < order.getQuantity()) {
+                activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity() - newQuantity);
+                order.setQuantity(newQuantity);
+                activeOrderRepo.update(order);
+                return;
+            } else {
+                boolean reserved = activeOrderPublisher.publishReserveTickets(order.getEventId(), newQuantity - order.getQuantity());
+                if (!reserved) {
+                    throw new IllegalStateException("Not enough tickets available");
+                }
+                order.setQuantity(newQuantity);
+                activeOrderRepo.update(order);
+            }
+        }else{
+            throw new RuntimeException("the session is over");
+        }
     }
    
 
