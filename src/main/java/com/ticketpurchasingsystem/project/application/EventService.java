@@ -12,8 +12,8 @@ import com.ticketpurchasingsystem.project.domain.event.EventListener;
 import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
+import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 
 public class EventService implements IEventService {
     IEventRepo eventRepo = EventRepo.getInstance();
@@ -53,6 +53,7 @@ public class EventService implements IEventService {
             return false;
         }
     }
+    @Override
     public EventDTO searchEvent(int eventId) {
         //TOOD implement this
         throw new UnsupportedOperationException("Unimplemented method 'searchEvent'");
@@ -69,8 +70,13 @@ public class EventService implements IEventService {
     }
     @Override
     public boolean removeEvent(int eventId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeEvent'");
+        return eventRepo.findById(eventId)
+                .map(event -> {
+                    eventRepo.delete(eventId);
+                    //eventPublisher.publishEventRemoved(event);
+                    return true;
+                })
+                .orElse(false);
     }
     @Override
     public boolean editEventInventory(int eventId, int newCapacity) {
