@@ -13,19 +13,15 @@ import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 
 public class EventService implements IEventService {
-    IEventRepo eventRepo = EventRepo.getInstance();
+    private final IEventRepo eventRepo;
     EventPublisher eventPublisher = EventPublisher.getInstance();
     EventListener eventListener = EventListener.getInstance();
-    private static EventService instance;
-    public static EventService getInstance() {
-        if (instance == null) {
-            instance = new EventService();
-        }
-        return instance;
+        public EventService(IEventRepo eventRepo) {
+        this.eventRepo = eventRepo;
     }
+
     public boolean createEvent(EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO) {
         // Convert DTOs to domain objects
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(
