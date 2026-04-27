@@ -12,8 +12,8 @@ import com.ticketpurchasingsystem.project.domain.event.EventListener;
 import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
+import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 
 public class EventService implements IEventService {
     IEventRepo eventRepo = EventRepo.getInstance();
@@ -53,14 +53,34 @@ public class EventService implements IEventService {
             return false;
         }
     }
+    @Override   
     public EventDTO searchEvent(int eventId) {
-        //TOOD implement this
-        throw new UnsupportedOperationException("Unimplemented method 'searchEvent'");
+        Event event = eventRepo.findById(eventId).orElse(null);
+        if (event == null) {
+            return null;
+        }
+        // Convert domain object to DTO
+        return new EventDTO(
+                event.getCompanyId(),
+                event.getEventName(),
+                event.getEventCapacity(),
+                event.getEventDate(),
+                event.isActive()
+        );
     }
     @Override
     public List<EventDTO> searchEventsByCompany(int companyId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'searchEventsByCompany'");
+        List<Event> events = eventRepo.findByCompanyId(companyId);
+        // Convert domain objects to DTOs
+        return events.stream()
+                .map(event -> new EventDTO(
+                        event.getCompanyId(),
+                        event.getEventName(),
+                        event.getEventCapacity(),
+                        event.getEventDate(),
+                        event.isActive()
+                ))
+                .toList();
     }
     @Override
     public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
