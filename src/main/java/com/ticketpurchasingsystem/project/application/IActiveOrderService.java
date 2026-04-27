@@ -11,5 +11,5 @@ public interface  IActiveOrderService {
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int quantity) ;
     public boolean saveOrder(ActiveOrderItem order);
     public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId);
-
+    public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount);
 }

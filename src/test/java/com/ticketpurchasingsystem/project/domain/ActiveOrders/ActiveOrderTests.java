@@ -1,21 +1,22 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
-import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.IActiveOrderService;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-
 import com.ticketpurchasingsystem.project.application.ActiveOrderService;
-import org.springframework.boot.web.servlet.server.Session;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.IActiveOrderService;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public class ActiveOrderTests {
     private IActiveOrderRepo activeOrderRepoMock;
@@ -135,16 +136,90 @@ public class ActiveOrderTests {
         when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(false);
         assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
     }
-        @Test
-        public void GivenInvalidQuantity_WhenCreatePendingOrder_thenReturnErrorMessage(){
-            SessionToken sessionToken = mock(SessionToken.class);
-            when(sessionToken.getToken()).thenReturn("user");
-            String eventId = "1";
-            String userId = "user";
-            int quantity = -4 ;
-            when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(false);
-            when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
-            assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
-        }
+    @Test
+    public void GivenInvalidQuantity_WhenCreatePendingOrder_thenReturnErrorMessage(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "1";
+        String userId = "user";
+        int quantity = -4 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(false);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+        assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
+    }
+    @Test
+    public void GivenRepoThrowsException_WhenCreatePendingOrder_thenReturnErrorMessage(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        String eventId = "1";
+        String userId = "user";
+        int quantity = 5 ;
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishReserveTickets(eventId, quantity)).thenReturn(true);
+        when(activeOrderRepoMock.save(any(ActiveOrderItem.class))).thenThrow(new RuntimeException("Error saving order"));
+        assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId, quantity));
+    }
 
+    @Test
+    public void givenValidOrder_whenCompleteOrder_thenOrderIsRemovedFromRepo() {
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("user");
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        ActiveOrderItem order = mock(ActiveOrderItem.class);
+        when(order.getOrderId()).thenReturn("order1");
+        when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(true);
+        activeOrderService.completeOrder(paymentGateway, sessionToken, 100, order.getOrderId());
+        verify(activeOrderRepoMock, times(1)).delete(order.getOrderId());
+    }
+    
+    @Test
+    public void givenExpiredSessionToken_whenCompleteOrder_thenReturnErrorMessage() {
+        SessionToken sessionToken = mock(SessionToken.class);
+        ActiveOrderItem order = mock(ActiveOrderItem.class);
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        String orderId = "order1";
+        when(order.getOrderId()).thenReturn(orderId);
+        when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        when(sessionToken.getToken()).thenReturn("user");
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(true);
+        verify(activeOrderRepoMock, times(0)).delete(orderId);
+
+      
+        assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
+    }
+
+    @Test
+    public void givenPaymentFailure_whenCompleteOrder_thenReturnErrorMessage() {
+        SessionToken sessionToken = mock(SessionToken.class);
+        ActiveOrderItem order = mock(ActiveOrderItem.class);
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        String orderId = "order1";
+        when(order.getOrderId()).thenReturn(orderId);
+        when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        when(sessionToken.getToken()).thenReturn("user");
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(false);
+        verify(activeOrderRepoMock, times(0)).delete(orderId);
+
+      
+        assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
+    }
+
+    @Test
+    public void givenNonExistingOrder_whenCompleteOrder_thenReturnErrorMessage() {
+        SessionToken sessionToken = mock(SessionToken.class);
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        String orderId = "nonExistingOrder";
+        when(activeOrderRepoMock.findById(orderId)).thenReturn(null);
+        when(sessionToken.getToken()).thenReturn("user");
+        when(authenticationService.validateToken(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(true);
+        verify(activeOrderRepoMock, times(0)).delete(orderId);
+
+      
+        assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
+    } 
 }
