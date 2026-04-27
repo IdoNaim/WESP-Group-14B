@@ -77,7 +77,8 @@ public class EventService implements IEventService {
                     return true;
                 })
                 .orElse(false);
-    }
+    } //rr
+
     @Override
     public boolean editEventInventory(int eventId, int newCapacity) {
         // TODO Auto-generated method stub
