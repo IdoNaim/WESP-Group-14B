@@ -12,20 +12,16 @@ import com.ticketpurchasingsystem.project.domain.event.EventListener;
 import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
 public class EventService implements IEventService {
-    IEventRepo eventRepo = EventRepo.getInstance();
+    private final IEventRepo eventRepo;
     EventPublisher eventPublisher = EventPublisher.getInstance();
     EventListener eventListener = EventListener.getInstance();
-    private static EventService instance;
-    public static EventService getInstance() {
-        if (instance == null) {
-            instance = new EventService();
-        }
-        return instance;
+        public EventService(IEventRepo eventRepo) {
+        this.eventRepo = eventRepo;
     }
+
     public boolean createEvent(EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO) {
         // Convert DTOs to domain objects
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(
@@ -53,6 +49,7 @@ public class EventService implements IEventService {
             return false;
         }
     }
+    @Override
     public EventDTO searchEvent(int eventId) {
         //TOOD implement this
         throw new UnsupportedOperationException("Unimplemented method 'searchEvent'");
@@ -69,9 +66,15 @@ public class EventService implements IEventService {
     }
     @Override
     public boolean removeEvent(int eventId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeEvent'");
-    }
+        return eventRepo.findById(eventId)
+                .map(event -> {
+                    eventRepo.delete(eventId);
+                    //eventPublisher.publishEventRemoved(event);
+                    return true;
+                })
+                .orElse(false);
+    } //rr
+
     @Override
     public boolean editEventInventory(int eventId, int newCapacity) {
         // TODO Auto-generated method stub

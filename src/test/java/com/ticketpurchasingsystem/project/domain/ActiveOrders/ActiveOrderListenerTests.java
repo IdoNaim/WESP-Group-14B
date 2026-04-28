@@ -25,7 +25,7 @@ class ActiveOrderListenerTests {
 
     @Test
     void WhenHandleGetAllActiveOrdersEventGivenOrders_ThenEventResultIsSet() {
-        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem());
+        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1","1",1));
         when(activeOrderRepo.findAll()).thenReturn(mockOrders);
         GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(REQ_ID);
 
@@ -43,6 +43,7 @@ class ActiveOrderListenerTests {
 
         assertTrue(event.getResult().isEmpty());
     }
+
 
     @Test
     void WhenHandleGetAllActiveOrdersEventGiven_ThenRepoCalledOnce() {

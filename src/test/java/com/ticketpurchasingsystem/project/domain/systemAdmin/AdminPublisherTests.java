@@ -32,7 +32,7 @@ class AdminPublisherTests {
 
     @Test
     void WhenPublishGetAllActiveOrdersGivenListenerResponds_ThenReturnOrders() {
-        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem());
+        List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1", 1));
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
             event.setResult(mockOrders);
