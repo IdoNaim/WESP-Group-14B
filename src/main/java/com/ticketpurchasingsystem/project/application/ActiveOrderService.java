@@ -92,7 +92,6 @@ public class ActiveOrderService implements IActiveOrderService {
     public ActiveOrderDTO getOrderInfo(String orderId) {
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
         if(order == null){
-            System.out.println("Order not found");
             return null;
         }
         return new ActiveOrderDTO(order.getOrderId(), order.getUserId(), order.getEventId(), order.getQuantity(), order.getStatus(), order.getCreatedAt());
