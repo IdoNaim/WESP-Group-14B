@@ -15,10 +15,10 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public ActiveOrderItem findById(int orderId) {
+    public ActiveOrderItem findById(String orderId) {
         for(ActiveOrderItem order : activeOrders)
         {
-            if(order.getOrderId() == orderId) {
+            if(order.getOrderId().equals(orderId)) {
                 return order;
             }
         }
@@ -26,9 +26,9 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public void delete(int orderId) {
+    public void delete(String orderId) {
         for(ActiveOrderItem order : activeOrders) {
-            if(order.getOrderId() == orderId) {
+            if(order.getOrderId().equals(orderId)) {
                 activeOrders.remove(order);
                 break;
             }
@@ -39,7 +39,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     public void update(ActiveOrderItem order) {
         boolean found = false;
         for(ActiveOrderItem o : activeOrders) {
-            if(o.getOrderId() == order.getOrderId()) {
+            if(o.getOrderId().equals(order.getOrderId())) {
                 o.editOrder(order);
                 found = true;
                 break;
@@ -49,5 +49,10 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             activeOrders.add(order);
         }
     }
-    
+
+    @Override
+    public List<ActiveOrderItem> findAll() {
+        return List.copyOf(activeOrders);
+    }
+
 }

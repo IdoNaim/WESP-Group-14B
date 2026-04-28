@@ -3,15 +3,15 @@ package com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents
 import org.springframework.context.ApplicationEvent;
 
 public class IsValidEventIDEvent extends ApplicationEvent {
-    private int eventId;
+    private String eventId;
     private boolean isValid = false; // The listener will set this
 
-    public IsValidEventIDEvent(Object source, int eventId) {
+    public IsValidEventIDEvent(Object source, String eventId) {
         super(source);
         this.eventId = eventId;
     }
 
-    public int getEventId() { return eventId; }
+    public String getEventId() { return eventId; }
     
     public boolean isValid() { return isValid; }
     

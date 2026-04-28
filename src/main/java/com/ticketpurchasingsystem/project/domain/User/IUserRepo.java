@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-public class IUserRepo {
+import java.util.List;
 
+public interface IUserRepo {
+    List<UserInfo> findAll();
 }

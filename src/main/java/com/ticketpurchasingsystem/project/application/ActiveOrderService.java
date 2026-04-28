@@ -16,13 +16,13 @@ public class ActiveOrderService implements IActiveOrderService {
     }
     
     @Override
-    public String createActiveOrder(String userId, int eventId, int quantity) {
+    public String createActiveOrder(String userId, String eventId, int quantity) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public void cancelActiveOrder(int orderId) {
+    public void cancelActiveOrder(String orderId) {
         // TODO Auto-generated method stub
         
     }
@@ -34,19 +34,19 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void getActiveOrder(int orderId) {
+    public void getActiveOrder(String orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void completeActiveOrder(int orderId) {
+    public void completeActiveOrder(String orderId) {
         // TODO Auto-generated method stub
         
     }
 
     @Override
-    public void updateActiveOrder(int orderId, int quantity) {
+    public void updateActiveOrder(String orderId, int quantity) {
         // TODO Auto-generated method stub
         
     }
@@ -71,16 +71,17 @@ public class ActiveOrderService implements IActiveOrderService {
             return false;
         }
     }
-    private boolean isValidEventID(int eventId) {
+    private boolean isValidEventID(String eventId) {
         
         return activeOrderPublisher.publishIsValidEventIDEvent(eventId);
     }
-    private boolean isValidOrderID(int orderId) {
-        
-        return orderId > 0;
+    private boolean isValidOrderID(String orderId) {
+        //TODO: implement this or delete this
+        // Implement your logic to validate the order ID here
+        return true; // Placeholder return value
     }
 
-    public ActiveOrderDTO getOrderInfo(int orderId) {
+    public ActiveOrderDTO getOrderInfo(String orderId) {
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
         if(order == null){
             System.out.println("Order not found");

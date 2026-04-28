@@ -7,7 +7,7 @@ public class ActiveOrderPublisher {
     public ActiveOrderPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
-    public boolean publishIsValidEventIDEvent(int eventId) {
+    public boolean publishIsValidEventIDEvent(String eventId) {
         IsValidEventIDEvent event = new IsValidEventIDEvent(this, eventId);
         eventPublisher.publishEvent(event);
         return event.isValid();
