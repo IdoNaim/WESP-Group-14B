@@ -89,7 +89,7 @@ public class ActiveOrderTests {
         
         ActiveOrderItem activeOrder = new ActiveOrderItem(orderId, userId, eventId, quantity);
         when(activeOrderRepoMock.findById(orderId)).thenReturn(activeOrder);
-        ActiveOrderDTO result = activeOrderService.getOrderInfo(orderId);
+        ActiveOrderDTO result = activeOrderService.getActiveOrderInfo(orderId);
         assertNotNull(result);
         assertEquals(orderId, result.getOrderId());
         assertEquals(userId, result.getUserId());
@@ -98,9 +98,9 @@ public class ActiveOrderTests {
     }
     @Test
     public void GivenInvalidOrderId_WhenGetOrderInfo_thenReturnNull() {
-        String orderId = "1";
+        String orderId = "-1";
         when(activeOrderRepoMock.findById(orderId)).thenReturn(null);
-        ActiveOrderDTO result = activeOrderService.getOrderInfo(orderId);
+        ActiveOrderDTO result = activeOrderService.getActiveOrderInfo(orderId);
         assertNull(result);
     }
 

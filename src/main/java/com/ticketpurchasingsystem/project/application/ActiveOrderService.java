@@ -89,7 +89,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-    public ActiveOrderDTO getOrderInfo(String orderId) {
+    public ActiveOrderDTO getActiveOrderInfo(String orderId) {
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
         if(order == null){
             return null;
