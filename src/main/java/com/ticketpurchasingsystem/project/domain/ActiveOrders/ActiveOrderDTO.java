@@ -2,14 +2,14 @@ package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import java.sql.Timestamp;
 
 public class ActiveOrderDTO {
-    private int orderId;
+    private String orderId;
     private String userId;
-    private int eventId;
+    private String eventId;
     private int quantity;
     private String status;
     private Timestamp createdAt;
 
-    public ActiveOrderDTO(int orderId, String userId, int eventId, int quantity, String status, Timestamp createdAt) {
+    public ActiveOrderDTO(String orderId, String userId, String eventId, int quantity, String status, Timestamp createdAt) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
@@ -18,13 +18,13 @@ public class ActiveOrderDTO {
         this.createdAt = createdAt;
     }
 
-    public int getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
     public String getUserId() {
         return userId;
     }
-    public int getEventId() {
+    public String getEventId() {
         return eventId;
     }
     public int getQuantity() {
@@ -36,13 +36,13 @@ public class ActiveOrderDTO {
     public Timestamp getCreatedAt() {
         return createdAt;
     }
-    public void setOrderId(int orderId) {
+    public void setOrderId(String orderId) {
         this.orderId = orderId;
     }
     public void setUserId(String userId) {
         this.userId = userId;
     }
-    public void setEventId(int eventId) {
+    public void setEventId(String eventId) {
         this.eventId = eventId;
     }
     public void setQuantity(int quantity) {
