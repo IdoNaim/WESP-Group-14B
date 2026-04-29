@@ -1,6 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.authTest;
 
-import com.ticketpurchasingsystem.project.domain.authentication.AuthPublisher;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
@@ -29,9 +28,6 @@ class DomainAuthServiceTest {
     @Mock
     private ISessionRepo sessionRepo;
 
-    @Mock
-    private AuthPublisher authPublisher;
-
     @InjectMocks
     private DomainAuthService domainAuthService;
 
@@ -44,34 +40,28 @@ class DomainAuthServiceTest {
         domainAuthService.init();
     }
 
-    // Token creation
-
     @Test
     void GivenUsername_WhenAuthenticateAndCreateSession_ThenTokenIsRealJwt() {
         // Arrange
-        doNothing().when(sessionRepo).save(any(SessionToken.class));
-        doNothing().when(authPublisher).publishNewSession(anyString());
+        String inputUsername = USERNAME;
 
         // Act
-        String token = domainAuthService.authenticateAndCreateSession(USERNAME);
+        String token = domainAuthService.authenticateAndCreateSession(inputUsername);
 
         // Assert
         assertNotNull(token, "Token must not be null");
-        assertEquals(3, token.split("\\.").length,
-                "JWT must have 3 parts (header.payload.signature)");
+        assertEquals(3, token.split("\\.").length, "JWT must have 3 parts (header.payload.signature)");
+        verify(sessionRepo, times(1)).save(any(SessionToken.class));
     }
 
     @Test
     void GivenUsername_WhenAuthenticateAndCreateSession_ThenTokenSubjectIsUsername() {
         // Arrange
-        doNothing().when(sessionRepo).save(any(SessionToken.class));
-        doNothing().when(authPublisher).publishNewSession(anyString());
+        String inputUsername = USERNAME;
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
         // Act
-        String token = domainAuthService.authenticateAndCreateSession(USERNAME);
-
-        // Decode manually using the same secret to inspect claims
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        String token = domainAuthService.authenticateAndCreateSession(inputUsername);
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -79,22 +69,18 @@ class DomainAuthServiceTest {
                 .getBody();
 
         // Assert
-        assertEquals(USERNAME, claims.getSubject(),
-                "Token subject must match the username it was created for");
+        assertEquals(inputUsername, claims.getSubject(), "Token subject must match the username");
     }
 
     @Test
     void GivenUsername_WhenAuthenticateAndCreateSession_ThenTokenExpiresInFuture() {
         // Arrange
-        doNothing().when(sessionRepo).save(any(SessionToken.class));
-        doNothing().when(authPublisher).publishNewSession(anyString());
+        String inputUsername = USERNAME;
         long beforeCreation = System.currentTimeMillis();
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
         // Act
-        String token = domainAuthService.authenticateAndCreateSession(USERNAME);
-
-        // Decode
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        String token = domainAuthService.authenticateAndCreateSession(inputUsername);
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -113,11 +99,11 @@ class DomainAuthServiceTest {
     @Test
     void GivenUsername_WhenAuthenticateAndCreateSession_ThenSavedTokenMatchesReturned() {
         // Arrange
+        String inputUsername = USERNAME;
         ArgumentCaptor<SessionToken> captor = ArgumentCaptor.forClass(SessionToken.class);
-        doNothing().when(authPublisher).publishNewSession(anyString());
 
         // Act
-        String returnedToken = domainAuthService.authenticateAndCreateSession(USERNAME);
+        String returnedToken = domainAuthService.authenticateAndCreateSession(inputUsername);
 
         // Assert
         verify(sessionRepo).save(captor.capture());
@@ -125,16 +111,13 @@ class DomainAuthServiceTest {
                 "The returned token and the saved token must be identical");
     }
 
-    // Session validation
-
     @Test
     void GivenValidTokenInRepo_WhenIsSessionValid_ThenReturnTrue() {
         // Arrange
-        doNothing().when(sessionRepo).save(any());
-        doNothing().when(authPublisher).publishNewSession(anyString());
         String token = domainAuthService.authenticateAndCreateSession(USERNAME);
+        long farFuture = System.currentTimeMillis() + 99999;
         when(sessionRepo.findByToken(token))
-                .thenReturn(Optional.of(new SessionToken(token, System.currentTimeMillis() + 99999)));
+                .thenReturn(Optional.of(new SessionToken(token, farFuture)));
 
         // Act
         boolean valid = domainAuthService.isSessionValid(token);
@@ -146,8 +129,6 @@ class DomainAuthServiceTest {
     @Test
     void GivenTokenRemovedFromRepo_WhenIsSessionValid_ThenReturnFalse() {
         // Arrange
-        doNothing().when(sessionRepo).save(any());
-        doNothing().when(authPublisher).publishNewSession(anyString());
         String token = domainAuthService.authenticateAndCreateSession(USERNAME);
         when(sessionRepo.findByToken(token)).thenReturn(Optional.empty());
 
@@ -155,46 +136,36 @@ class DomainAuthServiceTest {
         boolean valid = domainAuthService.isSessionValid(token);
 
         // Assert
-        assertFalse(valid,
-                "A JWT that was removed from the repo must be invalid even if structurally correct");
+        assertFalse(valid, "A JWT that was removed from the repo must be invalid");
     }
-
-    // Username extraction
 
     @Test
     void GivenRealToken_WhenGetUsernameFromToken_ThenReturnCorrectUsername() {
         // Arrange
-        doNothing().when(sessionRepo).save(any());
-        doNothing().when(authPublisher).publishNewSession(anyString());
-        String token = domainAuthService.authenticateAndCreateSession(USERNAME);
+        String inputUsername = USERNAME;
+        String token = domainAuthService.authenticateAndCreateSession(inputUsername);
 
         // Act
         String extractedUsername = domainAuthService.getUsernameFromToken(token);
 
         // Assert
-        assertEquals(USERNAME, extractedUsername,
-                "Username extracted from the token must match the one it was created for");
+        assertEquals(inputUsername, extractedUsername, "Username extracted from the token must match the original");
     }
 
-    // full logon and logout flow
     @Test
     void GivenUsername_WhenFullLoginAndLogoutFlow_ThenSessionIsCreatedThenDestroyed() {
         // Arrange
-        doNothing().when(sessionRepo).save(any());
-        doNothing().when(authPublisher).publishNewSession(anyString());
+        String inputUsername = USERNAME;
+        String token = domainAuthService.authenticateAndCreateSession(inputUsername);
+        long farFuture = System.currentTimeMillis() + 99999;
 
-        // Act — login
-        String token = domainAuthService.authenticateAndCreateSession(USERNAME);
-
-        // Act — validate before logout
         when(sessionRepo.findByToken(token))
-                .thenReturn(Optional.of(new SessionToken(token, System.currentTimeMillis() + 99999)));
-        boolean validBeforeLogout = domainAuthService.isSessionValid(token);
+                .thenReturn(Optional.of(new SessionToken(token, farFuture)));
 
-        // Act — logout
+        // Act
+        boolean validBeforeLogout = domainAuthService.isSessionValid(token);
         domainAuthService.invalidateSession(token);
 
-        // Act — validate after logout
         when(sessionRepo.findByToken(token)).thenReturn(Optional.empty());
         boolean validAfterLogout = domainAuthService.isSessionValid(token);
 

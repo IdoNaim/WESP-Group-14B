@@ -1,15 +1,19 @@
 package com.ticketpurchasingsystem.project.application;
 
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthenticationService {
 
     private final DomainAuthService domainAuthService;
+    private final ISessionRepo sessionRepo;
 
-    public AuthenticationService(DomainAuthService domainAuthService) {
+    public AuthenticationService(DomainAuthService domainAuthService, ISessionRepo sessionRepo) {
         this.domainAuthService = domainAuthService;
+        this.sessionRepo = sessionRepo;
     }
 
     public String login(String username) {
@@ -26,5 +30,9 @@ public class AuthenticationService {
 
     public String getUser(String token) {
         return domainAuthService.getUsernameFromToken(token);
+    }
+
+    public void removeSessionManually(String token) {
+        sessionRepo.deleteByToken(token);
     }
 }
