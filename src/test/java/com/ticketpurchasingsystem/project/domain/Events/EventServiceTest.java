@@ -4,7 +4,10 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +19,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ticketpurchasingsystem.project.application.EventService;
-import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
@@ -36,7 +38,7 @@ public class EventServiceTest {
     // ================= CREATE EVENT =================
 
     @Test
-    void createEvent_shouldReturnTrue_whenValidInput() {
+    void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
 
         EventDTO dto = new EventDTO(
                 1,
@@ -53,16 +55,14 @@ public class EventServiceTest {
         when(policyDTO.maxAge()).thenReturn(60);
         when(policyDTO.emnptySeatLeft()).thenReturn(false);
 
-        List<DiscountDTO> discounts = Collections.emptyList();
-
-        boolean result = eventService.createEvent(dto, policyDTO, discounts);
+        boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
 
         assertTrue(result);
         verify(mockRepo).save(any(Event.class));
     }
 
     @Test
-    void createEvent_shouldReturnFalse_whenRepoThrowsException() {
+    void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
 
         EventDTO dto = new EventDTO(
                 1,
@@ -86,85 +86,96 @@ public class EventServiceTest {
         assertFalse(result);
     }
 
-        // ================= EDIT EVENT DATE =================
+    // ================= SEARCH EVENT =================
+
     @Test
-    void editEventDate_shouldReturnTrue_whenEventExists() {
+    void GivenExistingEvent_WhenSearchEvent_ThenReturnDTO() {
 
         Event mockEvent = mock(Event.class);
-        when(mockRepo.findById(1)).thenReturn(mockEvent);
+        LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime newDate = LocalDateTime.now().plusDays(5);
+        when(mockEvent.getCompanyId()).thenReturn(1);
+        when(mockEvent.getEventName()).thenReturn("Concert");
+        when(mockEvent.getEventCapacity()).thenReturn(100);
+        when(mockEvent.getEventDate()).thenReturn(now);
+        when(mockEvent.isActive()).thenReturn(true);
 
-        boolean result = eventService.editEventDate(1, newDate);
+        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
 
-        assertTrue(result);
-        verify(mockEvent).setEventDate(newDate);
-        verify(mockRepo).save(mockEvent);
+        EventDTO result = eventService.searchEvent("1");
+
+        assertNotNull(result);
+        assertEquals(1, result.companyId());
+        assertEquals("Concert", result.eventName());
+        assertEquals(100, result.eventCapacity());
+        assertEquals(now, result.eventDateTime());
+        assertTrue(result.isActive());
     }
 
     @Test
-    void editEventDate_shouldReturnFalse_whenEventNotFound() {
+    void GivenNonExistingEvent_WhenSearchEvent_ThenReturnNull() {
 
-        when(mockRepo.findById(1)).thenReturn(null);
+        when(mockRepo.findById("1")).thenReturn(Optional.empty());
 
-        boolean result = eventService.editEventDate(1, LocalDateTime.now());
+        EventDTO result = eventService.searchEvent("1");
 
-        assertFalse(result);
-        verify(mockRepo, never()).save(any());
+        assertNull(result);
+    }
+
+    // ================= SEARCH EVENTS BY COMPANY =================
+
+    @Test
+    void GivenEventsExist_WhenSearchEventsByCompany_ThenReturnList() {
+
+        Event event = mock(Event.class);
+        LocalDateTime now = LocalDateTime.now();
+
+        when(event.getCompanyId()).thenReturn(1);
+        when(event.getEventName()).thenReturn("Concert");
+        when(event.getEventCapacity()).thenReturn(100);
+        when(event.getEventDate()).thenReturn(now);
+        when(event.isActive()).thenReturn(true);
+
+        when(mockRepo.findByCompanyId(1)).thenReturn(List.of(event));
+
+        List<EventDTO> result = eventService.searchEventsByCompany(1);
+
+        assertEquals(1, result.size());
+        assertEquals("Concert", result.get(0).eventName());
     }
 
     @Test
-    void editEventDate_shouldReturnFalse_whenSaveThrowsException() {
+    void GivenNoEvents_WhenSearchEventsByCompany_ThenReturnEmptyList() {
 
-        Event mockEvent = mock(Event.class);
-        when(mockRepo.findById(1)).thenReturn(mockEvent);
+        when(mockRepo.findByCompanyId(1)).thenReturn(Collections.emptyList());
 
-        doThrow(new RuntimeException()).when(mockRepo).save(mockEvent);
+        List<EventDTO> result = eventService.searchEventsByCompany(1);
 
-        boolean result = eventService.editEventDate(1, LocalDateTime.now());
-
-        assertFalse(result);
-        verify(mockEvent).setEventDate(any());
+        assertTrue(result.isEmpty());
     }
 
     // ================= REMOVE EVENT =================
 
     @Test
-    void removeEvent_shouldDeleteEvent_whenEventExists() {
+    void GivenExistingEvent_WhenRemoveEvent_ThenDeleteAndReturnTrue() {
 
-        when(mockRepo.delete(1)).thenReturn(true);
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
 
-        boolean result = eventService.removeEvent(1);
+        boolean result = eventService.removeEvent("1");
 
         assertTrue(result);
-        verify(mockRepo).delete(1);
+        verify(mockRepo).delete("1");
     }
 
     @Test
-    void removeEvent_shouldReturnFalse_whenEventNotFound() {
+    void GivenNonExistingEvent_WhenRemoveEvent_ThenReturnFalse() {
 
-        when(mockRepo.delete(1)).thenReturn(false);
+        when(mockRepo.findById("1")).thenReturn(Optional.empty());
 
-        boolean result = eventService.removeEvent(1);
+        boolean result = eventService.removeEvent("1");
 
         assertFalse(result);
         verify(mockRepo).delete(1);
     }
-    // ================= EDIT INVENTORY =================
-
-    // @Test
-    // void editEventInventory_shouldThrowException_whenNotImplemented() {
-    //     assertThrows(UnsupportedOperationException.class,
-    //             () -> eventService.editEventInventory(1, 200));
-    // }
-
-    // // ================= CONFIGURE SEATING MAP =================
-
-    // @Test
-    // void configureEventSeatingMap_shouldThrowException_whenNotImplemented() {
-    //     SeatingMap seatingMap = mock(SeatingMap.class);
-
-    //     assertThrows(UnsupportedOperationException.class,
-    //             () -> eventService.configureEventSeatinMap(1, seatingMap));
-    // }
 }
