@@ -352,3 +352,4 @@ public class UserHandler {
             throw new RuntimeException("Failed to set user group discount: " + e.getMessage());
         }
     }
+}
