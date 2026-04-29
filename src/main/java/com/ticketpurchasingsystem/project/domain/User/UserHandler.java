@@ -1,11 +1,18 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
+import java.util.List;
+
+import org.springframework.util.IdGenerator;
+
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class UserHandler {
+    private final ObjectMapper objectMapper;
 
     public UserHandler() {
+        this.objectMapper = new ObjectMapper();
     }
 
     public boolean isUserLoggedIn(IUserRepo userRepo, String userId) {
@@ -45,9 +52,11 @@ public class UserHandler {
         }
     }
 
-    public void exitPlatform() {
-        
-    }
+    public void handleGuestExit(IUserRepo userRepo, SessionToken sessionToken) {
+        try {
+            List<UserInfo> guests = userRepo.getAllGuests();
+            for (UserInfo guest : guests) {
+
 
     public void loginUser(IUserRepo userRepo, String userId, String password) {
         // Implement logic to authenticate and log in the user
@@ -70,7 +79,7 @@ public class UserHandler {
         try {
             UserInfo userInfo = userRepo.findByID(userId);
             if (userInfo == null || !userInfo.isLoggedIn()) {
-                throw new RuntimeException("User is not logged in.");
+                throw new RuntimeException("User is not found.");
             }
             userInfo.logout();
             userRepo.store(userInfo); // Update the user info in the repository
@@ -81,14 +90,30 @@ public class UserHandler {
     }
 
 
-    public UserInfo getUserInfo(IUserRepo userRepo, String userId)
+    public UserDTO getUser(IUserRepo userRepo, String userId)
     {
-        return userRepo.findByID(userId);
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            return new UserDTO(userInfo.getId(), userInfo.getName(), userInfo.getEmail(), userInfo.getUserGroupDiscount());
+        } catch (Exception e) {
+            // Handle exceptions (e.g., user not found)
+            throw new RuntimeException("Failed to get user info: " + e.getMessage());
+        }
     }
 
     private String generateUniqueId() {
         // Implement logic to generate a unique ID for the user (e.g., using UUID)
-        return null;
+        return java.util.UUID.randomUUID().toString();
     }
+
+    public List<UserDTO> getAllUsers(IUserRepo userRepo) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllUsers'");
+    }
+
+
 
 }
