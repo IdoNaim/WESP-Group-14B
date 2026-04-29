@@ -1,6 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.authentication;
 
-class SessionToken {
+public class SessionToken {
     private String token;
     private String userId;
     private long expirationTime;

@@ -1,6 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.authentication;
 
-class NewSessionEvent {
+public class NewSessionEvent {
     private final String userId;
     private final String sessionToken;
 

@@ -1,5 +1,8 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
+import org.springframework.boot.autoconfigure.jms.JmsProperties.Listener.Session;
+
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 //** just a very early version of the user info class, we will add more fields and methods to it as we go along
 // the user type can be hybrid can be owner on one group and founder of another, but for now we will just have one user type for each user, we will add more fields to the user info class as we go along, and we will also add more methods to it as we go along
@@ -7,38 +10,99 @@ package com.ticketpurchasingsystem.project.domain.User;
 // Not sure where to put user premissions and roles, maybe we can have a separate class for that and link it to the user info class, or maybe we can just have a field in the user info class for that, we will decide on that later when we have a better understanding of the requirements and the design of the system
 //  */
 public class UserInfo {
+    String id;
     String name;
     String email;
     String password;
-    UserState userType;
+    UserState userState;
     UserGroupDiscount userGroupDiscount;
+    boolean LoggedIn = false ;
+    SessionToken sessionToken;
 
-    public UserInfo(String name, String email, String password) {
+    // registration
+    public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
+        this.id = id;
         this.name = name;
         this.email = email;
         this.password = password;
-    }
-
-    public UserInfo() {
-        this.name = "";
-        this.email = "";
-        this.password = "";
-    }
-
-     public String getName() {
-        return name;
-    }
-    public void setUserGroupDiscount(UserGroupDiscount userGroupDiscount) {
+        this.userState = UserState.GUEST;
         this.userGroupDiscount = userGroupDiscount;
     }
 
-     public UserGroupDiscount getUserGroupDiscount() {
-        return userGroupDiscount;
-    }
-    public void setUserType(UserState userType) {
-        this.userType = userType;
+    // guest
+    public UserInfo(String id, SessionToken sessionToken) {
+        this.id = id; // Generate a unique ID for the guest user (e.g., using UUID)
+        this.name = "";
+        this.email = "";
+        this.password = "";
+        this.userState = UserState.GUEST;
+        this.userGroupDiscount = UserGroupDiscount.NONE;
+        this.sessionToken = sessionToken; // Store the session token for the guest user
     }
 
+    // login
+    public UserInfo(UserInfo userInfo) {
+        this.id = userInfo.id;
+        this.name = userInfo.name;
+        this.email = userInfo.email;
+        this.password = userInfo.password;
+        this.userState = userInfo.userState;
+        this.userGroupDiscount = userInfo.userGroupDiscount;
+        this.LoggedIn = true;
+        this.sessionToken = userInfo.sessionToken; // Use the existing session token for the logged-in user
+    }
+
+    public void logout() {
+        if (!LoggedIn) {
+            throw new IllegalStateException("User is not logged in.");
+        }
+        this.name = "";
+        this.email = "";
+        this.password = "";
+        this.userState = UserState.GUEST;
+        this.userGroupDiscount = UserGroupDiscount.NONE;
+        this.LoggedIn = false;
+    }
+
+    public boolean isLoggedIn() {
+        return LoggedIn;
+    }
+
+    public void setUserGroupDiscount(UserGroupDiscount userGroupDiscount) {
+        if (!isLoggedIn()) {
+            throw new IllegalStateException("User must be logged in to set group discount.");
+        }
+        if (userGroupDiscount == null) {
+            this.userGroupDiscount = UserGroupDiscount.NONE;
+        } else {
+            this.userGroupDiscount = userGroupDiscount;
+        }
+    }
+    
+    public UserGroupDiscount getUserGroupDiscount() {
+        return userGroupDiscount;
+    }
+    
+    public String getId() {
+        return id;
+    }
+    
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    public UserState getUserState() {
+        return userState;
+    }
+    
+    public void setUserState(UserState userState) {
+        this.userState = userState;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
     public void setName(String name) {
         this.name = name;
     }

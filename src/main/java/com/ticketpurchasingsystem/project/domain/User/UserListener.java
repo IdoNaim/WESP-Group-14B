@@ -1,19 +1,68 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-import com.ticketpurchasingsystem.project.domain.User.UserEvents.userEvents;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
+import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestEvents;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserEvents;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogInEvent;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogOutEvent;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserRegistrationEvent;
+import com.ticketpurchasingsystem.project.domain.authentication.NewSessionEvent;
+@Component
 public class UserListener {
-        private IUserRepo userRepo;
-        private UserPublisher publisher;
     
-        public UserListener(IUserRepo userRepo, UserPublisher publisher) {
+        IUserRepo userRepo;
+        UserHandler userHandler;
+
+        public UserListener(IUserRepo userRepo, UserHandler userHandler) {
             this.userRepo = userRepo;
-            this.publisher = publisher;
+            this.userHandler = userHandler;
         }
-    
-        public void onUserCreated(userEvents event) {
+        
+        @EventListener
+        public void onUserRegistered(UserRegistrationEvent event) {
             // Handle the event, e.g., update the read model or notify other services
             System.out.println("User created: " + event.getUserId());
         }
+
+        @EventListener
+        public void onUserLoggedIn(UserLogInEvent event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("User logged in: " + event.getUserId());
+        }
+
+        @EventListener
+        public void onUserLoggedOut(UserLogOutEvent event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("User logged out: " + event.getUserId());
+        }
+
+        @EventListener
+        public void onUserUpdated(UserEvents event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("User updated: " + event.getUserId());
+        }
+
+        @EventListener
+        public void onUserDeleted(UserEvents event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("User deleted: " + event.getUserId());
+        }
+
+        @EventListener
+        public void onEnterPlatform(NewSessionEvent event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("guest " + event.getUserId() + "entered platform with token: " + event.getSessionToken());
+            userHandler.handleGuestEntry(userRepo, event.getSessionToken());
+        }
+
+        @EventListener
+        public void onExitPlatform(GuestEvents event) {
+            // Handle the event, e.g., update the read model or notify other services
+            System.out.println("User exited platform: " + event.getSessionToken());
+        }
+
+
     
 }
