@@ -59,21 +59,30 @@ public class EventService implements IEventService {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'searchEventsByCompany'");
     }
-    @Override
-    public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'editEventDate'");
+  @Override
+public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
+    try {
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            return false;
+        }
+        event.setEventDate(newDateTime);
+        eventRepo.save(event);
+        return true;
+
+    } catch (Exception e) {
+        return false;
     }
+}
+
     @Override
     public boolean removeEvent(int eventId) {
-        return eventRepo.findById(eventId)
-                .map(event -> {
-                    eventRepo.delete(eventId);
-                    //eventPublisher.publishEventRemoved(event);
-                    return true;
-                })
-                .orElse(false);
-    } //rr
+        try {
+            return eventRepo.delete(eventId);
+        } catch (Exception e) {
+            return false;
+        }
+    } 
 
     @Override
     public boolean editEventInventory(int eventId, int newCapacity) {

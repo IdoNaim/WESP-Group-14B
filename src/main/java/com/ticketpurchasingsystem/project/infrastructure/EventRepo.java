@@ -3,7 +3,6 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -39,11 +38,8 @@ public class EventRepo implements IEventRepo {
 
 
     @Override
-    public Optional<Event> findById(Integer eventId) {
-
-        return Optional.ofNullable(
-                storage.get(eventId)
-        );
+    public Event findById(Integer eventId) {
+        return storage.get(eventId);
     }
 
 
@@ -68,8 +64,11 @@ public class EventRepo implements IEventRepo {
 
 
     @Override
-    public void delete(Integer eventId) {
-
+    public boolean delete(Integer eventId) {
+        if (!storage.containsKey(eventId)) {
+            return false;
+        }
         storage.remove(eventId);
+        return true;
     }
 }

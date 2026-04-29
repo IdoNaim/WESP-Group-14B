@@ -92,4 +92,8 @@ public class Event {
     public void setEventId(Integer eventId) {
         this.eventId = eventId;
     }
+
+    public void setEventDate(LocalDateTime eventDate) {
+        this.eventDate = eventDate;
+    }
 }

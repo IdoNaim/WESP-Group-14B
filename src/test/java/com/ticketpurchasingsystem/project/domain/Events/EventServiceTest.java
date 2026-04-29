@@ -3,7 +3,6 @@ package com.ticketpurchasingsystem.project.domain.Events;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,7 +24,7 @@ import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 
 public class EventServiceTest {
 
-        private EventService eventService;
+    private EventService eventService;
     private IEventRepo mockRepo;
 
     @BeforeEach
@@ -87,37 +86,53 @@ public class EventServiceTest {
         assertFalse(result);
     }
 
-    // ================= SEARCH EVENT =================
+        // ================= EDIT EVENT DATE =================
+    @Test
+    void editEventDate_shouldReturnTrue_whenEventExists() {
 
-    // @Test
-    // void searchEvent_shouldThrowException_whenNotImplemented() {
-    //     assertThrows(UnsupportedOperationException.class,
-    //             () -> eventService.searchEvent(1));
-    // }
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById(1)).thenReturn(mockEvent);
 
-    // // ================= SEARCH EVENTS BY COMPANY =================
+        LocalDateTime newDate = LocalDateTime.now().plusDays(5);
 
-    // @Test
-    // void searchEventsByCompany_shouldThrowException_whenNotImplemented() {
-    //     assertThrows(UnsupportedOperationException.class,
-    //             () -> eventService.searchEventsByCompany(1));
-    // }
+        boolean result = eventService.editEventDate(1, newDate);
 
-    // // ================= EDIT EVENT DATE =================
+        assertTrue(result);
+        verify(mockEvent).setEventDate(newDate);
+        verify(mockRepo).save(mockEvent);
+    }
 
-    // @Test
-    // void editEventDate_shouldThrowException_whenNotImplemented() {
-    //     assertThrows(UnsupportedOperationException.class,
-    //             () -> eventService.editEventDate(1, LocalDateTime.now()));
-    // }
+    @Test
+    void editEventDate_shouldReturnFalse_whenEventNotFound() {
+
+        when(mockRepo.findById(1)).thenReturn(null);
+
+        boolean result = eventService.editEventDate(1, LocalDateTime.now());
+
+        assertFalse(result);
+        verify(mockRepo, never()).save(any());
+    }
+
+    @Test
+    void editEventDate_shouldReturnFalse_whenSaveThrowsException() {
+
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById(1)).thenReturn(mockEvent);
+
+        doThrow(new RuntimeException()).when(mockRepo).save(mockEvent);
+
+        boolean result = eventService.editEventDate(1, LocalDateTime.now());
+
+        assertFalse(result);
+        verify(mockEvent).setEventDate(any());
+    }
 
     // ================= REMOVE EVENT =================
 
     @Test
     void removeEvent_shouldDeleteEvent_whenEventExists() {
 
-        Event mockEvent = mock(Event.class);
-        when(mockRepo.findById(1)).thenReturn(Optional.of(mockEvent));
+        when(mockRepo.delete(1)).thenReturn(true);
 
         boolean result = eventService.removeEvent(1);
 
@@ -128,14 +143,13 @@ public class EventServiceTest {
     @Test
     void removeEvent_shouldReturnFalse_whenEventNotFound() {
 
-        when(mockRepo.findById(1)).thenReturn(Optional.empty());
+        when(mockRepo.delete(1)).thenReturn(false);
 
         boolean result = eventService.removeEvent(1);
 
         assertFalse(result);
-        verify(mockRepo, never()).delete(any());
+        verify(mockRepo).delete(1);
     }
-
     // ================= EDIT INVENTORY =================
 
     // @Test
