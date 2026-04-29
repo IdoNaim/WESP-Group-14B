@@ -1,16 +1,20 @@
 package com.ticketpurchasingsystem.project.application;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
-
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublisher;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
     ActiveOrderPublisher activeOrderPublisher;
     IActiveOrderRepo activeOrderRepo;
+
     public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
     }
+    
     @Override
     public String createActiveOrder(String userId, String eventId, int quantity) {
         // TODO Auto-generated method stub
@@ -72,9 +76,25 @@ public class ActiveOrderService implements IActiveOrderService {
         return activeOrderPublisher.publishIsValidEventIDEvent(eventId);
     }
     private boolean isValidOrderID(String orderId) {
-        //TODO: implement this or delete this
-        // Implement your logic to validate the order ID here
-        return true; // Placeholder return value
+        try {
+            int orderIdInt = Integer.parseInt(orderId);
+            if(orderIdInt > 0){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    public ActiveOrderDTO getActiveOrderInfo(String orderId) {
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            return null;
+        }
+        return new ActiveOrderDTO(order.getOrderId(), order.getUserId(), order.getEventId(), order.getQuantity(), order.getStatus(), order.getCreatedAt());
     }
     
 }

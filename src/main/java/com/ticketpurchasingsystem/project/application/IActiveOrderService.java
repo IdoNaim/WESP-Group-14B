@@ -8,6 +8,7 @@ public interface  IActiveOrderService {
     public void completeActiveOrder(String orderId) ; // maybe add payment info as parameter?
     public void updateActiveOrder(String orderId, int quantity) ;
     public boolean saveOrder(ActiveOrderItem order);
+    public ActiveOrderDTO getActiveOrderInfo(String orderId);
 
     
 }
