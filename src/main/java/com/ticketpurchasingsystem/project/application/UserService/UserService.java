@@ -34,15 +34,15 @@ public class UserService implements IUserService {
     };
 
     // register the user without logging in
-    public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount) {
-        userHandler.registerUser(userId, name, email, password, userGroupDiscount, userRepo);
+    public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
+        userHandler.registerUser(userId, name, email, password, userGroupDiscount, userRepo, sessionTokenStr);
     }; 
 
     public String loginUser(String userId, String password, String sessionTokenStr) {
         return userHandler.loginUser(userRepo, userId, password, sessionTokenStr);
     };
-    public void logoutUser(String userId) {
-        userHandler.logoutUser(userRepo, userId);
+    public void logoutUser(String userId, String sessionTokenStr) {
+        userHandler.logoutUser(userRepo, userId, sessionTokenStr);
     };
 
     public List<UserDTO> getAllUsers() {
@@ -53,24 +53,24 @@ public class UserService implements IUserService {
         return userHandler.getUser(userRepo, userId);
     };
 
-    public void deleteUser(String userId) {
-        userHandler.deleteUser(userRepo, userId);
+    public void deleteUser(String userId, String sessionTokenStr) {
+        userHandler.deleteUser(userRepo, userId, sessionTokenStr);
     };
 
-    public void editUsername(String userId, String oldUsername, String newUsername) {
-        userHandler.editUsername(userRepo, userId, oldUsername, newUsername);
+    public void editUsername(String userId, String oldUsername, String newUsername, String sessionTokenStr) {
+        userHandler.editUsername(userRepo, userId, oldUsername, newUsername, sessionTokenStr);
     };
 
-    public void editPassword(String userId, String oldPassword, String newPassword) {
-        userHandler.editPassword(userRepo, userId, oldPassword, newPassword);
+    public void editPassword(String userId, String oldPassword, String newPassword, String sessionTokenStr) {
+        userHandler.editPassword(userRepo, userId, oldPassword, newPassword, sessionTokenStr);
     };
 
-    public void editEmail(String userId, String oldEmail, String newEmail) {
-        userHandler.editEmail(userRepo, userId, oldEmail, newEmail);
+    public void editEmail(String userId, String oldEmail, String newEmail, String sessionTokenStr) {
+        userHandler.editEmail(userRepo, userId, oldEmail, newEmail, sessionTokenStr);
     };
 
-    public void setUserGroupDiscount(String userId, UserGroupDiscount userGroupDiscount) {
-        userHandler.setUserGroupDiscount(userRepo, userId, userGroupDiscount);
+    public void setUserGroupDiscount(String userId, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
+        userHandler.setUserGroupDiscount(userRepo, userId, userGroupDiscount, sessionTokenStr);
     };
 
 }

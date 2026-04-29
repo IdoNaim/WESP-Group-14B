@@ -61,7 +61,7 @@ public class UserHandler {
             // Handle exceptions (e.g., failed to store guest user)
             throw new RuntimeException("Failed to store guest entry, try again, error message: " + e.getMessage()); 
         }
-        return guestId;
+        return sessionToken;
     }
 
     public void handleExit(IUserRepo userRepo, String sessionTokenStr) {
@@ -74,7 +74,8 @@ public class UserHandler {
             if (userInfo == null) {
                 throw new RuntimeException("User not found.");
             }
-            if (userInfo.getUserState() == UserState.GUEST) {
+            authenticationService.logout(sessionTokenStr); // Invalidate the session token
+            if (userInfo.isGuest()) {
                 handleGuestExit(userRepo, userInfo);
             }
             else {
@@ -117,6 +118,7 @@ public class UserHandler {
         try {
             String guestId = authenticationService.getUser(sessionTokenStr);
             userRepo.delete(guestId);
+            authenticationService.logout(sessionTokenStr); // Invalidate the session token
             userPublisher.publishGuestExited(guestId, sessionTokenStr);
         } catch (Exception e) {
             // Handle exceptions (e.g., guest user not found)
@@ -214,6 +216,139 @@ public class UserHandler {
         }
     }
 
+    public Boolean validateUserEditingHisAccount(UserInfo userInfo, String userId, String sessionTokenStr) {
+        return userInfo.getSessionTokenStr() != null && userInfo.getSessionTokenStr().equals(sessionTokenStr) && userInfo.getId().equals(userId);
+    }
 
+    public void deleteUser(IUserRepo userRepo, String userId, String sessionTokenStr) {
+        if (!authenticationService.validate(sessionTokenStr)) {
+            throw new RuntimeException("Invalid session token.");
+        }
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            if (validateUserEditingHisAccount(userInfo, userId, sessionTokenStr)) { // only the user can delete his own account
+                    logoutUser(userRepo, userId, sessionTokenStr); // Log out the user before deletion
+                    userRepo.delete(userId);
+                }
+            else {
+                throw new RuntimeException("Users can only delete their own accounts.");
+            }
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to delete user: " + e.getMessage());
+        }
+    }
 
-}
+    public void editUsername(IUserRepo userRepo, String userId, String oldUsername, String newUsername,
+            String sessionTokenStr) {
+        if (!authenticationService.validate(sessionTokenStr)) {
+            throw new RuntimeException("Invalid session token.");
+        }
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            if (validateUserEditingHisAccount(userInfo, userId, sessionTokenStr)) { // only the user can edit his own account
+                    if (!userInfo.getName().equals(oldUsername)) {
+                        throw new RuntimeException("Old username does not match current username.");
+                    }
+                    userInfo.setName(newUsername);
+                    userRepo.store(userInfo); // Update the user info in the repository
+                }
+            else {
+                throw new RuntimeException("Users can only edit their own accounts.");
+            }
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to edit username: " + e.getMessage());
+        }
+    }
+
+    public void editPassword(IUserRepo userRepo, String userId, String oldPassword, String newPassword,
+            String sessionTokenStr) {
+        if (!authenticationService.validate(sessionTokenStr)) {
+            throw new RuntimeException("Invalid session token.");
+        }
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            if (validateUserEditingHisAccount(userInfo, userId, sessionTokenStr)) {
+                    if (!PasswordEncoderUtil.matches(oldPassword, userInfo.getPassword())) {
+                        throw new RuntimeException("Old password does not match current password.");
+                    }
+                    String encryptedPass = PasswordEncoderUtil.encodePassword(newPassword);
+                    userInfo.setPassword(encryptedPass);
+                    userRepo.store(userInfo); // Update the user info in the repository
+                }
+            else {
+                throw new RuntimeException("Users can only edit their own accounts.");
+            }
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to edit password: " + e.getMessage());
+        }
+    }       
+
+    public void editEmail(IUserRepo userRepo, String userId, String oldEmail, String newEmail, String sessionTokenStr) {
+        if (!authenticationService.validate(sessionTokenStr)) {
+            throw new RuntimeException("Invalid session token.");
+        }
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            if (validateUserEditingHisAccount(userInfo, userId, sessionTokenStr)) { // only the user can edit his own account
+                    if (!userInfo.getEmail().equals(oldEmail)) {
+                        throw new RuntimeException("Old email does not match current email.");
+                    }
+                    userInfo.setEmail(newEmail);
+                    userRepo.store(userInfo); // Update the user info in the repository
+                }
+            else {
+                throw new RuntimeException("Users can only edit their own accounts.");
+            }
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to edit email: " + e.getMessage());
+        }
+    }
+
+    public void setUserGroupDiscount(IUserRepo userRepo, String userId, UserGroupDiscount userGroupDiscount,
+            String sessionTokenStr) {
+        if (!authenticationService.validate(sessionTokenStr)) {
+            throw new RuntimeException("Invalid session token.");
+        }
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                throw new RuntimeException("User not found.");
+            }
+            if (validateUserEditingHisAccount(userInfo, userId, sessionTokenStr)) { // only the user can edit his own account
+                if (userGroupDiscount != null && userInfo.getUserGroupDiscount() != userGroupDiscount) {
+                    userInfo.setUserGroupDiscount(userGroupDiscount);
+                    userRepo.store(userInfo); // Update the user info in the repository
+                }
+                else {
+                    throw new RuntimeException("Users can only edit their own accounts.");
+                }
+            }
+            else {
+                throw new RuntimeException("Users can only edit their own accounts.");
+            }
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to set user group discount: " + e.getMessage());
+        }
+    }

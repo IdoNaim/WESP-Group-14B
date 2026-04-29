@@ -43,19 +43,6 @@ public class UserInfo {
         this.LoggedIn = false;
     }
 
-    // login
-    public UserInfo(UserInfo userInfo) {
-        this.id = userInfo.id;
-        this.name = userInfo.name;
-        this.email = userInfo.email;
-        this.password = userInfo.password;
-        this.userState = userInfo.userState;
-        this.userGroupDiscount = userInfo.userGroupDiscount;
-        this.LoggedIn = true;
-        this.sessionTokenStr = userInfo.sessionTokenStr; // Use the existing session token for the logged-in user
-    }
-
-
     public boolean isLoggedIn() {
         return LoggedIn;
     }
