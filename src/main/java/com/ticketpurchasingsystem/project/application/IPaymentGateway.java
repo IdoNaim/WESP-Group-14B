@@ -1,4 +1,5 @@
 package com.ticketpurchasingsystem.project.application;
 
-public class IPaymentGateway {
+public interface IPaymentGateway {
+    public boolean pay();
 }

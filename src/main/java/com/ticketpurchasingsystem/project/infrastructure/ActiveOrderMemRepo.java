@@ -22,7 +22,8 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
                 return order;
             }
         }
-        return null;
+        return null;//maybe we should throw an exception instead?
+        //throw new IllegalArgumentException("Order with id " + orderId + " not found");
     }
 
     @Override
@@ -33,6 +34,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
                 break;
             }
         }
+        throw new IllegalArgumentException("Order with id " + orderId + " not found");
     }
 
     @Override

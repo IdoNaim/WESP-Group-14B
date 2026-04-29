@@ -93,7 +93,7 @@ public class ActiveOrderService implements IActiveOrderService {
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
         // TODO Auto-generated method stub
         if(authenticationService.validateToken(sessionToken.getToken())) {
-            return true; // Placeholder return value, replace with actual payment processing login
+            return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
             //throw new UnsupportedOperationException("Unimplemented method 'payment'");
         }else{
             throw new RuntimeException("the session has ended");
