@@ -7,11 +7,11 @@ public interface IEventRepo {
 
     Event save(Event event);
 
-    Optional<Event> findById(Integer eventId);
+    Optional<Event> findById(String eventId);
 
     List<Event> findByCompanyId(int companyId);
 
     List<Event> findActiveEvents();
 
-    void delete(Integer eventId);
+    void delete(String eventId);
 }

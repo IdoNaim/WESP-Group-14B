@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +20,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ticketpurchasingsystem.project.application.EventService;
-import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
 public class EventServiceTest {
 
@@ -104,9 +101,9 @@ public class EventServiceTest {
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
 
-        when(mockRepo.findById(1)).thenReturn(Optional.of(mockEvent));
+        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
 
-        EventDTO result = eventService.searchEvent(1);
+        EventDTO result = eventService.searchEvent("1");
 
         assertNotNull(result);
         assertEquals(1, result.companyId());
@@ -119,9 +116,9 @@ public class EventServiceTest {
     @Test
     void GivenNonExistingEvent_WhenSearchEvent_ThenReturnNull() {
 
-        when(mockRepo.findById(1)).thenReturn(Optional.empty());
+        when(mockRepo.findById("1")).thenReturn(Optional.empty());
 
-        EventDTO result = eventService.searchEvent(1);
+        EventDTO result = eventService.searchEvent("1");
 
         assertNull(result);
     }
@@ -164,20 +161,20 @@ public class EventServiceTest {
     void GivenExistingEvent_WhenRemoveEvent_ThenDeleteAndReturnTrue() {
 
         Event mockEvent = mock(Event.class);
-        when(mockRepo.findById(1)).thenReturn(Optional.of(mockEvent));
+        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
 
-        boolean result = eventService.removeEvent(1);
+        boolean result = eventService.removeEvent("1");
 
         assertTrue(result);
-        verify(mockRepo).delete(1);
+        verify(mockRepo).delete("1");
     }
 
     @Test
     void GivenNonExistingEvent_WhenRemoveEvent_ThenReturnFalse() {
 
-        when(mockRepo.findById(1)).thenReturn(Optional.empty());
+        when(mockRepo.findById("1")).thenReturn(Optional.empty());
 
-        boolean result = eventService.removeEvent(1);
+        boolean result = eventService.removeEvent("1");
 
         assertFalse(result);
         verify(mockRepo, never()).delete(any());

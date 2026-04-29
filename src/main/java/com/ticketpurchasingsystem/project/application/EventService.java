@@ -49,7 +49,7 @@ public class EventService implements IEventService {
             return false;
         }
     }
-    public EventDTO searchEvent(int eventId) {
+    public EventDTO searchEvent(String eventId) {
         Event event = eventRepo.findById(eventId).orElse(null);
         if (event == null) {
             return null;
@@ -78,12 +78,12 @@ public class EventService implements IEventService {
                 .toList();
     }
     @Override
-    public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
+    public boolean editEventDate(String eventId, LocalDateTime newDateTime) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'editEventDate'");
     }
     @Override
-    public boolean removeEvent(int eventId) {
+    public boolean removeEvent(String eventId) {
         return eventRepo.findById(eventId)
                 .map(event -> {
                     eventRepo.delete(eventId);
@@ -94,12 +94,12 @@ public class EventService implements IEventService {
     } //rr
 
     @Override
-    public boolean editEventInventory(int eventId, int newCapacity) {
+    public boolean editEventInventory(String eventId, int newCapacity) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'editEventInventory'");
     }
     @Override
-    public boolean configureEventSeatinMap(int eventId, SeatingMap seatingMapDTO) {
+    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'configureEventSeatinMap'");
     }
