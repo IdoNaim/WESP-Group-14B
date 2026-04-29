@@ -7,4 +7,6 @@ public interface ProductionService {
     public String getEventAsManager(String eventId,String userId);
     public String getAllEventsAsManager(String userId);
     public String getEventAsCustomer(String eventId);
+
+    public boolean createProductionCompany(String sessionToken, com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO companyDetails);
 }
