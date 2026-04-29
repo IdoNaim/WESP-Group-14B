@@ -11,64 +11,45 @@ import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 
 public class EventRepo implements IEventRepo {
 
-    private final Map<Integer, Event> storage = new HashMap<>();
+    private final Map<String, Event> storage = new HashMap<>();
+    private final AtomicInteger idGenerator = new AtomicInteger(1);
 
-    private final AtomicInteger idGenerator =
-            new AtomicInteger(1);
-
-    private static EventRepo instance;
-
-    public static EventRepo getInstance() {
-
-        if (instance == null) {
-            instance = new EventRepo();
-        }
-
-        return instance;
-    }
     @Override
     public Event save(Event event) {
 
-        event.setEventId(idGenerator.getAndIncrement());
+        // Generate ID only if new
+        if (event.getEventId() == null) {
+            String id = String.valueOf(idGenerator.getAndIncrement());
+            event.setEventId(id);
+        }
 
         storage.put(event.getEventId(), event);
-
         return event;
     }
 
-
     @Override
-    public Event findById(Integer eventId) {
+    public Event findById(String eventId) {
         return storage.get(eventId);
     }
 
-
     @Override
     public List<Event> findByCompanyId(int companyId) {
-
         return storage.values()
                 .stream()
                 .filter(e -> e.getCompanyId() == companyId)
                 .collect(Collectors.toList());
     }
 
-
     @Override
     public List<Event> findActiveEvents() {
-
         return storage.values()
                 .stream()
                 .filter(Event::isActive)
                 .collect(Collectors.toList());
     }
 
-
     @Override
-    public boolean delete(Integer eventId) {
-        if (!storage.containsKey(eventId)) {
-            return false;
-        }
+    public void delete(String eventId) {
         storage.remove(eventId);
-        return true;
     }
 }

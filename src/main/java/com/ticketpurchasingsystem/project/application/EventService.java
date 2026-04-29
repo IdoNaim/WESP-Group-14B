@@ -14,24 +14,32 @@ import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
+
 public class EventService implements IEventService {
+
     private final IEventRepo eventRepo;
+
     EventPublisher eventPublisher = EventPublisher.getInstance();
     EventListener eventListener = EventListener.getInstance();
-        public EventService(IEventRepo eventRepo) {
+
+    public EventService(IEventRepo eventRepo) {
         this.eventRepo = eventRepo;
     }
 
-    public boolean createEvent(EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO) {
-        // Convert DTOs to domain objects
+    public boolean createEvent(EventDTO eventDTO,
+                               PurchasePolicyDTO purchasePolicyDTO,
+                               List<DiscountDTO> discountPolicyDTO) {
+
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(
-            purchasePolicyDTO.minTickets(),
-            purchasePolicyDTO.maxTickets(),
-            purchasePolicyDTO.minAge(),
-            purchasePolicyDTO.maxAge(),
-            purchasePolicyDTO.emnptySeatLeft()
+                purchasePolicyDTO.minTickets(),
+                purchasePolicyDTO.maxTickets(),
+                purchasePolicyDTO.minAge(),
+                purchasePolicyDTO.maxAge(),
+                purchasePolicyDTO.emnptySeatLeft()
         );
+
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
+
         Event event = new Event(
                 eventDTO.companyId(),
                 eventDTO.eventName(),
@@ -40,21 +48,23 @@ public class EventService implements IEventService {
                 purchasePolicy,
                 discountPolicy
         );
-        try{
+
+        try {
             eventRepo.save(event);
-            //eventPublisher.publishEventCreated(event);
             return true;
         } catch (Exception e) {
-            // Handle exceptions (e.g., log the error)
             return false;
         }
     }
+
+    @Override
     public EventDTO searchEvent(String eventId) {
-        Event event = eventRepo.findById(eventId).orElse(null);
+        Event event = eventRepo.findById(eventId);
+
         if (event == null) {
             return null;
         }
-        // Convert domain object to DTO
+
         return new EventDTO(
                 event.getCompanyId(),
                 event.getEventName(),
@@ -63,11 +73,12 @@ public class EventService implements IEventService {
                 event.isActive()
         );
     }
+
     @Override
     public List<EventDTO> searchEventsByCompany(int companyId) {
-        List<Event> events = eventRepo.findByCompanyId(companyId);
-        // Convert domain objects to DTOs
-        return events.stream()
+
+        return eventRepo.findByCompanyId(companyId)
+                .stream()
                 .map(event -> new EventDTO(
                         event.getCompanyId(),
                         event.getEventName(),
@@ -77,35 +88,49 @@ public class EventService implements IEventService {
                 ))
                 .toList();
     }
+
     @Override
     public boolean editEventDate(String eventId, LocalDateTime newDateTime) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'editEventDate'");
+        try {
+            Event event = eventRepo.findById(eventId);
+
+            if (event == null) {
+                return false;
+            }
+
+            event.setEventDate(newDateTime);
+            eventRepo.save(event);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
     }
-}
 
     @Override
     public boolean removeEvent(String eventId) {
-        return eventRepo.findById(eventId)
-                .map(event -> {
-                    eventRepo.delete(eventId);
-                    //eventPublisher.publishEventRemoved(event);
-                    return true;
-                })
-                .orElse(false);
-    } //rr
+        try {
+            Event event = eventRepo.findById(eventId);
+
+            if (event == null) {
+                return false;
+            }
+
+            eventRepo.delete(eventId);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     @Override
     public boolean editEventInventory(String eventId, int newCapacity) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'editEventInventory'");
     }
+
     @Override
     public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'configureEventSeatinMap'");
     }
-    
-
-    
 }

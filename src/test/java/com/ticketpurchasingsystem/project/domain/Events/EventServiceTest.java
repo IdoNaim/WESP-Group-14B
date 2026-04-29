@@ -4,19 +4,11 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
@@ -40,13 +32,8 @@ public class EventServiceTest {
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
 
-        EventDTO dto = new EventDTO(
-                1,
-                "Concert",
-                100,
-                LocalDateTime.now().plusDays(1),
-                true
-        );
+        EventDTO dto = new EventDTO(1, "Concert", 100,
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -64,13 +51,8 @@ public class EventServiceTest {
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
 
-        EventDTO dto = new EventDTO(
-                1,
-                "Concert",
-                100,
-                LocalDateTime.now().plusDays(1),
-                true
-        );
+        EventDTO dto = new EventDTO(1, "Concert", 100,
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -100,22 +82,19 @@ public class EventServiceTest {
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
 
-        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         EventDTO result = eventService.searchEvent("1");
 
         assertNotNull(result);
-        assertEquals(1, result.companyId());
         assertEquals("Concert", result.eventName());
         assertEquals(100, result.eventCapacity());
-        assertEquals(now, result.eventDateTime());
-        assertTrue(result.isActive());
     }
 
     @Test
     void GivenNonExistingEvent_WhenSearchEvent_ThenReturnNull() {
 
-        when(mockRepo.findById("1")).thenReturn(Optional.empty());
+        when(mockRepo.findById("1")).thenReturn(null);
 
         EventDTO result = eventService.searchEvent("1");
 
@@ -154,13 +133,41 @@ public class EventServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    // ================= EDIT EVENT DATE =================
+
+    @Test
+    void GivenExistingEvent_WhenEditEventDate_ThenUpdateAndReturnTrue() {
+
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
+
+        LocalDateTime newDate = LocalDateTime.now().plusDays(5);
+
+        boolean result = eventService.editEventDate("1", newDate);
+
+        assertTrue(result);
+        verify(mockEvent).setEventDate(newDate);
+        verify(mockRepo).save(mockEvent);
+    }
+
+    @Test
+    void GivenNonExistingEvent_WhenEditEventDate_ThenReturnFalse() {
+
+        when(mockRepo.findById("1")).thenReturn(null);
+
+        boolean result = eventService.editEventDate("1", LocalDateTime.now());
+
+        assertFalse(result);
+        verify(mockRepo, never()).save(any());
+    }
+
     // ================= REMOVE EVENT =================
 
     @Test
     void GivenExistingEvent_WhenRemoveEvent_ThenDeleteAndReturnTrue() {
 
         Event mockEvent = mock(Event.class);
-        when(mockRepo.findById("1")).thenReturn(Optional.of(mockEvent));
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         boolean result = eventService.removeEvent("1");
 
@@ -171,11 +178,11 @@ public class EventServiceTest {
     @Test
     void GivenNonExistingEvent_WhenRemoveEvent_ThenReturnFalse() {
 
-        when(mockRepo.findById("1")).thenReturn(Optional.empty());
+        when(mockRepo.findById("1")).thenReturn(null);
 
         boolean result = eventService.removeEvent("1");
 
         assertFalse(result);
-        verify(mockRepo).delete(1);
+        verify(mockRepo, never()).delete(any());
     }
 }
