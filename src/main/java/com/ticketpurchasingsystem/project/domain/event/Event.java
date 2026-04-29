@@ -96,4 +96,6 @@ public class Event {
     public void setEventDate(LocalDateTime eventDate) {
         this.eventDate = eventDate;
     }
+
+    public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 }

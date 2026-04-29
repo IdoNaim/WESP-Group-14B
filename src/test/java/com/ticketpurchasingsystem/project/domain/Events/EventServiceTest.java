@@ -185,4 +185,32 @@ public class EventServiceTest {
         assertFalse(result);
         verify(mockRepo, never()).delete(any());
     }
+
+    // ================= EDIT EVENT CAPACITY =================
+
+    @Test
+    void GivenExistingEvent_WhenEditEventInventory_ThenUpdateAndReturnTrue() {
+
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
+
+        int newCapacity = 250;
+
+        boolean result = eventService.editEventInventory("1", newCapacity);
+
+        assertTrue(result);
+        verify(mockEvent).setEventCapacity(newCapacity);
+        verify(mockRepo).save(mockEvent);
+    }
+
+    @Test
+    void GivenNonExistingEvent_WhenEditEventInventory_ThenReturnFalse() {
+
+        when(mockRepo.findById("1")).thenReturn(null);
+
+        boolean result = eventService.editEventInventory("1", 250);
+
+        assertFalse(result);
+        verify(mockRepo, never()).save(any());
+    }
 }

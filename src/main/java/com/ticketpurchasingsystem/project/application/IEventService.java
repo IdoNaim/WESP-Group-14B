@@ -17,5 +17,5 @@ public interface IEventService {
      public boolean editEventDate(String eventId, LocalDateTime newDateTime);
      public boolean removeEvent(String eventId);
      public boolean editEventInventory(String eventId, int newCapacity);
-     public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO);
+     //public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO);
 }

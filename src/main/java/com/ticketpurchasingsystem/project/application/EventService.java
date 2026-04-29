@@ -126,11 +126,24 @@ public class EventService implements IEventService {
 
     @Override
     public boolean editEventInventory(String eventId, int newCapacity) {
-        throw new UnsupportedOperationException("Unimplemented method 'editEventInventory'");
-    }
+        try {
+            Event event = eventRepo.findById(eventId);
 
-    @Override
-    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
-        throw new UnsupportedOperationException("Unimplemented method 'configureEventSeatinMap'");
+            if (event == null) {
+                return false;
+            }
+
+            event.setEventCapacity(newCapacity);
+            eventRepo.save(event);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+
     }
 }
+//    @Override
+//    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
+//        return true;
+//    }
