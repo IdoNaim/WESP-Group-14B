@@ -17,7 +17,7 @@ public class UserInfo {
     UserState userState;
     UserGroupDiscount userGroupDiscount;
     boolean LoggedIn = false ;
-    SessionToken sessionToken;
+    String sessionTokenStr;
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
@@ -25,19 +25,22 @@ public class UserInfo {
         this.name = name;
         this.email = email;
         this.password = password;
-        this.userState = UserState.GUEST;
+        this.userState = UserState.MEMBER;
         this.userGroupDiscount = userGroupDiscount;
+        this.LoggedIn = false;
+        this.sessionTokenStr = null; // No session token for registered users until they log in
     }
 
     // guest
-    public UserInfo(String id, SessionToken sessionToken) {
-        this.id = id; // Generate a unique ID for the guest user (e.g., using UUID)
+    public UserInfo(String id, String sessionTokenStr) {
+        this.id = id; 
         this.name = "";
         this.email = "";
         this.password = "";
         this.userState = UserState.GUEST;
         this.userGroupDiscount = UserGroupDiscount.NONE;
-        this.sessionToken = sessionToken; // Store the session token for the guest user
+        this.sessionTokenStr = sessionTokenStr;
+        this.LoggedIn = false;
     }
 
     // login
@@ -49,20 +52,9 @@ public class UserInfo {
         this.userState = userInfo.userState;
         this.userGroupDiscount = userInfo.userGroupDiscount;
         this.LoggedIn = true;
-        this.sessionToken = userInfo.sessionToken; // Use the existing session token for the logged-in user
+        this.sessionTokenStr = userInfo.sessionTokenStr; // Use the existing session token for the logged-in user
     }
 
-    public void logout() {
-        if (!LoggedIn) {
-            throw new IllegalStateException("User is not logged in.");
-        }
-        this.name = "";
-        this.email = "";
-        this.password = "";
-        this.userState = UserState.GUEST;
-        this.userGroupDiscount = UserGroupDiscount.NONE;
-        this.LoggedIn = false;
-    }
 
     public boolean isLoggedIn() {
         return LoggedIn;
@@ -122,5 +114,16 @@ public class UserInfo {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public Boolean isGuest() {
+        return this.userState == UserState.GUEST;
+    }
     
+    public String getSessionTokenStr() {
+        return sessionTokenStr;
+    }
+
+    public void setSessionTokenStr(String sessionTokenStr) {
+        this.sessionTokenStr = sessionTokenStr;
+    }
 }

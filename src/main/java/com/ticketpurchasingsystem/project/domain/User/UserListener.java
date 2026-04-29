@@ -1,7 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -55,8 +53,8 @@ public class UserListener {
         @EventListener
         public void onEnterPlatform(NewSessionEvent event) {
             // Handle the event, e.g., update the read model or notify other services
-            System.out.println("guest " + event.getUserId() + "entered platform with token: " + event.getSessionToken());
-            userHandler.handleGuestEntry(userRepo, event.getSessionToken());
+            // System.out.println("guest " + event.getUserId() event.get + "entered platform with token: " + event.getSessionToken());
+            
         }
 
         @EventListener
@@ -65,35 +63,4 @@ public class UserListener {
             System.out.println("User exited platform: " + event.getSessionToken());
         }
 
-
-    
-=======
-import org.springframework.context.ApplicationListener;
-=======
-import org.springframework.context.event.EventListener;
->>>>>>> origin/SESSION_TOKEN
-import org.springframework.stereotype.Component;
-
-import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllEvent;
-
-
-@Component
-public class UserListener {
-
-    private final IUserRepo userRepo;
-
-    public UserListener(IUserRepo userRepo) {
-        this.userRepo = userRepo;
-    }
-
-    @EventListener
-    public void handleGetAllUsers(GetAllEvent<UserInfo> event) {
-        event.setResult(userRepo.findAll());
-    }
-<<<<<<< HEAD
->>>>>>> 33_generate_Id
 }
-=======
-
-}
->>>>>>> origin/SESSION_TOKEN

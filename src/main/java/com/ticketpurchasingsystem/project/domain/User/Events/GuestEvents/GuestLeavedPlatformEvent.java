@@ -1,12 +1,11 @@
 package com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;;
 
-public class GuestEnterPlatformEvent extends GuestEvents {
 
+public class GuestLeavedPlatformEvent extends GuestEvents {
     private String guestId;
     private String sessionTokenStr;
 
-    public GuestEnterPlatformEvent(String guestId, String sessionTokenStr) {
+    public GuestLeavedPlatformEvent(String guestId, String sessionTokenStr) {
         this.guestId = guestId;
         this.sessionTokenStr = sessionTokenStr;
     }
@@ -19,5 +18,5 @@ public class GuestEnterPlatformEvent extends GuestEvents {
     public String getGuestId() {
         return guestId;
     }
-    
+
 }

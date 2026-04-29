@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MemoryUserRepo implements IUserRepo {
     private final ConcurrentHashMap<String, UserInfo> users = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, SessionToken> guests = new ConcurrentHashMap<>();
 
     @Override
     public void store(UserInfo userInfo) {
@@ -30,9 +29,5 @@ public class MemoryUserRepo implements IUserRepo {
     @Override
     public List<UserInfo> getAllUsers() {
         return new ArrayList<>(users.values());
-    }
-
-    public List<SessionToken> getAllGuests() {
-        return new ArrayList<>(guests.values());
     }
 }

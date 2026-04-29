@@ -2,18 +2,19 @@ package com.ticketpurchasingsystem.project.domain.User.Events.UserEvents;
 
 public class UserLogInEvent extends UserEvents {
     private String userId;
-    private String password;
+    private String sessionTokenStr;
 
-    public UserLogInEvent(String userId, String password) {
+    public UserLogInEvent(String userId, String sessionTokenStr) {
         this.userId = userId;
-        this.password = password;
+        this.sessionTokenStr = sessionTokenStr;
     }
 
+    @Override
     public String getUserId() {
         return userId;
     }
 
-    public String getPassword() {
-        return password;
+    public String getSessionToken() {
+        return sessionTokenStr;
     }
 }

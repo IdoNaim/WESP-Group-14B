@@ -1,17 +1,16 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-
 public class UserDTO {
     private String userId;
     private String username;
     private String email;
-    private boolean isLoggedIn;
-
-    public UserDTO(String userId, String username, String email, boolean isLoggedIn) {
+    private UserGroupDiscount userGroupDiscount;
+    
+    public UserDTO(String userId, String username, String email, UserGroupDiscount userGroupDiscount) {
         this.userId = userId;
         this.username = username;
         this.email = email;
-        this.isLoggedIn = isLoggedIn;
+        this.userGroupDiscount = userGroupDiscount;
     }
 
     public String getUserId() {
@@ -26,7 +25,7 @@ public class UserDTO {
         return email;
     }
 
-    public boolean isLoggedIn() {
-        return isLoggedIn;
+    public UserGroupDiscount getGroupDiscount() {
+        return userGroupDiscount;
     }
 }

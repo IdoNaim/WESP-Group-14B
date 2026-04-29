@@ -1,14 +1,14 @@
 package com.ticketpurchasingsystem.project.domain.User.Events.UserEvents;
 
-public class UserLogOutEvent extends UserEvents {
+public class UserLeavedPlatformEvent {
     private String userId;
     private String sessionTokenStr;
 
-    public UserLogOutEvent(String userId, String sessionTokenStr) {
+    public UserLeavedPlatformEvent(String userId, String sessionTokenStr) {
         this.userId = userId;
         this.sessionTokenStr = sessionTokenStr;
     }
-    @Override
+
     public String getUserId() {
         return userId;
     }
@@ -16,4 +16,5 @@ public class UserLogOutEvent extends UserEvents {
     public String getSessionToken() {
         return sessionTokenStr;
     }
+    
 }
