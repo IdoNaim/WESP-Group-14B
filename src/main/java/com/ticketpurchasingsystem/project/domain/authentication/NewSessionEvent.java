@@ -1,16 +1,15 @@
 package com.ticketpurchasingsystem.project.domain.authentication;
 
 public class NewSessionEvent {
+<<<<<<< HEAD
     private final String userId;
+=======
+
+>>>>>>> origin/SESSION_TOKEN
     private final String sessionToken;
 
-    public NewSessionEvent(String userId, String sessionToken) {
-        this.userId = userId;
+    public NewSessionEvent(String sessionToken) {
         this.sessionToken = sessionToken;
-    }
-
-    public String getUserId() {
-        return userId;
     }
 
     public String getSessionToken() {
