@@ -24,7 +24,6 @@ public class ProdRepo implements IProdRepo {
 
     @Override
     public ProductionCompany save(ProductionCompany company) {
-        // generate id if not exists
         if (company.getCompanyId() == null) {
             company.setCompanyId(idGenerator.getAndIncrement());
         }

@@ -5,7 +5,7 @@ public class ProductionCompanyDTO {
     private String companyDescription;
     private String companyEmail;
 
-    public ProductionCompanyDTO(String companyName, String companyDescription, String companyEmail) {
+    public ProductionCompanyDTO(String companyName, String companyEmail, String companyDescription) {
         this.companyName = companyName;
         this.companyDescription = companyDescription;
         this.companyEmail = companyEmail;

@@ -3,6 +3,8 @@ package com.ticketpurchasingsystem.project.domain.Production;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.DiscountPolicy.DiscountPolicy;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.PurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 
 public class ProductionCompany {
@@ -22,6 +24,13 @@ public class ProductionCompany {
         this.ownerIds = new ArrayList<>();
         this.purchasePolicy = new PurchasePolicy();
         this.discountPolicy = new DiscountPolicy();
+    }
+
+    public void initFounder(String userId) {
+        this.founderId = userId;
+        if (!this.ownerIds.contains(userId)) {
+            this.ownerIds.add(userId);
+        }
     }
 
     public Integer getCompanyId() {

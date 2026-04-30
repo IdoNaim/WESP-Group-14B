@@ -17,25 +17,30 @@ public class ProductionHandler {
     }
 
     public boolean createProductionCompany(String userId, ProductionCompanyDTO companyDetails) {
-        if (companyDetails == null || companyDetails.getCompanyName() == null
-                || companyDetails.getCompanyName().trim().isEmpty()) {
+        // Basic input validation
+        if (userId == null || companyDetails == null || isInvalid(companyDetails.getCompanyName())) {
             return false;
         }
-        Optional<ProductionCompany> existingCompany = prodRepo.findByName(companyDetails.getCompanyName());
-        if (existingCompany.isPresent()) {
+        Optional<ProductionCompany> existing = prodRepo.findByName(companyDetails.getCompanyName());
+        if (existing.isPresent()) {
+            loggerDef.getInstance().error("Company name already exists: " + companyDetails.getCompanyName());
             return false;
         }
-        ProductionCompany company = new ProductionCompany(companyDetails);
-        company.setFounderId(userId);
-        company.addOwnerId(userId);
+
         try {
-            ProductionCompany savedCompany = prodRepo.save(company);
+            ProductionCompany newCompany = new ProductionCompany(companyDetails);
+            newCompany.initFounder(userId);
+            ProductionCompany savedCompany = prodRepo.save(newCompany);
             publisher.publish(new NewProdEvent(savedCompany));
             return true;
         } catch (Exception e) {
-            loggerDef logger = loggerDef.getInstance();
-            logger.error("Failed to create production company: " + companyDetails.getCompanyName());
+            loggerDef.getInstance().error("Failed to create company: " + e.getMessage());
             return false;
         }
     }
+
+    private boolean isInvalid(String str) {
+        return str == null || str.trim().isEmpty();
+    }
+
 }
