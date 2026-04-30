@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
 import com.ticketpurchasingsystem.project.domain.Utils.Publisher;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 import java.util.ArrayList;
@@ -28,6 +29,19 @@ public class ProdPublisher extends Publisher {
             } catch (Exception e) {
                 loggerDef logger = loggerDef.getInstance();
                 logger.error("Failed to publish new production company event: " + event.getCompany().getCompanyName());
+            }
+        }
+    }
+
+    public void publish(AssignOwnerEvent event) {
+        for (ProdListener listener : listeners) {
+            try {
+                listener.onAssignOwner(event);
+            } catch (Exception e) {
+                loggerDef.getInstance().error(
+                        "Failed to publish AssignOwnerEvent: company="
+                                + event.getCompany().getCompanyName()
+                                + ", appointee=" + event.getAppointeeId());
             }
         }
     }

@@ -37,4 +37,9 @@ public class ProdRepo implements IProdRepo {
                 .filter(company -> company.getCompanyName().equalsIgnoreCase(name))
                 .findFirst();
     }
+
+    @Override
+    public Optional<ProductionCompany> findById(Integer companyId) {
+        return Optional.ofNullable(storage.get(companyId));
+    }
 }

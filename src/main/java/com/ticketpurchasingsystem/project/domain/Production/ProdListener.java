@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -8,7 +9,17 @@ public class ProdListener {
     public void onNewProductionCompany(NewProdEvent event) {
         String companyName = event.getCompany().getCompanyName();
         String founderId = event.getCompany().getFounderId();
-        loggerDef logger = loggerDef.getInstance();
-        logger.info("New Production Company created: Name=" + companyName + ", FounderID=" + founderId);
+        loggerDef.getInstance().info(
+                "New Production Company created: Name=" + companyName + ", FounderID=" + founderId);
+    }
+
+    public void onAssignOwner(AssignOwnerEvent event) {
+        String companyName = event.getCompany().getCompanyName();
+        String appointeeId = event.getAppointeeId();
+        String appointerId = event.getAppointerId();
+        loggerDef.getInstance().info(
+                "Owner assigned: Company=" + companyName
+                        + ", NewOwner=" + appointeeId
+                        + ", AppointedBy=" + appointerId);
     }
 }

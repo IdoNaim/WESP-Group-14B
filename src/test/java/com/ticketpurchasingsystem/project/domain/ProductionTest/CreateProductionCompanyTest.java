@@ -5,7 +5,6 @@ import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.domain.Production.*;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
-import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

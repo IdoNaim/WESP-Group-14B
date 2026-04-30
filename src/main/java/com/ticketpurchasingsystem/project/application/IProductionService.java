@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.application;
 
+import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+
 public interface IProductionService {
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId);
 
@@ -15,5 +17,7 @@ public interface IProductionService {
     public String getEventAsCustomer(String eventId);
 
     public boolean createProductionCompany(String sessionToken,
-            com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO companyDetails);
+            ProductionCompanyDTO companyDetails);
+
+    public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId);
 }
