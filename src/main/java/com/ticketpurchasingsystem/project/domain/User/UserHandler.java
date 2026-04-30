@@ -352,4 +352,35 @@ public class UserHandler {
             throw new RuntimeException("Failed to set user group discount: " + e.getMessage());
         }
     }
+
+    public void addProductionRole(IUserRepo userRepo, String userId, String productionId, String productionRole) {
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                userPublisher.publishUserNotFound(userId);
+                return;
+            }
+            userInfo.getUserProduction().addProduction(productionId, productionRole);
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to add production role: " + e.getMessage());
+        }
+    }
+
+    public void removeProductionRole(IUserRepo userRepo, String userId, String productionId) {
+        try {
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                userPublisher.publishUserNotFound(userId);
+                return;
+            }
+            userInfo.getUserProduction().removeProduction(productionId);
+        }
+        catch (Exception e) {
+            // Handle exceptions (e.g., user not found, user not logged in)
+            throw new RuntimeException("Failed to remove production role: " + e.getMessage());
+        }
+    }
 }
+            

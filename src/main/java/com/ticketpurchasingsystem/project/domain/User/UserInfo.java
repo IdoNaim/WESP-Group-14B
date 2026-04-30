@@ -18,6 +18,7 @@ public class UserInfo {
     UserGroupDiscount userGroupDiscount;
     boolean LoggedIn = false ;
     String sessionTokenStr;
+    UserProduction userProduction;
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
@@ -29,6 +30,7 @@ public class UserInfo {
         this.userGroupDiscount = userGroupDiscount;
         this.LoggedIn = false;
         this.sessionTokenStr = null; // No session token for registered users until they log in
+        this.userProduction = new UserProduction();
     }
 
     // guest
@@ -41,6 +43,7 @@ public class UserInfo {
         this.userGroupDiscount = UserGroupDiscount.NONE;
         this.sessionTokenStr = sessionTokenStr;
         this.LoggedIn = false;
+        this.userProduction = null; // Guests do not have production roles
     }
 
     public boolean isLoggedIn() {
@@ -112,5 +115,13 @@ public class UserInfo {
 
     public void setSessionTokenStr(String sessionTokenStr) {
         this.sessionTokenStr = sessionTokenStr;
+    }
+
+    public UserProduction getUserProduction() {
+        return userProduction;
+    }
+
+    public void setUserProduction(UserProduction userProduction) {
+        this.userProduction = userProduction;
     }
 }

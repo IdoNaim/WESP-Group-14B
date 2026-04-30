@@ -7,6 +7,7 @@ import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserRegi
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLeavedPlatformEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogInEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogOutEvent;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserNotFoundEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestLeavedPlatformEvent;
 @Component
 public class UserPublisher {
@@ -41,5 +42,9 @@ public class UserPublisher {
     public void publishUserLeftPlatform(String userId, String sessionTokenStr) {
         // You can create a UserLeftPlatformEvent similar to UserLogOutEvent and publish it here
         eventPublisher.publishEvent(new UserLeavedPlatformEvent(userId, sessionTokenStr));
+    }
+
+    public void publishUserNotFound(String userId) {
+        eventPublisher.publishEvent(new UserNotFoundEvent(userId));
     }
 }

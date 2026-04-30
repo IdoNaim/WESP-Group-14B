@@ -63,4 +63,8 @@ public class UserListener {
             System.out.println("User exited platform: " + event.getSessionToken());
         }
 
+        @EventListener
+        public void onAddProductionRole(AddProductionRoleEvent event) {
+            userHandler.addProductionRole(userRepo, event.getProductionId(), event.getUserId());
+        }
 }

@@ -7,10 +7,6 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.User.UserListener;
-import com.ticketpurchasingsystem.project.domain.User.UserPublisher;
-import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 
 @Service
@@ -21,7 +17,6 @@ public class UserService implements IUserService {
 
     public UserService(IUserRepo userRepo, UserHandler userHandler) {
         this.userRepo = userRepo;
-        // this.userPublisher = new UserPublisher();
         this.userHandler = userHandler;
     }
 
