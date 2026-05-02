@@ -2,20 +2,17 @@ package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.domain.Production.*;
 import com.ticketpurchasingsystem.project.application.UserService.IUserService;
+import com.ticketpurchasingsystem.project.domain.Production.*;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
-import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
-
-import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Optional;
 
@@ -31,8 +28,6 @@ public class AssignOwnerTest {
     @Mock
     private IProdRepo prodRepo;
     @Mock
-    private ProdPublisher publisher;
-    @Mock
     private IUserService userService;
 
     private ProductionHandler productionHandler;
@@ -40,15 +35,16 @@ public class AssignOwnerTest {
 
     private static final String VALID_TOKEN = "valid-token";
     private static final String INVALID_TOKEN = "bad-token";
-    private static final String FOUNDER_ID = "founder-1";
-    private static final String OWNER_ID = "owner-1";
-    private static final String APPOINTEE_ID = "new-user-99";
+    private static final String FOUNDER_ID = "eden-1";
+    private static final String OWNER_ID = "itay-1";
+    private static final String APPOINTEE_ID = "tomer-99";
     private static final Integer COMPANY_ID = 1;
 
     @BeforeEach
     void setUp() {
-        productionHandler = new ProductionHandler(prodRepo, publisher);
-        productionService = new ProductionService(authenticationService, productionHandler, userService);
+        productionHandler = new ProductionHandler();
+        productionService = new ProductionService(
+                authenticationService, productionHandler, userService, prodRepo);
     }
 
     private ProductionCompany companyWithFounderAndOwner() {
@@ -61,7 +57,7 @@ public class AssignOwnerTest {
     }
 
     private UserDTO fakeUserDTO(String userId) {
-        return new UserDTO(userId, "name", "email@test.com", null);
+        return new UserDTO(userId, "name", userId + "@test.com", null);
     }
 
     @Test
@@ -91,7 +87,7 @@ public class AssignOwnerTest {
 
         // Assert
         assertFalse(result);
-        verifyNoInteractions(prodRepo, userService, publisher);
+        verifyNoInteractions(prodRepo, userService);
     }
 
     @Test
@@ -106,7 +102,7 @@ public class AssignOwnerTest {
 
         // Assert
         assertFalse(result);
-        verifyNoInteractions(prodRepo, publisher);
+        verifyNoInteractions(prodRepo);
     }
 
     @Test
@@ -127,68 +123,15 @@ public class AssignOwnerTest {
     }
 
     @Test
-    public void GivenFounderAsAppointerId_WhenAssignOwner_ThenReturnTrue() {
-        // Arrange
-        ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        // Act
-        boolean result = productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    public void GivenExistingOwnerAsAppointerId_WhenAssignOwner_ThenReturnTrue() {
-        // Arrange
-        ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        // Act
-        boolean result = productionHandler.assignOwner(OWNER_ID, COMPANY_ID, APPOINTEE_ID);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    public void GivenCallerNotOwnerOfCompany_WhenAssignOwner_ThenReturnFalse() {
-        // Arrange
-        ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-
-        // Act
-        boolean result = productionHandler.assignOwner("random-user", COMPANY_ID, APPOINTEE_ID);
-
-        // Assert
-        assertFalse(result);
-        verify(prodRepo, never()).save(any());
-    }
-
-    @Test
-    public void GivenAppointeeAlreadyOwner_WhenAssignOwner_ThenReturnFalse() {
-        // Arrange
-        ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-
-        // Act
-        boolean result = productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, OWNER_ID);
-
-        // Assert
-        assertFalse(result);
-        verify(prodRepo, never()).save(any());
-    }
-
-    @Test
     public void GivenCompanyDoesNotExist_WhenAssignOwner_ThenReturnFalse() {
         // Arrange
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
+        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.empty());
 
         // Act
-        boolean result = productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID);
+        boolean result = productionService.assignOwner(VALID_TOKEN, COMPANY_ID, APPOINTEE_ID);
 
         // Assert
         assertFalse(result);
@@ -196,47 +139,115 @@ public class AssignOwnerTest {
     }
 
     @Test
-    public void GivenNullAppointeeId_WhenAssignOwner_ThenReturnFalse() {
-        assertFalse(productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, null));
-        verifyNoInteractions(prodRepo, publisher);
-    }
-
-    @Test
-    public void GivenValidInput_WhenAssignOwner_ThenAssignOwnerEventIsPublished() {
+    public void GivenValidInput_WhenAssignOwner_ThenRepoSaveIsCalledWithUpdatedCompany() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
+        ArgumentCaptor<ProductionCompany> captor = ArgumentCaptor.forClass(ProductionCompany.class);
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
+        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(prodRepo.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID);
+        boolean result = productionService.assignOwner(VALID_TOKEN, COMPANY_ID, APPOINTEE_ID);
 
         // Assert
-        verify(publisher, times(1)).publish(any(AssignOwnerEvent.class));
+        assertTrue(result);
+        verify(prodRepo, times(1)).save(any(ProductionCompany.class));
+        assertTrue(captor.getValue().isOwner(APPOINTEE_ID),
+                "Repo must receive the company with the new owner already added");
     }
 
     @Test
-    public void GivenFailedAssignment_WhenAssignOwner_ThenNoEventIsPublished() {
-        // Arrange — caller is not an owner so assignment will fail
+    public void GivenFailedAssignment_WhenAssignOwner_ThenRepoSaveIsNeverCalled() {
+        // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn("not-an-owner");
+        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
 
         // Act
-        productionHandler.assignOwner("not-an-owner", COMPANY_ID, APPOINTEE_ID);
+        boolean result = productionService.assignOwner(VALID_TOKEN, COMPANY_ID, APPOINTEE_ID);
 
         // Assert
-        verify(publisher, never()).publish(any(AssignOwnerEvent.class));
+        assertFalse(result);
+        verify(prodRepo, never()).save(any());
+    }
+
+    @Test
+    public void GivenFounderAsAppointerId_WhenAssignOwner_ThenReturnNonNull() {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Act
+        ProductionCompany result = productionHandler.assignOwner(
+                FOUNDER_ID, COMPANY_ID, APPOINTEE_ID, company);
+
+        // Assert
+        assertNotNull(result);
+    }
+
+    @Test
+    public void GivenExistingOwnerAsAppointerId_WhenAssignOwner_ThenReturnNonNull() {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Act
+        ProductionCompany result = productionHandler.assignOwner(
+                OWNER_ID, COMPANY_ID, APPOINTEE_ID, company);
+
+        // Assert
+        assertNotNull(result);
+    }
+
+    @Test
+    public void GivenCallerNotOwnerOfCompany_WhenAssignOwner_ThenReturnNull() {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Act
+        ProductionCompany result = productionHandler.assignOwner(
+                "random-user", COMPANY_ID, APPOINTEE_ID, company);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void GivenAppointeeAlreadyOwner_WhenAssignOwner_ThenReturnNull() {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Act
+        ProductionCompany result = productionHandler.assignOwner(
+                FOUNDER_ID, COMPANY_ID, OWNER_ID, company);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void GivenNullAppointeeId_WhenAssignOwner_ThenReturnNull() {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Act
+        ProductionCompany result = productionHandler.assignOwner(
+                FOUNDER_ID, COMPANY_ID, null, company);
+
+        // Assert
+        assertNull(result);
     }
 
     @Test
     public void GivenFounderAppoints_WhenAssignOwner_ThenAppointeeHasFounderAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID);
+        productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
         OwnerDTO node = company.getOwnerDTO(APPOINTEE_ID).orElseThrow();
@@ -247,11 +258,9 @@ public class AssignOwnerTest {
     public void GivenOwnerAppoints_WhenAssignOwner_ThenAppointeeHasOwnerAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        productionHandler.assignOwner(OWNER_ID, COMPANY_ID, APPOINTEE_ID);
+        productionHandler.assignOwner(OWNER_ID, COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
         OwnerDTO node = company.getOwnerDTO(APPOINTEE_ID).orElseThrow();
@@ -259,38 +268,30 @@ public class AssignOwnerTest {
     }
 
     @Test
-    public void GivenSuccessfulAssignment_WhenAssignOwner_ThenRepoSaveIsCalledWithUpdatedCompany() {
+    public void GivenSuccessfulAssignment_WhenAssignOwner_ThenReturnedCompanyContainsNewOwner() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
-        // need to capture the company that was saved
-        ArgumentCaptor<ProductionCompany> captor = ArgumentCaptor.forClass(ProductionCompany.class);
-
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
-        boolean result = productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID);
+        ProductionCompany result = productionHandler.assignOwner(
+                FOUNDER_ID, COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
-        assertTrue(result);
-        verify(prodRepo, times(1)).save(any(ProductionCompany.class));
-        ProductionCompany saved = captor.getValue();
-        assertTrue(saved.isOwner(APPOINTEE_ID),
-                "Repo must receive the company with the new owner already added");
+        assertNotNull(result);
+        assertTrue(result.isOwner(APPOINTEE_ID),
+                "Returned company must contain the newly appointed owner");
     }
 
     @Test
-    public void GivenFailedAssignment_WhenAssignOwner_ThenRepoSaveIsNeverCalled() {
+    public void GivenFailedAssignment_WhenAssignOwner_ThenReturnNull() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
 
         // Act
-        boolean result = productionHandler.assignOwner("not-an-owner", COMPANY_ID, APPOINTEE_ID);
+        ProductionCompany result = productionHandler.assignOwner(
+                "not-an-owner", COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
-        assertFalse(result);
-        verify(prodRepo, never()).save(any());
+        assertNull(result);
     }
-
 }
