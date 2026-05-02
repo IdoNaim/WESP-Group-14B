@@ -43,6 +43,58 @@ public class ActiveOrderService implements IActiveOrderService {
 
     //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
     //called after "checkout" is pressed in UI
+    public ActiveOrderDTO createPendingOrder(SessionToken sessionToken, String userId, String eventId){
+        if(authenticationService.validate(sessionToken.getToken())){
+            String orderId = ""+ IdGenerator.getInstance().nextId();
+            ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
+            saveOrder(orderItem);
+            return new ActiveOrderDTO(orderItem);
+        }
+        else{
+            throw new RuntimeException("the session has ended");
+        }
+    }
+
+    @Override
+    public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, String[] seatIds) {
+        if(authenticationService.validate(sessionToken.getToken())){
+            ActiveOrderItem order = activeOrderRepo.findById(orderId);
+            if (order == null) {
+                throw new IllegalArgumentException("Order not found");
+            }
+            checkIfExpiredAndThrowException(order);
+            boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatIds);
+            if (!reserved) {
+                throw new IllegalStateException("cant reserve these seats");
+            }
+            order.addSeatIds(seatIds);
+            saveOrder(order);
+
+        }      
+        else{
+            throw new RuntimeException("the session has ended");
+        }
+    }
+
+    public void addStandingAreaToActiveOrder(SessionToken sessionToken, String orderId, String areaId, int quantity) {
+        if(authenticationService.validate(sessionToken.getToken())){
+            ActiveOrderItem order = activeOrderRepo.findById(orderId);
+            if (order == null) {
+                throw new IllegalArgumentException("Order not found");
+            }
+            checkIfExpiredAndThrowException(order);
+            boolean reserved = activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, quantity);
+            if (!reserved) {
+                throw new IllegalStateException("cant reserve these standing area tickets");
+            }
+            order.addStandingAreaQuantity(areaId, quantity);
+            saveOrder(order);
+        }      
+        else{
+            throw new RuntimeException("the session has ended");
+        }
+    }
+
     @Override
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
         if(authenticationService.validateToken(sessionToken.getToken())){
@@ -63,7 +115,7 @@ public class ActiveOrderService implements IActiveOrderService {
     @Override
     public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
     {
-        if(authenticationService.validateToken(sessionToken.getToken())){
+        if(authenticationService.validate(sessionToken.getToken())){
             ActiveOrderItem order = activeOrderRepo.findById(orderId);
             if(order == null){
                 throw new IllegalArgumentException("Order not found");
@@ -104,7 +156,7 @@ public class ActiveOrderService implements IActiveOrderService {
     @Override
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
     {
-        if(authenticationService.validateToken(sessionToken.getToken())) {
+        if(authenticationService.validate(sessionToken.getToken())) {
             ActiveOrderItem order = activeOrderRepo.findById(orderId);
             if (order == null) {
                 throw new IllegalArgumentException("Order not found");
@@ -152,10 +204,7 @@ public class ActiveOrderService implements IActiveOrderService {
                 System.out.println("Order cannot be null");
                 return false;
             }
-            if(order.getQuantity() <= 0){
-                System.out.println("Quantity must be greater than 0");
-                return false;
-            }
+       
             if(!isValidEventID(order.getEventId()) || !isValidOrderID(order.getOrderId())) {
                 System.out.println("bad order ID or event ID");
                 return false;

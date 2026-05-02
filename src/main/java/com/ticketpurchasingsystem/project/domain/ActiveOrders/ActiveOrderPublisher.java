@@ -18,13 +18,25 @@ public class ActiveOrderPublisher {
     }
 
 
-
-    public boolean publishReserveTickets(String eventId, int quantity)
-    {
-        TicketReservationEvent event = new TicketReservationEvent(this,eventId, quantity);
+    public boolean publishReserveSeats(String eventId, String[] seatIds) {
+        SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
+
+    public boolean publishReserveStandingArea(String eventId, String areaId, int quantity) {
+        StandingAreaReservationEvent event = new StandingAreaReservationEvent(this, eventId, areaId, quantity);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+
+
+    // public boolean publishReserveTickets(String eventId, int quantity)
+    // {
+    //     TicketReservationEvent event = new TicketReservationEvent(this,eventId, quantity);
+    //     eventPublisher.publishEvent(event);
+    //     return event.getResult();
+    // }
     public boolean publishIsMember(String userId){
         IsMemberEvent event = new IsMemberEvent(this, userId);
         eventPublisher.publishEvent(event);
