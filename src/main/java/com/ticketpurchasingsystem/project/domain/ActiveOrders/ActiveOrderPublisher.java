@@ -4,6 +4,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
 
