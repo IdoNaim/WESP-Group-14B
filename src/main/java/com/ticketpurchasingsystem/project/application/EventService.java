@@ -12,30 +12,34 @@ import com.ticketpurchasingsystem.project.domain.event.EventListener;
 import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
 
+
 public class EventService implements IEventService {
-    IEventRepo eventRepo = EventRepo.getInstance();
+
+    private final IEventRepo eventRepo;
+
     EventPublisher eventPublisher = EventPublisher.getInstance();
     EventListener eventListener = EventListener.getInstance();
-    private static EventService instance;
-    public static EventService getInstance() {
-        if (instance == null) {
-            instance = new EventService();
-        }
-        return instance;
+
+    public EventService(IEventRepo eventRepo) {
+        this.eventRepo = eventRepo;
     }
-    public boolean createEvent(EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO) {
-        // Convert DTOs to domain objects
+
+    public boolean createEvent(EventDTO eventDTO,
+                               PurchasePolicyDTO purchasePolicyDTO,
+                               List<DiscountDTO> discountPolicyDTO) {
+
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(
-            purchasePolicyDTO.minTickets(),
-            purchasePolicyDTO.maxTickets(),
-            purchasePolicyDTO.minAge(),
-            purchasePolicyDTO.maxAge(),
-            purchasePolicyDTO.emnptySeatLeft()
+                purchasePolicyDTO.minTickets(),
+                purchasePolicyDTO.maxTickets(),
+                purchasePolicyDTO.minAge(),
+                purchasePolicyDTO.maxAge(),
+                purchasePolicyDTO.emnptySeatLeft()
         );
+
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
+
         Event event = new Event(
                 eventDTO.companyId(),
                 eventDTO.eventName(),
@@ -44,45 +48,102 @@ public class EventService implements IEventService {
                 purchasePolicy,
                 discountPolicy
         );
-        try{
+
+        try {
             eventRepo.save(event);
-            //eventPublisher.publishEventCreated(event);
             return true;
         } catch (Exception e) {
-            // Handle exceptions (e.g., log the error)
             return false;
         }
     }
-    public EventDTO searchEvent(int eventId) {
-        //TOOD implement this
-        throw new UnsupportedOperationException("Unimplemented method 'searchEvent'");
+
+    @Override
+    public EventDTO searchEvent(String eventId) {
+        Event event = eventRepo.findById(eventId);
+
+        if (event == null) {
+            return null;
+        }
+
+        return new EventDTO(
+                event.getCompanyId(),
+                event.getEventName(),
+                event.getEventCapacity(),
+                event.getEventDate(),
+                event.isActive()
+        );
     }
+
     @Override
     public List<EventDTO> searchEventsByCompany(int companyId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'searchEventsByCompany'");
-    }
-    @Override
-    public boolean editEventDate(int eventId, LocalDateTime newDateTime) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'editEventDate'");
-    }
-    @Override
-    public boolean removeEvent(int eventId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeEvent'");
-    }
-    @Override
-    public boolean editEventInventory(int eventId, int newCapacity) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'editEventInventory'");
-    }
-    @Override
-    public boolean configureEventSeatinMap(int eventId, SeatingMap seatingMapDTO) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'configureEventSeatinMap'");
-    }
-    
 
-    
+        return eventRepo.findByCompanyId(companyId)
+                .stream()
+                .map(event -> new EventDTO(
+                        event.getCompanyId(),
+                        event.getEventName(),
+                        event.getEventCapacity(),
+                        event.getEventDate(),
+                        event.isActive()
+                ))
+                .toList();
+    }
+
+    @Override
+    public boolean editEventDate(String eventId, LocalDateTime newDateTime) {
+        try {
+            Event event = eventRepo.findById(eventId);
+
+            if (event == null) {
+                return false;
+            }
+
+            event.setEventDate(newDateTime);
+            eventRepo.save(event);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean removeEvent(String eventId) {
+        try {
+            Event event = eventRepo.findById(eventId);
+
+            if (event == null) {
+                return false;
+            }
+
+            eventRepo.delete(eventId);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean editEventInventory(String eventId, int newCapacity) {
+        try {
+            Event event = eventRepo.findById(eventId);
+
+            if (event == null) {
+                return false;
+            }
+
+            event.setEventCapacity(newCapacity);
+            eventRepo.save(event);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+
+    }
 }
+//    @Override
+//    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
+//        return true;
+//    }
