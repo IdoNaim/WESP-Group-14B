@@ -5,6 +5,9 @@ import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
+
+import java.util.concurrent.CompletableFuture;
+
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
 
@@ -48,6 +51,15 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
     }
 
+    public boolean publishIsUpToPolicy(ActiveOrderDTO order){
+        IsUpToPolicyEvent event = new IsUpToPolicyEvent(this,order);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid){
+        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid);
+        eventPublisher.publishEvent(event);
+    }
     // public boolean publishPaymentEvent(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
     //     // TODO Auto-generated method stub
     //     throw new UnsupportedOperationException("Unimplemented method 'publishPaymentEvent'");
