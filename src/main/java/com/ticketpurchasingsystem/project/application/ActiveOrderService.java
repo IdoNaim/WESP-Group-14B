@@ -127,6 +127,9 @@ public class ActiveOrderService implements IActiveOrderService {
         checkIfExpiredAndThrowException(order);
         //check purchasePolicy
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
+        if(!upToPolicy){
+            throw new IllegalStateException("Order violates purchase policies");
+        }
         boolean paymentResult = payment(paymentGateway, sessionToken, amount);
         if(!paymentResult){
             rollbackOrderReservations(order);
