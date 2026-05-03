@@ -132,14 +132,14 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         boolean paymentResult = payment(paymentGateway, sessionToken, amount);
         if(!paymentResult){
-            rollbackOrderReservations(order);
+            rollbackOrderReservations(orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
         List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
         if(barcodesIssued == null){
             paymentGateway.refund(sessionToken.getToken(), amount, orderId);
-            rollbackOrderReservations(order);
+            rollbackOrderReservations(orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Barcode generation failed. Refund processed.");
         }
@@ -147,7 +147,7 @@ public class ActiveOrderService implements IActiveOrderService {
         activeOrderRepo.delete(orderId);
         return barcodesIssued;
     }
-    private void rollbackOrderReservations(ActiveOrderItem order) {
+    private void rollbackOrderReservations(ActiveOrderDTO order) {
         // Unreserve specific seats
         if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
             // Convert List to Array if your publisher expects an array, otherwise pass the list
@@ -162,35 +162,34 @@ public class ActiveOrderService implements IActiveOrderService {
             }
         }
     }
-    @Override
-    public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
-    {
-        if(authenticationService.validate(sessionToken.getToken())){
-            ActiveOrderItem order = activeOrderRepo.findById(orderId);
-            if(order == null){
-                throw new IllegalArgumentException("Order not found");
-            }
-            checkIfExpiredAndThrowException(order);
-            
-            //boolean paymentResult = activeOrderPublisher.publishPaymentEvent(paymentGateway, sessionToken, amount);
-            boolean paymentResult = payment(paymentGateway, sessionToken, amount);
-            if(paymentResult) {
-                //add to history order repo and delete from active order repo
-                
-                activeOrderRepo.delete(orderId);
-            }
-            else
-            {
-                activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
-                activeOrderRepo.delete(orderId);
-                throw new IllegalStateException("Payment failed");
-            }
-        }
-        else{
-            throw new RuntimeException("the session has ended");
-        }
-    }
-    //TODO: we may need to publish an event about the succesful purchase so that eventService can update the number of tickets sold for the event,but we can do that in the completeOrder method after the payment is successful
+//    @Override
+//    public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
+//    {
+//        if(authenticationService.validate(sessionToken.getToken())){
+//            ActiveOrderItem order = activeOrderRepo.findById(orderId);
+//            if(order == null){
+//                throw new IllegalArgumentException("Order not found");
+//            }
+//            checkIfExpiredAndThrowException(order);
+//
+//            //boolean paymentResult = activeOrderPublisher.publishPaymentEvent(paymentGateway, sessionToken, amount);
+//            boolean paymentResult = payment(paymentGateway, sessionToken, amount);
+//            if(paymentResult) {
+//                //add to history order repo and delete from active order repo
+//
+//                activeOrderRepo.delete(orderId);
+//            }
+//            else
+//            {
+//                activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
+//                activeOrderRepo.delete(orderId);
+//                throw new IllegalStateException("Payment failed");
+//            }
+//        }
+//        else{
+//            throw new RuntimeException("the session has ended");
+//        }
+//    }
 
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
         // TODO Auto-generated method stub
@@ -202,7 +201,13 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-
+    public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO orderDTO){
+        if(!authenticationService.validate(sessionToken.getToken())){
+            throw new RuntimeException("Session has ended");
+        }
+        checkIfExpiredAndThrowException(orderDTO);
+        activeOrderRepo.save(orderDTO);
+    }
     @Override
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
     {
@@ -242,7 +247,15 @@ public class ActiveOrderService implements IActiveOrderService {
     private void checkIfExpiredAndThrowException(ActiveOrderItem order){
         if(order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis())
         {
-            activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity());
+            rollbackOrderReservations(new ActiveOrderDTO(order));
+            activeOrderRepo.delete(order.getOrderId());
+            throw new IllegalStateException("Order has expired");
+        }
+    }
+    private void checkIfExpiredAndThrowException(ActiveOrderDTO order){
+        if(order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis())
+        {
+            rollbackOrderReservations(order);
             activeOrderRepo.delete(order.getOrderId());
             throw new IllegalStateException("Order has expired");
         }
