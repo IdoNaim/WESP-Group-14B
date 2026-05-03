@@ -15,8 +15,7 @@ public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderPublisher activeOrderPublisher;
     IActiveOrderRepo activeOrderRepo;
     AuthenticationService authenticationService;
-    I
-    //AuthenticationService authenticationService;
+    IBarCodeGateway barCodeGateway;
     public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
@@ -115,7 +114,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //    }
 
     // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
-    public void completeOrder2(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder2(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("the session has ended");
         }
@@ -123,14 +122,26 @@ public class ActiveOrderService implements IActiveOrderService {
         if(order == null){
             throw new IllegalArgumentException("Order not found");
         }
+        ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
         checkIfExpiredAndThrowException(order);
         //check purchasePolicy
+        boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
         boolean paymentResult = payment(paymentGateway, sessionToken, amount);
         if(!paymentResult){
             rollbackOrderReservations(order);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
+        List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
+        if(barcodesIssued == null){
+            paymentGateway.refund(sessionToken.getToken(), amount, orderId);
+            rollbackOrderReservations(order);
+            activeOrderRepo.delete(orderId);
+            throw new IllegalStateException("Barcode generation failed. Refund processed.");
+        }
+        activeOrderPublisher.publishCompletedOrder(orderDTO, amount);
+        activeOrderRepo.delete(orderId);
+        return barcodesIssued;
     }
     private void rollbackOrderReservations(ActiveOrderItem order) {
         // Unreserve specific seats
