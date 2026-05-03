@@ -6,12 +6,14 @@ public class StandingArea implements Bookable{
     private int avalibleSeats;
     private int capacity;
     private double priceForTicket;
+    private String desc;
 
 
-    public StandingArea(int capacity, double priceForTicket, String areaId) {
+    public StandingArea(int capacity, double priceForTicket, String areaId, String desc) {
         this.capacity = capacity;
         this.priceForTicket = priceForTicket;
         this.avalibleSeats = capacity;
+        this.desc = desc;
         this.areaId = areaId;
     }
     @Override
@@ -51,5 +53,11 @@ public class StandingArea implements Bookable{
         }
         priceForTicket = newPrice;
         return true;
+    }
+    public String getDesc(){
+        return desc;
+    }
+    public void setDesc(String newDesc){
+        desc = newDesc;
     }
 }
