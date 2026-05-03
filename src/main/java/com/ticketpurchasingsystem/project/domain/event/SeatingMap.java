@@ -12,12 +12,12 @@ public class SeatingMap {
         return "" + areaIDGenerator.getAndIncrement();
     }
     //TODO: add name
-    public boolean addStandingArea(int capacity, double priceForTicket, String desc){
+    public boolean addStandingArea(int capacity, double priceForTicket){
         if(capacity <= 0 || priceForTicket < 0){
             return false;
         }
         String areaID = generateAreaID();
-        PurchaseAreas.put(areaID, new StandingArea(capacity, priceForTicket, areaID, desc));
+        PurchaseAreas.put(areaID, new StandingArea(capacity, priceForTicket, areaID));
         return true;
     }
 
@@ -78,7 +78,7 @@ public class SeatingMap {
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
             if(!PurchaseAreas.containsKey(seatID)){
-                throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist")
+                throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist");
             }
             Bookable seat = PurchaseAreas.get(seatID);
             if(!seat.unbook(1)){
