@@ -7,7 +7,7 @@ public interface  IActiveOrderService {
     public void cancelActiveOrder(String orderId) ;
     public void getActiveOrders(String userId) ;
     public void getActiveOrder(String orderId) ;
-    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId);
+    public ActiveOrderDTO createPendingOrder(SessionToken sessionToken, String userId, String eventId);
     public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, String[] seatIds);
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int quantity) ;
     public boolean saveOrder(ActiveOrderItem order);

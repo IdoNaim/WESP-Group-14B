@@ -7,6 +7,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
 import javax.naming.AuthenticationException;
+import java.util.HashMap;
 
 
 public class ActiveOrderService implements IActiveOrderService {
@@ -14,6 +15,7 @@ public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderPublisher activeOrderPublisher;
     IActiveOrderRepo activeOrderRepo;
     AuthenticationService authenticationService;
+    I
     //AuthenticationService authenticationService;
     public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService) {
         this.activeOrderListener = activeOrderListener;
@@ -94,24 +96,57 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new RuntimeException("the session has ended");
         }
     }
+//
+//    @Override
+//    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
+//        if(authenticationService.validateToken(sessionToken.getToken())){
+//            boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
+//            if(!reserved){
+//                return null;
+//            }
+//            String orderId = ""+ IdGenerator.getInstance().nextId();
+//            ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
+//            saveOrder(orderItem);
+//            return orderItem;
+//            }
+//        else{
+//            throw new RuntimeException("the session has ended");
+//        }
+//    }
 
-    @Override
-    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId, int quantity) {
-        if(authenticationService.validateToken(sessionToken.getToken())){
-            boolean reserved = activeOrderPublisher.publishReserveTickets(eventId, quantity);
-            if(!reserved){
-                return null;
-            }
-            String orderId = ""+ IdGenerator.getInstance().nextId();
-            ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId, quantity);
-            saveOrder(orderItem);
-            return orderItem;
-            }
-        else{
+    // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
+    public void completeOrder2(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+        if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("the session has ended");
         }
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            throw new IllegalArgumentException("Order not found");
+        }
+        checkIfExpiredAndThrowException(order);
+        //check purchasePolicy
+        boolean paymentResult = payment(paymentGateway, sessionToken, amount);
+        if(!paymentResult){
+            rollbackOrderReservations(order);
+            activeOrderRepo.delete(orderId);
+            throw new IllegalStateException("Payment failed");
+        }
     }
-    // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
+    private void rollbackOrderReservations(ActiveOrderItem order) {
+        // Unreserve specific seats
+        if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
+            // Convert List to Array if your publisher expects an array, otherwise pass the list
+            String[] seatsArray = order.getSeatIds().toArray(new String[0]);
+            activeOrderPublisher.publishUnreserveSeats(order.getEventId(), seatsArray);
+        }
+
+        // Unreserve standing area quantities
+        if (order.getStandingAreaQuantities() != null && !order.getStandingAreaQuantities().isEmpty()) {
+            for (HashMap.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
+                activeOrderPublisher.publishUnreserveStandingArea(order.getEventId(), entry.getKey(), entry.getValue());
+            }
+        }
+    }
     @Override
     public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId)
     {
@@ -144,7 +179,7 @@ public class ActiveOrderService implements IActiveOrderService {
 
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
         // TODO Auto-generated method stub
-        if(authenticationService.validateToken(sessionToken.getToken())) {
+        if(authenticationService.validate(sessionToken.getToken())) {
             return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
             //throw new UnsupportedOperationException("Unimplemented method 'payment'");
         }else{
