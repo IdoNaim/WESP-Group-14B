@@ -27,11 +27,19 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
+    public void publishReleaseSeats(String eventID, String[] seatIds){
+        SeatReleaseEvent event = new SeatReleaseEvent(this, eventID, seatIds);
+        eventPublisher.publish(event);
+    }
 
     public boolean publishReserveStandingArea(String eventId, String areaId, int quantity) {
         StandingAreaReservationEvent event = new StandingAreaReservationEvent(this, eventId, areaId, quantity);
         eventPublisher.publishEvent(event);
         return event.getResult();
+    }
+    public void publishReleaseStandingArea(String eventId, String areaID, int quantity){
+        StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(this, eventId, areaID, quantity);
+        eventPublisher.publishEvent(event);
     }
 
 

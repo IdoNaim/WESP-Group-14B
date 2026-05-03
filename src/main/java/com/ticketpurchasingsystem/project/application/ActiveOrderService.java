@@ -152,13 +152,13 @@ public class ActiveOrderService implements IActiveOrderService {
         if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
             // Convert List to Array if your publisher expects an array, otherwise pass the list
             String[] seatsArray = order.getSeatIds().toArray(new String[0]);
-            activeOrderPublisher.publishUnreserveSeats(order.getEventId(), seatsArray);
+            activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsArray);
         }
 
         // Unreserve standing area quantities
         if (order.getStandingAreaQuantities() != null && !order.getStandingAreaQuantities().isEmpty()) {
             for (HashMap.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
-                activeOrderPublisher.publishUnreserveStandingArea(order.getEventId(), entry.getKey(), entry.getValue());
+                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), entry.getKey(), entry.getValue());
             }
         }
     }
