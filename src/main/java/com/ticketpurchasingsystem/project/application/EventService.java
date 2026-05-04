@@ -142,7 +142,10 @@ public class EventService implements IEventService {
         }
 
     }
+
 }
+
+
 //    @Override
 //    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
 //        return true;
