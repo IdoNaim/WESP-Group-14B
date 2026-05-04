@@ -1,12 +1,8 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import org.springframework.context.ApplicationEventPublisher;
 
-import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
-
-import java.util.concurrent.CompletableFuture;
 
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
@@ -29,7 +25,7 @@ public class ActiveOrderPublisher {
     }
     public void publishReleaseSeats(String eventID, String[] seatIds){
         SeatReleaseEvent event = new SeatReleaseEvent(this, eventID, seatIds);
-        eventPublisher.publish(event);
+        eventPublisher.publishEvent(event);
     }
 
     public boolean publishReserveStandingArea(String eventId, String areaId, int quantity) {
