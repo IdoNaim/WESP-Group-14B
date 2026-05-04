@@ -152,7 +152,7 @@ public class ActiveOrderService implements IActiveOrderService {
         // Unreserve specific seats
         if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
             // Convert List to Array if your publisher expects an array, otherwise pass the list
-            String[] seatsArray = order.getSeatIds().toArray(new String[0]);
+            List<String> seatsArray = order.getSeatIds();
             activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsArray);
         }
 
