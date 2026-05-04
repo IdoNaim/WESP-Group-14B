@@ -53,7 +53,7 @@ public class ActiveOrderItem {
         this.eventId = eventId;
     }
 
-    public void addSeatIds(String[] seatIds) {
+    public void addSeatIds(List<String> seatIds) {
         for (String id : seatIds) {
             this.seatIds.add(id);
         }
