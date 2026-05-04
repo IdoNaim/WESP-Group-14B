@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.event;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 public class SeatingMap {
     private HashMap<String, Bookable> PurchaseAreas;
@@ -44,7 +45,7 @@ public class SeatingMap {
         return area.book(orderId, numberOfTickets);
     }
 
-    public boolean bookAssignedSeats(String[] seatIDs, String orderId){
+    public boolean bookAssignedSeats(List<String> seatIDs, String orderId){
         for(String seatID : seatIDs){
             if(!PurchaseAreas.containsKey(seatID)){
                 return false;
@@ -74,7 +75,7 @@ public class SeatingMap {
 
 
     //
-    public boolean unbookAssignedSeats(String[] seatIDs){
+    public boolean unbookAssignedSeats(List<String> seatIDs){
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
             if(!PurchaseAreas.containsKey(seatID)){
