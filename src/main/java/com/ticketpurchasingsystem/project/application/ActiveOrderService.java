@@ -59,7 +59,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, String[] seatIds) {
+    public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, List<String> seatIds) {
         if(authenticationService.validate(sessionToken.getToken())){
             ActiveOrderItem order = activeOrderRepo.findById(orderId);
             if (order == null) {
