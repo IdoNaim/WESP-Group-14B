@@ -8,9 +8,19 @@ import java.util.List;
 
 public class IsUpToPolicyEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
+    private Boolean result;
     public IsUpToPolicyEvent(Object source, ActiveOrderDTO order){
         super(source);
         this.order = order;
+        this.result = null;
+    }
+
+    public boolean getResult() {
+        return result.booleanValue();
+    }
+
+    public void setResult(boolean result) {
+        this.result = result;
     }
 
     public ActiveOrderDTO getOrder() {
