@@ -4,6 +4,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
 
+import java.util.List;
+
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
 
@@ -18,12 +20,12 @@ public class ActiveOrderPublisher {
     }
 
 
-    public boolean publishReserveSeats(String eventId, String[] seatIds) {
+    public boolean publishReserveSeats(String eventId, List<String> seatIds) {
         SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishReleaseSeats(String eventID, String[] seatIds){
+    public void publishReleaseSeats(String eventID, List<String> seatIds){
         SeatReleaseEvent event = new SeatReleaseEvent(this, eventID, seatIds);
         eventPublisher.publishEvent(event);
     }
