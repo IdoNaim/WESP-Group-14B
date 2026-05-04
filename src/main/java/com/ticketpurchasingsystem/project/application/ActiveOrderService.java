@@ -7,6 +7,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
 import javax.naming.AuthenticationException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -138,7 +139,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
         if(barcodesIssued == null){
-            paymentGateway.refund(sessionToken.getToken(), amount, orderId);
+            paymentGateway.refund( orderId , amount );
             rollbackOrderReservations(orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Barcode generation failed. Refund processed.");
@@ -192,7 +193,6 @@ public class ActiveOrderService implements IActiveOrderService {
 //    }
 
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
-        // TODO Auto-generated method stub
         if(authenticationService.validate(sessionToken.getToken())) {
             return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
             //throw new UnsupportedOperationException("Unimplemented method 'payment'");
@@ -201,12 +201,35 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-    public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO orderDTO){
+//    public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO orderDTO){
+//        if(!authenticationService.validate(sessionToken.getToken())){
+//            throw new RuntimeException("Session has ended");
+//        }
+//        checkIfExpiredAndThrowException(orderDTO);
+//        activeOrderRepo.save(orderDTO);
+//    }
+
+    public void editOrder(SessionToken sessionToken, ActiveOrderDTO newOrderDTO){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("Session has ended");
         }
-        checkIfExpiredAndThrowException(orderDTO);
-        activeOrderRepo.save(orderDTO);
+        ActiveOrderItem order = activeOrderRepo.findById(newOrderDTO.getOrderId());
+        if(order == null){
+            throw new IllegalArgumentException("couldn't find order to edit");
+        }
+        List<String> currentSeats = order.getSeatIds();
+        List<String> newOrderSeats = newOrderDTO.getSeatIds();
+        HashMap<String, Integer> currentStanding = order.getStandingAreaQuantities();
+        HashMap<String, Integer> newOrderStanding = newOrderDTO.getStandingAreaQuantities();
+        List<String> seatsToReserve = new ArrayList<>(newOrderSeats);
+        seatsToReserve.removeAll(currentSeats);
+        List<String> seatsToRelease = new ArrayList<>(currentSeats);
+        seatsToRelease.removeAll(newOrderSeats);
+
+        //try to reserve and release the seats
+        activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
+
+
     }
     @Override
     public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
