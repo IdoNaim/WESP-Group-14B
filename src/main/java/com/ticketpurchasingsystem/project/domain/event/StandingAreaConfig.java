@@ -8,4 +8,11 @@ public class StandingAreaConfig {
         this.capacity = capacity;
         this.price = price;
     }
+
+    public int getCapacity() {
+        return capacity;
+    }
+    public double getPrice() {
+        return price;
+    }
 }

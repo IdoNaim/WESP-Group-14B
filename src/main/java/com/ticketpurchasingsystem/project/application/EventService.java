@@ -6,13 +6,7 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
-import com.ticketpurchasingsystem.project.domain.event.EventListener;
-import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
-import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.*;
 
 
 public class EventService implements IEventService {
@@ -143,6 +137,17 @@ public class EventService implements IEventService {
 
     }
 
+    @Override
+    public SeatingMap configureSeatingMap(List<SeatingAreaConfig> seatingAreas, List<SeatingAreaConfig> standingAreas) {
+        SeatingMap seatingMap = new SeatingMap();
+        for(SeatingAreaConfig seatingConfig : seatingAreas) {
+            seatingMap.addSeatingArea(seatingConfig.getRows(), seatingConfig.getseatsPerRow(), seatingConfig.getPrice());
+        }
+        for(SeatingAreaConfig seatingAreaConfig : standingAreas) {
+            seatingMap.addStandingArea(seatingAreaConfig.getRows(), seatingAreaConfig.getseatsPerRow());
+        }
+        return seatingMap;
+    }
 }
 
 
