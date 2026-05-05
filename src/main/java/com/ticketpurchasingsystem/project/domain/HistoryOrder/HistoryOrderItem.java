@@ -5,10 +5,10 @@ import java.util.Date;
 public class HistoryOrderItem {
     private String id;
     private String userId;
-    private int price;
+    private double price;
     private int quantity;
     private Date orderDate;
-    public HistoryOrderItem(String id, String userId, int price, int quantity, Date orderDate) {
+    public HistoryOrderItem(String id, String userId, double price, int quantity, Date orderDate) {
         this.id = id;
         this.userId = userId;
         this.price = price;

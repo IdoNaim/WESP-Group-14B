@@ -9,10 +9,10 @@ public interface  IActiveOrderService {
     public void cancelActiveOrder(String orderId) ;
     public void getActiveOrders(String userId) ;
     public void getActiveOrder(String orderId) ;
-    public ActiveOrderDTO createPendingOrder(SessionToken sessionToken, String userId, String eventId);
+    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId);
     public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, List<String> seatIds);
     public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO order);
     public boolean saveOrder(ActiveOrderItem order);
-    public void completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId);
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId);
     public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount);
 }

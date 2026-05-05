@@ -15,11 +15,12 @@ public class ActiveOrderService implements IActiveOrderService {
     IActiveOrderRepo activeOrderRepo;
     AuthenticationService authenticationService;
     IBarCodeGateway barCodeGateway;
-    public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService) {
+    public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService, IBarCodeGateway barCodeGateway) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
         this.authenticationService = authenticationService;
+        this.barCodeGateway = barCodeGateway;
     }
 
     @Override
@@ -43,12 +44,12 @@ public class ActiveOrderService implements IActiveOrderService {
 
     //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
     //called after "checkout" is pressed in UI
-    public ActiveOrderDTO createPendingOrder(SessionToken sessionToken, String userId, String eventId){
+    public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId){
         if(authenticationService.validate(sessionToken.getToken())){
             String orderId = ""+ IdGenerator.getInstance().nextId();
             ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
             saveOrder(orderItem);
-            return new ActiveOrderDTO(orderItem);
+            return orderItem;
         }
         else{
             throw new RuntimeException("the session has ended");
@@ -113,7 +114,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //    }
 
     // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
-    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder(  IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("the session has ended");
         }
