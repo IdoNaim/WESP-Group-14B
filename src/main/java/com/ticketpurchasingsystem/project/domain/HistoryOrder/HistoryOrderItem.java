@@ -4,21 +4,21 @@ import java.util.Date;
 
 public class HistoryOrderItem {
     private String id;
-    private String name;
+    private String userId;
     private int price;
     private int quantity;
     private Date orderDate;
-    public HistoryOrderItem(String id, String name, int price, int quantity, Date orderDate) {
+    public HistoryOrderItem(String id, String userId, int price, int quantity, Date orderDate) {
         this.id = id;
-        this.name = name;
+        this.userId = userId;
         this.price = price;
         this.quantity = quantity;
         this.orderDate = orderDate;
     }
 
     public HistoryOrderItem(ActiveOrderItem activeOrderItem, Date orderDate) {
-        this.id = activeOrderItem.getId();
-        this.name = activeOrderItem.getName();
+        this.id = activeOrderItem.getOrderId();
+        this.userId = activeOrderItem.getUserId();
         this.price = activeOrderItem.getPrice();
         this.quantity = activeOrderItem.getQuantity();
         this.orderDate = orderDate;

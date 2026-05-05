@@ -1,12 +1,9 @@
 package com.ticketpurchasingsystem.project.application;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
-import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
-import javax.naming.AuthenticationException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,7 +113,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //    }
 
     // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
-    public List<BarcodeDTO> completeOrder2(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("the session has ended");
         }
@@ -128,6 +125,9 @@ public class ActiveOrderService implements IActiveOrderService {
         checkIfExpiredAndThrowException(order);
         //check purchasePolicy
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
+        // 1. boolean upToPolicy = eventService.checkPurchasePolicy(orderDTO);
+        // ActiveOrderEventsService -> fields: eventRepo, ActiveOrderRepo,
+        // 2. כל זה בסרוויס נפרד שמחזיק את שני הרפוזיטורי של הזמנות פעילות ואירועים
         if(!upToPolicy){
             throw new IllegalStateException("Order violates purchase policies");
         }
@@ -148,6 +148,7 @@ public class ActiveOrderService implements IActiveOrderService {
         activeOrderRepo.delete(orderId);
         return barcodesIssued;
     }
+
     private void rollbackOrderReservations(ActiveOrderDTO order) {
         // Unreserve specific seats
         if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
@@ -209,7 +210,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //        activeOrderRepo.save(orderDTO);
 //    }
 
-    public void editOrder(SessionToken sessionToken, ActiveOrderDTO newOrderDTO){
+    public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO newOrderDTO){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("Session has ended");
         }
@@ -221,6 +222,7 @@ public class ActiveOrderService implements IActiveOrderService {
         List<String> newOrderSeats = newOrderDTO.getSeatIds();
         HashMap<String, Integer> currentStanding = order.getStandingAreaQuantities();
         HashMap<String, Integer> newOrderStanding = newOrderDTO.getStandingAreaQuantities();
+
         List<String> seatsToReserve = new ArrayList<>(newOrderSeats);
         seatsToReserve.removeAll(currentSeats);
         List<String> seatsToRelease = new ArrayList<>(currentSeats);
@@ -228,42 +230,62 @@ public class ActiveOrderService implements IActiveOrderService {
 
         //try to reserve and release the seats
         activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
-
-
-    }
-    @Override
-    public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
-    {
-        if(authenticationService.validate(sessionToken.getToken())) {
-            ActiveOrderItem order = activeOrderRepo.findById(orderId);
-            if (order == null) {
-                throw new IllegalArgumentException("Order not found");
+        activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
+        //for each new standing area quantity, reserve or release the diffrence in seats
+        for (String areaId : newOrderStanding.keySet()) {
+            int currentQuantity = currentStanding.getOrDefault(areaId, 0); // Get current quantity for this area, default to 0 if not present
+            int newQuantity = newOrderStanding.get(areaId);
+            if (newQuantity > currentQuantity) {
+                activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, newQuantity - currentQuantity);
+                // If reservation fails, we should ideally roll back any successful reservations made so far and throw an exception. This is a simplified example.
+            } else if (newQuantity < currentQuantity) {
+                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentQuantity - newQuantity);
             }
-            checkIfExpiredAndThrowException(order);
-            if (newQuantity <= 0) {
-                throw new IllegalArgumentException("Quantity must be greater than 0");
-            }
-
-            if (newQuantity == order.getQuantity()) {
-                return;
-            }
-            if (newQuantity < order.getQuantity()) {
-                activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity() - newQuantity);
-                order.setQuantity(newQuantity);
-                activeOrderRepo.update(order);
-                return;
-            } else {
-                boolean reserved = activeOrderPublisher.publishReserveTickets(order.getEventId(), newQuantity - order.getQuantity());
-                if (!reserved) {
-                    throw new IllegalStateException("Not enough tickets available");
-                }
-                order.setQuantity(newQuantity);
-                activeOrderRepo.update(order);
-            }
-        }else{
-            throw new RuntimeException("the session is over");
         }
+        //for each old standing area quantity that is not in the new order, release all the quantity
+        for (String areaId : currentStanding.keySet()) {
+            if (!newOrderStanding.containsKey(areaId)) {
+                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentStanding.get(areaId));
+            }
+        }
+
+        order.setSeatIds(newOrderSeats);
+        order.setStandingAreaQuantities(newOrderStanding);
+        saveOrder(order);
     }
+    // @Override
+    // public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
+    // {
+    //     if(authenticationService.validate(sessionToken.getToken())) {
+    //         ActiveOrderItem order = activeOrderRepo.findById(orderId);
+    //         if (order == null) {
+    //             throw new IllegalArgumentException("Order not found");
+    //         }
+    //         checkIfExpiredAndThrowException(order);
+    //         if (newQuantity <= 0) {
+    //             throw new IllegalArgumentException("Quantity must be greater than 0");
+    //         }
+
+    //         if (newQuantity == order.getQuantity()) {
+    //             return;
+    //         }
+    //         if (newQuantity < order.getQuantity()) {
+    //             activeOrderPublisher.publishUnreserveTickets(order.getEventId(), order.getQuantity() - newQuantity);
+    //             order.setQuantity(newQuantity);
+    //             activeOrderRepo.update(order);
+    //             return;
+    //         } else {
+    //             boolean reserved = activeOrderPublisher.publishReserveTickets(order.getEventId(), newQuantity - order.getQuantity());
+    //             if (!reserved) {
+    //                 throw new IllegalStateException("Not enough tickets available");
+    //             }
+    //             order.setQuantity(newQuantity);
+    //             activeOrderRepo.update(order);
+    //         }
+    //     }else{
+    //         throw new RuntimeException("the session is over");
+    //     }
+    // }
    
 
     

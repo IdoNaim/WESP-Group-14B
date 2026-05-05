@@ -94,4 +94,12 @@ public class ActiveOrderItem {
         this.seatIds = order.getSeatIds();
         this.StandingAreaQuantities = order.getStandingAreaQuantities();
     }
+
+    public void setSeatIds(List<String> seatIds) {
+        this.seatIds = seatIds;
+    }
+
+    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) {
+        StandingAreaQuantities = standingAreaQuantities;
+    }
 }
