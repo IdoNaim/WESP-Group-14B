@@ -18,7 +18,7 @@ public class EventServiceSeatingMapTest {
 
     @BeforeEach
     void setUp() {
-        eventService = new EventService(mock(IEventRepo.class));
+        eventService = new EventService(mock(IEventRepo.class), mock(EventAggregatePublisher.class), mock(EventAggregateListener.class));
     }
 
     // ================= BASIC SUCCESS =================

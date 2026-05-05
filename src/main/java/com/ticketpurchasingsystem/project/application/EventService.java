@@ -13,11 +13,13 @@ public class EventService implements IEventService {
 
     private final IEventRepo eventRepo;
 
-    EventPublisher eventPublisher = EventPublisher.getInstance();
-    EventListener eventListener = EventListener.getInstance();
+    EventAggregatePublisher eventPublisher;
+    EventAggregateListener eventListener;
 
-    public EventService(IEventRepo eventRepo) {
+    public EventService(IEventRepo eventRepo, EventAggregatePublisher eventPublisher, EventAggregateListener eventListener) {
         this.eventRepo = eventRepo;
+        this.eventPublisher = eventPublisher;
+        this.eventListener = eventListener;
     }
 
     public boolean createEvent(EventDTO eventDTO,
