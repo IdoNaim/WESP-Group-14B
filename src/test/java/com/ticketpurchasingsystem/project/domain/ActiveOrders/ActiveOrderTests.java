@@ -114,7 +114,7 @@ public class ActiveOrderTests {
         String userId = "user";
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId);
-        verify(activeOrderService.saveOrder(order));
+        verify(activeOrderRepoMock).save(order);
     }
     @Test
     public void GivenInvalidSessionToken_WhenCreatePendingOrder_thenReturnErrorMessage(){
