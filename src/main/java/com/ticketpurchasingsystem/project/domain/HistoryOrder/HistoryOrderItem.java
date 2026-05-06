@@ -64,7 +64,7 @@ public class HistoryOrderItem {
     public String getUserId() {
         return userId;
     }
-    
+
      public HashMap<String, Integer> getStandingAreaQuantities(){
         return standingAreaQuantities;
      }
