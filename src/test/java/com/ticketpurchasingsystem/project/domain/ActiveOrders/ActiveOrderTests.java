@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -158,7 +159,7 @@ public class ActiveOrderTests {
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         when(order.getOrderId()).thenReturn("order1");
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
-        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(true);
+        when(activeOrderService.payment(paymentGateway, any(), anyDouble())).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
        
@@ -193,7 +194,7 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(false);
+        when(activeOrderService.payment(paymentGateway, any(), anyDouble())).thenReturn(false);
         verify(activeOrderRepoMock, times(0)).delete(orderId);
 
         assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
@@ -207,7 +208,7 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(orderId)).thenReturn(null);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        when(activeOrderService.payment(paymentGateway, any(), any())).thenReturn(true);
+        when(activeOrderService.payment(paymentGateway, any(), anyDouble())).thenReturn(true);
         verify(activeOrderRepoMock, times(0)).delete(orderId);
 
       
@@ -222,7 +223,8 @@ public class ActiveOrderTests {
         when(activeOrderPublisher.publishReserveSeats(any(), any())).thenReturn(true);
 
         when(order.getOrderId()).thenReturn("order1");
-        when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        when(orderDTO.getOrderId()).thenReturn("order1");
+        when(activeOrderRepoMock.findById(orderDTO.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         HashMap<String, Integer> seatQuantities = new HashMap<>();
