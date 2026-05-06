@@ -48,7 +48,10 @@ public class ActiveOrderService implements IActiveOrderService {
         if(authenticationService.validate(sessionToken.getToken())){
             String orderId = ""+ IdGenerator.getInstance().nextId();
             ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
-            saveOrder(orderItem);
+            boolean saved = saveOrder(orderItem);
+            if(!saved){
+                throw new RuntimeException("failed to save the order");
+            }
             return orderItem;
         }
         else{
