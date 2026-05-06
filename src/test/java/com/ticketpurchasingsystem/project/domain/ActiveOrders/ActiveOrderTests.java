@@ -112,6 +112,7 @@ public class ActiveOrderTests {
         when(sessionToken.getToken()).thenReturn("user");
         String eventId = "1";
         String userId = "user";
+        when(activeOrderPublisher.publishIsValidEventIDEvent("1")).thenReturn(true);
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId);
         verify(activeOrderRepoMock).save(order);
@@ -218,29 +219,33 @@ public class ActiveOrderTests {
         ActiveOrderItem order = mock(ActiveOrderItem.class);
         SessionToken sessionToken = mock(SessionToken.class);
         ActiveOrderDTO orderDTO = mock(ActiveOrderDTO.class);
-
+        String orderID = "order1";
         when(activeOrderPublisher.publishReserveSeats(any(), any())).thenReturn(true);
 
-        when(order.getOrderId()).thenReturn("order1");
-        when(orderDTO.getOrderId()).thenReturn("order1");
+        when(order.getOrderId()).thenReturn(orderID);
+        when(orderDTO.getOrderId()).thenReturn(orderID);
         when(activeOrderRepoMock.findById(orderDTO.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        HashMap<String, Integer> seatQuantities = new HashMap<>();
-        seatQuantities.put("seat1", 5);
-        seatQuantities.put("seat2", 5);
-        when(order.getStandingAreaQuantities()).thenReturn(seatQuantities);
-        
-        when(order.getSeatIds()).thenReturn(List.of("seat1", "seat2"));
 
-        
+        //creating the old order
+        int oldQuantity = 5;
+        HashMap<String, Integer> areaQuantities = new HashMap<>();
+        areaQuantities.put("area1", oldQuantity);
+        areaQuantities.put("area2", oldQuantity);
+        when(order.getStandingAreaQuantities()).thenReturn(areaQuantities);
+        List<String> seatIds = List.of("seat1", "seat2");
+        when(order.getSeatIds()).thenReturn(seatIds);
+
+        //creating the new order
+        int newQuantity = 3;
         List<String> newSeatIds = List.of("seat3", "seat4");
         when(orderDTO.getSeatIds()).thenReturn(newSeatIds);
-        when(orderDTO.getStandingAreaQuantities()).thenReturn(seatQuantities);
-        HashMap<String, Integer> newSeatQuantities = new HashMap<>();
-        newSeatQuantities.put("seat1", 3);
-        newSeatQuantities.put("seat2", 3);
-        when(orderDTO.getStandingAreaQuantities()).thenReturn(newSeatQuantities);
+        HashMap<String, Integer> newAreaQuantities = new HashMap<>();
+        newAreaQuantities.put("area1", newQuantity);
+        newAreaQuantities.put("area2", newQuantity);
+        when(orderDTO.getStandingAreaQuantities()).thenReturn(newAreaQuantities);
+
 
         activeOrderService.updateActiveOrder(sessionToken, orderDTO);
 
@@ -248,15 +253,35 @@ public class ActiveOrderTests {
         verify(activeOrderPublisher, times(1)).publishReleaseSeats(order.getEventId(), order.getSeatIds());
         verify(activeOrderPublisher, times(1)).publishReserveSeats(order.getEventId(), newSeatIds);
 
-        for(String areaId : seatQuantities.keySet()) {
-            verify(activeOrderPublisher, times(1)).publishReleaseStandingArea(order.getEventId(), areaId, seatQuantities.get(areaId));
+//        for(String areaId : areaQuantities.keySet()) {
+//            verify(activeOrderPublisher, times(1)).publishReleaseStandingArea(order.getEventId(), areaId, seatQuantities.get(areaId));
+//        }
+//
+//        for(String areaId : newSeatQuantities.keySet()) {
+//            verify(activeOrderPublisher, times(1)).publishReserveStandingArea(order.getEventId(), areaId, newSeatQuantities.get(areaId));
+//        }
+        // standing areas: service releases/reserves the DIFFERENCE
+        for(String areaId : newAreaQuantities.keySet()) {
+            int current = areaQuantities.getOrDefault(areaId, 0);
+            int next = newAreaQuantities.get(areaId);
+            if(next > current) {
+                verify(activeOrderPublisher, times(1))
+                        .publishReserveStandingArea(order.getEventId(), areaId, next - current);
+            } else if(next < current) {
+                verify(activeOrderPublisher, times(1))
+                        .publishReleaseStandingArea(order.getEventId(), areaId, current - next); // 5 - 3 = 2
+            }
         }
 
-        for(String areaId : newSeatQuantities.keySet()) {
-            verify(activeOrderPublisher, times(1)).publishReserveStandingArea(order.getEventId(), areaId, newSeatQuantities.get(areaId));
+// areas in old order but not in new order should be fully released
+        for(String areaId : areaQuantities.keySet()) {
+            if(!newAreaQuantities.containsKey(areaId)) {
+                verify(activeOrderPublisher, times(1))
+                        .publishReleaseStandingArea(order.getEventId(), areaId, areaQuantities.get(areaId));
+            }
         }
 
-        verify(activeOrderRepoMock, times(0)).update(order);
+        verify(activeOrderRepoMock, times(1)).update(order);
     }
     @Test
     public void givenNonExistentOrder_whenUpdateOrder_thenThrowException(){

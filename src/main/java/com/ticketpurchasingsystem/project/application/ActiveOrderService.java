@@ -252,7 +252,7 @@ public class ActiveOrderService implements IActiveOrderService {
 
         order.setSeatIds(newOrderSeats);
         order.setStandingAreaQuantities(newOrderStanding);
-        saveOrder(order);
+        activeOrderRepo.update(order);
     }
     // @Override
     // public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
