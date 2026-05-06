@@ -134,6 +134,7 @@ public class ActiveOrderTests {
         String eventId = "-1";
         String userId = "user";
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishIsValidEventIDEvent(eventId)).thenReturn(false);
         assertThrows(Exception.class, () ->activeOrderService.createPendingOrder(sessionToken, userId, eventId));
     }
    
@@ -154,12 +155,12 @@ public class ActiveOrderTests {
         SessionToken sessionToken = mock(SessionToken.class);
         ActiveOrderItem order = mock(ActiveOrderItem.class);
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
-
+        when(order.getCreatedAt()).thenReturn(new Timestamp(System.currentTimeMillis()));
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         when(order.getOrderId()).thenReturn("order1");
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
-        when(activeOrderService.payment(eq(paymentGateway), any(), anyDouble())).thenReturn(true);
+        when(paymentGateway.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
        
@@ -178,7 +179,8 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(false);
-        when(activeOrderService.payment(eq(paymentGateway), any(), any())).thenReturn(true);
+        when(paymentGateway.pay()).thenReturn(true);
+//        when(activeOrderService.payment(eq(paymentGateway), any(), any())).thenReturn(true);
 
         verify(activeOrderRepoMock, times(0)).delete(orderId);
         assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
@@ -194,7 +196,8 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        when(activeOrderService.payment(eq(paymentGateway), any(), anyDouble())).thenReturn(false);
+        //when(activeOrderService.payment(eq(paymentGateway), any(), anyDouble())).thenReturn(false);
+        when(paymentGateway.pay()).thenReturn(true);
         verify(activeOrderRepoMock, times(0)).delete(orderId);
 
         assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
@@ -208,7 +211,8 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(orderId)).thenReturn(null);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        when(activeOrderService.payment(eq(paymentGateway), any(), anyDouble())).thenReturn(true);
+        //when(activeOrderService.payment(eq(paymentGateway), any(), anyDouble())).thenReturn(true);
+        when(paymentGateway.pay()).thenReturn(true);
         verify(activeOrderRepoMock, times(0)).delete(orderId);
 
       

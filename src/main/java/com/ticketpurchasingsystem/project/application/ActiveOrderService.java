@@ -310,13 +310,11 @@ public class ActiveOrderService implements IActiveOrderService {
     public boolean saveOrder(ActiveOrderItem order) {
         try{
             if(order == null){
-                System.out.println("Order cannot be null");
-                return false;
+                throw new IllegalArgumentException("Order cannot be null");
             }
        
             if(!isValidEventID(order.getEventId()) || !isValidOrderID(order.getOrderId())) {
-                System.out.println("bad order ID or event ID");
-                return false;
+                throw new IllegalArgumentException("bad order ID or event ID");
             }
         return activeOrderRepo.save(order);
         }catch(Exception e){
