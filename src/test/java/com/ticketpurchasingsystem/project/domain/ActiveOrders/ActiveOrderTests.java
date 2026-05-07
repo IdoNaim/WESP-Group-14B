@@ -102,6 +102,8 @@ public class ActiveOrderTests {
         String eventId = "1";
         String userId = "user";
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderPublisher.publishIsValidEventIDEvent(eventId)).thenReturn(true);
+        when(activeOrderRepoMock.save(any())).thenReturn(true);
         ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId);
         assertEquals(order.getEventId(), eventId);
         assertEquals(order.getUserId(), userId);
@@ -112,8 +114,9 @@ public class ActiveOrderTests {
         when(sessionToken.getToken()).thenReturn("user");
         String eventId = "1";
         String userId = "user";
-        when(activeOrderPublisher.publishIsValidEventIDEvent("1")).thenReturn(true);
+        when(activeOrderPublisher.publishIsValidEventIDEvent(eventId)).thenReturn(true);
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
+        when(activeOrderRepoMock.save(any())).thenReturn(true);
         ActiveOrderItem order = activeOrderService.createPendingOrder(sessionToken, userId, eventId);
         verify(activeOrderRepoMock).save(order);
     }
@@ -231,6 +234,7 @@ public class ActiveOrderTests {
         when(activeOrderRepoMock.findById(orderDTO.getOrderId())).thenReturn(order);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
+        when(order.getCreatedAt()).thenReturn(new Timestamp(System.currentTimeMillis()));
 
         //creating the old order
         int oldQuantity = 5;
@@ -257,13 +261,6 @@ public class ActiveOrderTests {
         verify(activeOrderPublisher, times(1)).publishReleaseSeats(order.getEventId(), order.getSeatIds());
         verify(activeOrderPublisher, times(1)).publishReserveSeats(order.getEventId(), newSeatIds);
 
-//        for(String areaId : areaQuantities.keySet()) {
-//            verify(activeOrderPublisher, times(1)).publishReleaseStandingArea(order.getEventId(), areaId, seatQuantities.get(areaId));
-//        }
-//
-//        for(String areaId : newSeatQuantities.keySet()) {
-//            verify(activeOrderPublisher, times(1)).publishReserveStandingArea(order.getEventId(), areaId, newSeatQuantities.get(areaId));
-//        }
         // standing areas: service releases/reserves the DIFFERENCE
         for(String areaId : newAreaQuantities.keySet()) {
             int current = areaQuantities.getOrDefault(areaId, 0);
@@ -277,7 +274,7 @@ public class ActiveOrderTests {
             }
         }
 
-// areas in old order but not in new order should be fully released
+        // areas in old order but not in new order should be fully released
         for(String areaId : areaQuantities.keySet()) {
             if(!newAreaQuantities.containsKey(areaId)) {
                 verify(activeOrderPublisher, times(1))
@@ -337,7 +334,8 @@ public class ActiveOrderTests {
         
         
         assertThrows(Exception.class, ()-> activeOrderService.updateActiveOrder(sessionToken, orderDTO));
-        verify(activeOrderService, times(0)).saveOrder(any());
+        verify(activeOrderRepoMock, times(0)).update(order);
+        //verify(activeOrderService, times(0)).saveOrder(any());
 
 
         // String orderId = "order1";

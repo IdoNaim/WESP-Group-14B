@@ -7,6 +7,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class ActiveOrderService implements IActiveOrderService {
@@ -129,9 +130,6 @@ public class ActiveOrderService implements IActiveOrderService {
         checkIfExpiredAndThrowException(order);
         //check purchasePolicy
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
-        // 1. boolean upToPolicy = eventService.checkPurchasePolicy(orderDTO);
-        // ActiveOrderEventsService -> fields: eventRepo, ActiveOrderRepo,
-        // 2. כל זה בסרוויס נפרד שמחזיק את שני הרפוזיטורי של הזמנות פעילות ואירועים
         if(!upToPolicy){
             throw new IllegalStateException("Order violates purchase policies");
         }
@@ -153,10 +151,19 @@ public class ActiveOrderService implements IActiveOrderService {
         return barcodesIssued;
     }
 
+    private void rollbackOrderReservations(String eventID, List<String> seatsToRollback, Map<String, Integer> standingToRollback) {
+        if (seatsToRollback != null && !seatsToRollback.isEmpty()) {
+                activeOrderPublisher.publishReleaseSeats(eventID, seatsToRollback);
+        }
+        if (standingToRollback != null && !standingToRollback.isEmpty()) {
+            for (Map.Entry<String, Integer> entry : standingToRollback.entrySet()) {
+                    activeOrderPublisher.publishReleaseStandingArea(eventID, entry.getKey(), entry.getValue());
+            }
+        }
+    }
     private void rollbackOrderReservations(ActiveOrderDTO order) {
         // Unreserve specific seats
         if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
-            // Convert List to Array if your publisher expects an array, otherwise pass the list
             List<String> seatsArray = order.getSeatIds();
             activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsArray);
         }
@@ -222,6 +229,8 @@ public class ActiveOrderService implements IActiveOrderService {
         if(order == null){
             throw new IllegalArgumentException("couldn't find order to edit");
         }
+        checkIfExpiredAndThrowException(order);
+
         List<String> currentSeats = order.getSeatIds();
         List<String> newOrderSeats = newOrderDTO.getSeatIds();
         HashMap<String, Integer> currentStanding = order.getStandingAreaQuantities();
@@ -231,18 +240,39 @@ public class ActiveOrderService implements IActiveOrderService {
         seatsToReserve.removeAll(currentSeats);
         List<String> seatsToRelease = new ArrayList<>(currentSeats);
         seatsToRelease.removeAll(newOrderSeats);
+        Map<String, Integer> standingToReserve = calculateStandingToReserve(currentStanding, newOrderStanding);
 
-        //try to reserve and release the seats
-        activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
+        //try to reserve the seats
+        boolean seatsReserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
+        if(!seatsReserved){
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
+            throw new RuntimeException("couldnt reserve the new seats, didnt release current seats and tickets");
+        }
+
+        boolean standingReserved = true;
+        for (Map.Entry<String, Integer> entry : standingToReserve.entrySet()) {
+            standingReserved = activeOrderPublisher.publishReserveStandingArea(
+                    order.getEventId(), entry.getKey(), entry.getValue()
+            );
+            if (!standingReserved) {
+                break;
+            }
+        }
+        if(!standingReserved){
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, standingToReserve);
+            throw new RuntimeException("couldnt reserve the new standing area tickes, didnt release current seats and tickets");
+        }
+
+        order.setSeatIds(newOrderSeats);
+        order.setStandingAreaQuantities(newOrderStanding);
+        activeOrderRepo.update(order);
+
+        //if we managed to reserve all the seats/tickets and update DB, we release the unneeded ones:
         activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
-        //for each new standing area quantity, reserve or release the diffrence in seats
-        for (String areaId : newOrderStanding.keySet()) {
+        for(String areaId : newOrderStanding.keySet()) {
             int currentQuantity = currentStanding.getOrDefault(areaId, 0); // Get current quantity for this area, default to 0 if not present
             int newQuantity = newOrderStanding.get(areaId);
-            if (newQuantity > currentQuantity) {
-                activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, newQuantity - currentQuantity);
-                // If reservation fails, we should ideally roll back any successful reservations made so far and throw an exception. This is a simplified example.
-            } else if (newQuantity < currentQuantity) {
+            if (newQuantity < currentQuantity) {
                 activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentQuantity - newQuantity);
             }
         }
@@ -252,10 +282,22 @@ public class ActiveOrderService implements IActiveOrderService {
                 activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentStanding.get(areaId));
             }
         }
+    }
+    private Map<String, Integer> calculateStandingToReserve(Map<String, Integer> currentStanding,
+            Map<String, Integer> newOrderStanding) {
+        Map<String, Integer> standingToReserve = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : newOrderStanding.entrySet()) {
+            String areaId = entry.getKey();
+            int newQuantity = entry.getValue();
+            int currentQuantity = currentStanding.getOrDefault(areaId, 0);
+            int difference = newQuantity - currentQuantity;
 
-        order.setSeatIds(newOrderSeats);
-        order.setStandingAreaQuantities(newOrderStanding);
-        activeOrderRepo.update(order);
+            // Only keep the areas where we need to reserve additional tickets
+            if (difference > 0) {
+                standingToReserve.put(areaId, difference);
+            }
+        }
+        return standingToReserve;
     }
     // @Override
     // public void updateActiveOrder(SessionToken sessionToken, String orderId, int newQuantity) 
