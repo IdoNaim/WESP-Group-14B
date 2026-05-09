@@ -14,5 +14,4 @@ public interface  IActiveOrderService {
     public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO order);
     public boolean saveOrder(ActiveOrderItem order);
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId);
-    public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount);
 }

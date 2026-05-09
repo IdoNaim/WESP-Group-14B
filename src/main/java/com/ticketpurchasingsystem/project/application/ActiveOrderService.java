@@ -47,6 +47,9 @@ public class ActiveOrderService implements IActiveOrderService {
     //called after "checkout" is pressed in UI
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId){
         if(authenticationService.validate(sessionToken.getToken())){
+            if(activeOrderRepo.findByUserId(userId) != null){
+                throw new IllegalArgumentException("an active order already exists for this user: "+ userId);
+            }
             String orderId = ""+ IdGenerator.getInstance().nextId();
             ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
             boolean saved = saveOrder(orderItem);
@@ -204,7 +207,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //        }
 //    }
 
-    public boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
+    private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
         if(authenticationService.validate(sessionToken.getToken())) {
             return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
             //throw new UnsupportedOperationException("Unimplemented method 'payment'");

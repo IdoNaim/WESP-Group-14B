@@ -12,6 +12,7 @@ public class ActiveOrderItem {
     private Timestamp createdAt;
     private List<String> seatIds;
     private HashMap<String, Integer> StandingAreaQuantities;
+    
 
     public final static int EXPIRATION_TIME_MINUTES = 15;
 
@@ -23,6 +24,14 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(System.currentTimeMillis());
         this.seatIds = new ArrayList<>();
         this.StandingAreaQuantities = new HashMap<>();
+    }
+    public ActiveOrderItem(ActiveOrderItem other) {
+        this.orderId = other.getOrderId();
+        this.userId = other.getUserId();
+        this.eventId = other.getEventId();
+        this.createdAt = new Timestamp(other.getCreatedAt().getTime());
+        this.seatIds = new ArrayList<>(other.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
     }
 
     public String getOrderId() {
@@ -88,11 +97,11 @@ public class ActiveOrderItem {
     // }
 
     public void editOrder(ActiveOrderItem order) {
-        if(order.getOrderId() != this.orderId) {
+        if (!order.getOrderId().equals(this.orderId)) {
             throw new IllegalArgumentException("Order ID cannot be changed");
         }
-        this.seatIds = order.getSeatIds();
-        this.StandingAreaQuantities = order.getStandingAreaQuantities();
+        this.seatIds = new ArrayList<>(order.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(order.getStandingAreaQuantities());
     }
 
     public void setSeatIds(List<String> seatIds) {
@@ -101,5 +110,9 @@ public class ActiveOrderItem {
 
     public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) {
         StandingAreaQuantities = standingAreaQuantities;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
     }
 }

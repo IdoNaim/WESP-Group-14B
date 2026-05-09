@@ -6,5 +6,6 @@ public interface  IActiveOrderRepo {
     public ActiveOrderItem findById(String orderId);
     public void delete(String orderId);
     public void update(ActiveOrderItem order);
-    List<ActiveOrderItem> findAll();
+    public List<ActiveOrderItem> findAll();
+    public ActiveOrderItem findByUserId(String userId);
 }
