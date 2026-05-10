@@ -12,7 +12,7 @@ public class ActiveOrderItem {
     private Timestamp createdAt;
     private List<String> seatIds;
     private HashMap<String, Integer> StandingAreaQuantities;
-    private boolean paid;
+    private boolean processing;
     
 
     public final static int EXPIRATION_TIME_MINUTES = 15;
@@ -25,7 +25,7 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(System.currentTimeMillis());
         this.seatIds = new ArrayList<>();
         this.StandingAreaQuantities = new HashMap<>();
-        paid = false;
+        this.processing = false;
     }
     public ActiveOrderItem(ActiveOrderItem other) {
         this.orderId = other.getOrderId();
@@ -34,15 +34,15 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(other.getCreatedAt().getTime());
         this.seatIds = new ArrayList<>(other.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
-        this.paid = other.isPaid();
+        this.processing = false;
     }
 
-    public boolean isPaid() {
-        return paid;
+    public boolean markAsProcessing() {
+        if (processing) return false;
+        processing = true;
+        return true;
     }
-    public void setPaid(boolean paid){
-        this.paid = paid;
-    }
+
 
     public String getOrderId() {
         return orderId;
@@ -112,7 +112,6 @@ public class ActiveOrderItem {
         }
         this.seatIds = new ArrayList<>(order.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(order.getStandingAreaQuantities());
-        setPaid(order.isPaid());
     }
 
     public void setSeatIds(List<String> seatIds) {

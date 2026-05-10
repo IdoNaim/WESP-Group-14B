@@ -121,13 +121,17 @@ public class ActiveOrderService implements IActiveOrderService {
 //    }
 
     // gets paymentGateway because there multiple gateways each for a different payment method(paypal, bit...), so gets the payment method from UI after the user chose it
-    public List<BarcodeDTO> completeOrder(  IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
         if(!authenticationService.validate(sessionToken.getToken())){
             throw new RuntimeException("the session has ended");
         }
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
         if(order == null){
             throw new IllegalArgumentException("Order not found");
+        }
+        boolean processing = activeOrderRepo.markAsProcessing(orderId);
+        if(!processing){
+            throw new IllegalStateException("order is already being processed");
         }
         ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
         checkIfExpiredAndThrowException(order);

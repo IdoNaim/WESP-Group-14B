@@ -8,4 +8,5 @@ public interface  IActiveOrderRepo {
     public void update(ActiveOrderItem order);
     public List<ActiveOrderItem> findAll();
     public ActiveOrderItem findByUserId(String userId);
+    public boolean markAsProcessing(String orderId);
 }
