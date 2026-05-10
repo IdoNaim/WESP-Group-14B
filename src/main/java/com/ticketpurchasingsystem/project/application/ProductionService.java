@@ -3,9 +3,11 @@ package com.ticketpurchasingsystem.project.application;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
@@ -89,6 +91,43 @@ public class ProductionService implements IProductionService {
             return true;
         } catch (Exception e) {
             loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean appointManager(String sessionToken, Integer companyId, String managerId,
+            Set<ManagerPermission> permissions) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String appointerId = authenticationService.getUser(sessionToken);
+
+        if (!productionEventPublisher.publishIsUserRegisteredEvent(managerId)) {
+            return false;
+        }
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("appointManager: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.appointManager(
+                appointerId, companyId, managerId, permissions, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            ProductionCompany saved = prodRepo.save(company);
+            productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
+            loggerDef.getInstance().info(
+                    "appointManager: " + managerId + " appointed as manager of company "
+                            + companyId + " by " + appointerId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
             return false;
         }
     }
