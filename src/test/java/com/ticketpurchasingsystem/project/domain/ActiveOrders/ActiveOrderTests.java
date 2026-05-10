@@ -700,7 +700,7 @@ public class ActiveOrderTests {
         new Thread(() -> {
             try {
                 startLatch.await();
-                service.cancelActiveOrder(orderId);
+                service.cancelActiveOrder(sessionToken, "userB", orderId);
                 successCount.incrementAndGet();
             } catch (Exception e) { failCount.incrementAndGet(); }
             finally { doneLatch.countDown(); }
@@ -712,7 +712,7 @@ public class ActiveOrderTests {
         assertEquals(1, successCount.get(), "Only one operation should succeed");
         assertEquals(1, failCount.get(), "The other operation should fail gracefully");
         assertNull(realRepo.findById(orderId), "Order should be removed from repo either way");
-        verify(paymentGateway, atMostOnce()).pay(); // never double charged
+        verify(paymentGateway, atMostOnce()).pay();
     }
 
     @Test

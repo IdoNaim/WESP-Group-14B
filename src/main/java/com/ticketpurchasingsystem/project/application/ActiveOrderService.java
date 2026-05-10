@@ -25,9 +25,28 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void cancelActiveOrder(String orderId) {
-        // TODO Auto-generated method stub
-        
+    public void cancelActiveOrder(SessionToken sessionToken, String userId, String orderId) {
+        if (!authenticationService.validate(sessionToken.getToken())) {
+            throw new RuntimeException("the session has ended");
+        }
+
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        // make sure the user canceling the order is the one who owns it
+        if (!order.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("this order does not belong to this user");
+        }
+
+        boolean processing = activeOrderRepo.markAsProcessing(orderId);
+        if (!processing) {
+            throw new IllegalStateException("order is already being processed, cannot cancel");
+        }
+
+        rollbackOrderReservations(new ActiveOrderDTO(order));
+        activeOrderRepo.delete(orderId);
     }
 
     @Override
