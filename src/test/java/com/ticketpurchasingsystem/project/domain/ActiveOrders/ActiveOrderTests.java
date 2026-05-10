@@ -183,19 +183,21 @@ public class ActiveOrderTests {
     @Test
     public void givenValidOrder_whenCompleteOrder_thenOrderIsRemovedFromRepo() {
         double amount = 100.0;
+        String orderId = "order1";
         SessionToken sessionToken = mock(SessionToken.class);
         ActiveOrderItem order = mock(ActiveOrderItem.class);
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
         when(order.getCreatedAt()).thenReturn(new Timestamp(System.currentTimeMillis()));
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
-        when(order.getOrderId()).thenReturn("order1");
+        when(order.getOrderId()).thenReturn(orderId);
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        when(activeOrderRepoMock.markAsProcessing(orderId)).thenReturn(true);
         when(paymentGateway.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
        
-        activeOrderService.completeOrder(paymentGateway, sessionToken, amount, order.getOrderId());
+        activeOrderService.completeOrder(paymentGateway, sessionToken, amount, orderId);
         verify(activeOrderRepoMock, times(1)).delete(order.getOrderId());
     }
     
@@ -226,6 +228,7 @@ public class ActiveOrderTests {
         when(order.getCreatedAt()).thenReturn(new Timestamp(System.currentTimeMillis())); // Order not expired
         when(order.getOrderId()).thenReturn(orderId);
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
+        when(activeOrderRepoMock.markAsProcessing(orderId)).thenReturn(true);
         when(sessionToken.getToken()).thenReturn("user");
         when(authenticationService.validate(sessionToken.getToken())).thenReturn(true);
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
@@ -454,6 +457,7 @@ public class ActiveOrderTests {
         order.setCreatedAt(new Timestamp(System.currentTimeMillis())); // not expired
         order.setSeatIds(List.of("A-1", "A-2")); // Mocking already chosen seats
         when(activeOrderRepoMock.findById("order1")).thenReturn(order);
+        when(activeOrderRepoMock.markAsProcessing("order1")).thenReturn(true);
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
         
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
