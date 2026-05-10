@@ -547,9 +547,6 @@ public class ActiveOrderTests {
                     startLatch.await();
                     service.createPendingOrder(sessionToken, "sameUser", "event1");
                     successCount.incrementAndGet();
-                } catch (IllegalArgumentException e) {
-                    // expected — order already exists for this user
-                    failCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
                 } finally { doneLatch.countDown(); }

@@ -9,21 +9,23 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
 
     private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ReentrantLock> orderLocks = new ConcurrentHashMap<>();
-
+    private final ConcurrentHashMap<String, String> userToOrder = new ConcurrentHashMap<>();
     private ReentrantLock getLockFor(String orderId) {
         return orderLocks.computeIfAbsent(orderId, id -> new ReentrantLock());
     }
 
     @Override
     public boolean save(ActiveOrderItem order) {
-        ReentrantLock lock = getLockFor(order.getOrderId());
-        lock.lock();
-        try {
-            activeOrders.put(order.getOrderId(), order);
-            return true;
-        } finally {
-            lock.unlock();
+        if(order == null){
+            return false;
         }
+        String existing = userToOrder.putIfAbsent(order.getUserId(), order.getOrderId());
+        if (existing != null) {
+            return false;
+        }
+        activeOrders.put(order.getOrderId(), order);
+        getLockFor(order.getOrderId());
+        return true;
     }
 
     @Override
@@ -54,8 +56,12 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         }
         lock.lock();
         try {
-            activeOrders.remove(orderId);
-            orderLocks.remove(orderId); // clean up the lock too
+            ActiveOrderItem order = activeOrders.get(orderId);
+            if (order != null) {
+                userToOrder.remove(order.getUserId());
+                activeOrders.remove(orderId);
+            }
+            orderLocks.remove(orderId);
         } finally {
             lock.unlock();
         }
