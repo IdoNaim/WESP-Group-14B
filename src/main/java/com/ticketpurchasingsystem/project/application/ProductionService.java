@@ -3,9 +3,11 @@ package com.ticketpurchasingsystem.project.application;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
@@ -114,6 +116,39 @@ public class ProductionService implements IProductionService {
 
         List<HistoryOrderItem> history = productionEventPublisher.publishGetCompanyHistoryEvent(companyId);
         return history != null ? history : Collections.emptyList();
+    }
+
+    @Override
+    public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String ownerId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("modifyManagerPermissions: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.modifyManagerPermissions(
+                ownerId, companyId, managerId, permissions, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            ProductionCompany saved = prodRepo.save(company);
+            productionEventPublisher.publishModifyManagerPermissionsEvent(saved, ownerId, managerId, permissions);
+            loggerDef.getInstance().info(
+                    "modifyManagerPermissions: permissions updated for manager " + managerId
+                            + " in company " + companyId + " by " + ownerId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
+            return false;
+        }
     }
 
     @Override

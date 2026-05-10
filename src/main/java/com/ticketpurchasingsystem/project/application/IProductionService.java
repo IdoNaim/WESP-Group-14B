@@ -1,8 +1,10 @@
 package com.ticketpurchasingsystem.project.application;
 
 import java.util.List;
+import java.util.Set;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 
 public interface IProductionService {
@@ -25,4 +27,7 @@ public interface IProductionService {
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId);
 
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId);
+
+    public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions);
 }

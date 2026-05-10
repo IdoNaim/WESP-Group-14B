@@ -4,6 +4,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.ModifyManagerPermissionsEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -27,5 +28,14 @@ public class ProdListener {
                 "Owner assigned: Company=" + companyName
                         + ", NewOwner=" + appointeeId
                         + ", AppointedBy=" + appointerId);
+    }
+
+    @EventListener
+    public void onModifyManagerPermissions(ModifyManagerPermissionsEvent event) {
+        loggerDef.getInstance().info(
+                "Manager permissions updated: Company=" + event.getCompany().getCompanyName()
+                        + ", Manager=" + event.getManagerId()
+                        + ", UpdatedBy=" + event.getOwnerId()
+                        + ", Permissions=" + event.getPermissions());
     }
 }

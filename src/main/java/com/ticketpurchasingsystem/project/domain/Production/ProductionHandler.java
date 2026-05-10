@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
+import java.util.Set;
+
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -63,6 +65,32 @@ public class ProductionHandler {
             return false;
         }
         return true;
+    }
+
+    public ProductionCompany modifyManagerPermissions(String ownerId, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions, ProductionCompany company) {
+        if (isInvalid(ownerId) || companyId == null || isInvalid(managerId)
+                || permissions == null || company == null) {
+            loggerDef.getInstance().error("modifyManagerPermissions called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwner(ownerId)) {
+            loggerDef.getInstance().error(
+                    "modifyManagerPermissions: caller " + ownerId + " is not an owner of company " + companyId);
+            return null;
+        }
+        if (!company.isOwner(managerId)) {
+            loggerDef.getInstance().error(
+                    "modifyManagerPermissions: " + managerId + " is not a manager of company " + companyId);
+            return null;
+        }
+        if (!company.isAppointedBy(managerId, ownerId)) {
+            loggerDef.getInstance().error(
+                    "modifyManagerPermissions: " + managerId + " was not appointed by " + ownerId);
+            return null;
+        }
+        company.setManagerPermissions(managerId, permissions);
+        return company;
     }
 
     private boolean isInvalid(String str) {
