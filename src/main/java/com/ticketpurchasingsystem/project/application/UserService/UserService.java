@@ -1,31 +1,50 @@
 package com.ticketpurchasingsystem.project.application.UserService;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
 public class UserService implements IUserService {
 
     private IUserRepo userRepo;    
     private UserHandler userHandler;
+    private final AuthenticationService authenticationService;
 
-    public UserService(IUserRepo userRepo, UserHandler userHandler) {
+    public UserService(IUserRepo userRepo, UserHandler userHandler, AuthenticationService authenticationService) {
         this.userRepo = userRepo;
         this.userHandler = userHandler;
+        this.authenticationService = authenticationService;
     }
 
-    public String guestEntry() {
-        return userHandler.handleGuestEntry(userRepo);
+    public void guestEntry() {
+        try {
+            String sessionToken = authenticationService.login(userHandler.generateUniqueId());
+            userRepo.store(userHandler.handleGuestEntry(sessionToken, authenticationService.getUser(sessionToken)));
+        } catch (Exception e) {
+            // Handle exception
+            loggerDef.getInstance().error("Failed to handle guest entry: " + e.getMessage());
+        }
     };
 
     public void Exit(String sessionTokenStr) {
-        userHandler.handleExit(userRepo, sessionTokenStr);
+        try {
+            if (authenticationService.validate(sessionTokenStr)) {
+                authenticationService.logout(sessionTokenStr);
+                userHandler.handleExit(userRepo.findByID(authenticationService.getUser((sessionTokenStr))));
+            }
+        } catch (Exception e) {
+            // Handle exception
+            loggerDef.getInstance().error("Failed to handle exit: " + e.getMessage());
+        }
     };
 
     // register the user without logging in

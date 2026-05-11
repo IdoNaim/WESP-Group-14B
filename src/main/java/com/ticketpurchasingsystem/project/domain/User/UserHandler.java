@@ -50,31 +50,16 @@ public class UserHandler {
         }
     }
 
-    public String handleGuestEntry(IUserRepo userRepo) {
-        String guestId = generateUniqueId();
-        String sessionToken = authenticationService.login(guestId);
-        UserInfo guestUser = new UserInfo(guestId, sessionToken);
-        try {
-            userRepo.store(guestUser);
-            userPublisher.publishGuestEntered(guestId, sessionToken);
-        } catch (Exception e) {
-            // Handle exceptions (e.g., failed to store guest user)
-            throw new RuntimeException("Failed to store guest entry, try again, error message: " + e.getMessage()); 
-        }
-        return sessionToken;
+    public UserInfo handleGuestEntry(String SessionTokenStr, String guestId) {
+        UserInfo guestInfo = new UserInfo(guestId, SessionTokenStr);
+        return guestInfo;
     }
 
-    public void handleExit(IUserRepo userRepo, String sessionTokenStr) {
-        if (!authenticationService.validate(sessionTokenStr)) {
-            throw new RuntimeException("Invalid session token.");
-        }
+    public void handleExit(UserInfo userInfo) {
         try {
-            String id = authenticationService.getUser(sessionTokenStr);
-            UserInfo userInfo = userRepo.findByID(id);
             if (userInfo == null) {
                 throw new RuntimeException("User not found.");
             }
-            authenticationService.logout(sessionTokenStr); // Invalidate the session token
             if (userInfo.isGuest()) {
                 handleGuestExit(userRepo, userInfo);
             }
@@ -198,7 +183,7 @@ public class UserHandler {
         }
     }
 
-    private String generateUniqueId() {
+    public String generateUniqueId() {
         return java.util.UUID.randomUUID().toString();
     }
 
