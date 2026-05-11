@@ -128,9 +128,9 @@ public class ProductionHandler {
                     "modifyManagerPermissions: caller " + ownerId + " is not an owner of company " + companyId);
             return null;
         }
-        if (company.isManager(managerId)) {
+        if (!company.isManager(managerId)) {
             loggerDef.getInstance().error(
-                    "appointManager: " + managerId + " is already a manager of company " + companyId);
+                    "appointManager: " + managerId + " is not a manager of company " + companyId);
             return null;
         }
         boolean appointed = company.removeManager(ownerId, managerId);

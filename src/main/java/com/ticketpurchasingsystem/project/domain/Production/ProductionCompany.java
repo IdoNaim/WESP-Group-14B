@@ -192,8 +192,8 @@ public class ProductionCompany {
     }
 
     public boolean isAppointedBy(String managerId, String ownerId) {
-        return ownershipTree.containsKey(managerId)
-                && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
+        return ownershipTree.containsKey(ownerId)
+                && ownerId.equals(managerTree.get(managerId).getAppointerId());
     }
 
     public long getVersion() {
