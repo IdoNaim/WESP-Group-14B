@@ -24,9 +24,9 @@ public class ActiveOrderDTO {
         this.orderId = other.getOrderId();
         this.userId = other.getUserId();
         this.eventId = other.getEventId();
-        this.createdAt = other.getCreatedAt();
-        this.seatIds = other.getSeatIds();
-        this.StandingAreaQuantities = other.getStandingAreaQuantities();
+        this.createdAt = new Timestamp(other.getCreatedAt().getTime());
+        this.seatIds = new ArrayList<>(other.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
     }
     public String getOrderId() {
         return orderId;
