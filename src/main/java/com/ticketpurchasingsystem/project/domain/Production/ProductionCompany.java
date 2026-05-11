@@ -109,7 +109,7 @@ public class ProductionCompany {
         return true;
     }
     public boolean removeManager(String appointerId, String managerId){
-        if(!isManager(managerId) || !isAppointedBy(managerId, appointerId)){
+        if(!isManager(managerId) || !isManagerAppointedByOwner(managerId, appointerId)){
             return false;
         }
         managerTree.remove(managerId);
@@ -192,10 +192,13 @@ public class ProductionCompany {
     }
 
     public boolean isAppointedBy(String managerId, String ownerId) {
-        return ownershipTree.containsKey(ownerId)
+        return ownershipTree.containsKey(managerId)
+                && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
+    }
+    public boolean isManagerAppointedByOwner(String managerId, String ownerId){
+        return managerTree.containsKey(managerId)
                 && ownerId.equals(managerTree.get(managerId).getAppointerId());
     }
-
     public long getVersion() {
         return version;
     }
