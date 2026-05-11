@@ -2,15 +2,18 @@ package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.UserService.IUserService;
-import com.ticketpurchasingsystem.project.domain.Production.*;
-import com.ticketpurchasingsystem.project.domain.User.UserDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.*;
+import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
+import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,7 +31,9 @@ public class AssignOwnerTest {
     @Mock
     private IProdRepo prodRepo;
     @Mock
-    private IUserService userService;
+    private ProductionEventPublisher productionEventPublisher;
+    @Captor
+    private ArgumentCaptor<ProductionCompany> captor;
 
     private ProductionHandler productionHandler;
     private ProductionService productionService;
@@ -44,7 +49,7 @@ public class AssignOwnerTest {
     void setUp() {
         productionHandler = new ProductionHandler();
         productionService = new ProductionService(
-                authenticationService, productionHandler, userService, prodRepo);
+                authenticationService, productionHandler, prodRepo, productionEventPublisher);
     }
 
     private ProductionCompany companyWithFounderAndOwner() {
@@ -56,17 +61,13 @@ public class AssignOwnerTest {
         return company;
     }
 
-    private UserDTO fakeUserDTO(String userId) {
-        return new UserDTO(userId, "name", userId + "@test.com", null);
-    }
-
     @Test
     public void GivenValidTokenAndValidAppointee_WhenAssignOwner_ThenReturnTrue() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(true);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
         when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -87,7 +88,7 @@ public class AssignOwnerTest {
 
         // Assert
         assertFalse(result);
-        verifyNoInteractions(prodRepo, userService);
+        verifyNoInteractions(prodRepo, productionEventPublisher);
     }
 
     @Test
@@ -95,7 +96,7 @@ public class AssignOwnerTest {
         // Arrange
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(null); // not registered
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(false);
 
         // Act
         boolean result = productionService.assignOwner(VALID_TOKEN, COMPANY_ID, APPOINTEE_ID);
@@ -111,7 +112,7 @@ public class AssignOwnerTest {
         ProductionCompany company = companyWithFounderAndOwner();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(true);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
         when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -127,7 +128,7 @@ public class AssignOwnerTest {
         // Arrange
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(true);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.empty());
 
         // Act
@@ -142,10 +143,9 @@ public class AssignOwnerTest {
     public void GivenValidInput_WhenAssignOwner_ThenRepoSaveIsCalledWithUpdatedCompany() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
-        ArgumentCaptor<ProductionCompany> captor = ArgumentCaptor.forClass(ProductionCompany.class);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(true);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
         when(prodRepo.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -154,7 +154,7 @@ public class AssignOwnerTest {
 
         // Assert
         assertTrue(result);
-        verify(prodRepo, times(1)).save(any(ProductionCompany.class));
+        verify(prodRepo, times(1)).save(any());
         assertTrue(captor.getValue().isOwner(APPOINTEE_ID),
                 "Repo must receive the company with the new owner already added");
     }
@@ -165,7 +165,7 @@ public class AssignOwnerTest {
         ProductionCompany company = companyWithFounderAndOwner();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn("not-an-owner");
-        when(userService.getUser(APPOINTEE_ID)).thenReturn(fakeUserDTO(APPOINTEE_ID));
+        when(productionEventPublisher.publishIsUserRegisteredEvent(APPOINTEE_ID)).thenReturn(true);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
 
         // Act

@@ -2,7 +2,10 @@ package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.domain.Production.*;
+import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,8 @@ public class CreateProductionCompanyTest {
     private AuthenticationService authenticationService;
     @Mock
     private IProdRepo prodRepo;
+    @Mock
+    private ProductionEventPublisher productionEventPublisher;
 
     private ProductionService productionService;
     private ProductionHandler productionHandler;
@@ -34,7 +39,8 @@ public class CreateProductionCompanyTest {
     @BeforeEach
     void setUp() {
         productionHandler = new ProductionHandler();
-        productionService = new ProductionService(authenticationService, productionHandler, prodRepo);
+        productionService = new ProductionService(
+                authenticationService, productionHandler, prodRepo, productionEventPublisher);
     }
 
     private ProductionCompanyDTO validDTO() {
@@ -129,7 +135,7 @@ public class CreateProductionCompanyTest {
         productionService.createProductionCompany(VALID_TOKEN, validDTO());
 
         // Assert
-        verify(prodRepo, times(1)).save(any(ProductionCompany.class));
+        verify(prodRepo, times(1)).save(any());
     }
 
     @Test

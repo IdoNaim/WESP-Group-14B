@@ -1,39 +1,34 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
-import com.ticketpurchasingsystem.project.application.UserService.IUserService;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
-import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
-import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
-import com.ticketpurchasingsystem.project.domain.Production.ProdPublisher;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class ProductionService implements IProductionService {
+
     private final AuthenticationService authenticationService;
     private final ProductionHandler productionHandler;
-    private final IUserService userService;
     private final IProdRepo prodRepo;
-    private final ProdPublisher publisher;
+    private final ProductionEventPublisher productionEventPublisher;
 
     public ProductionService(AuthenticationService authenticationService,
             ProductionHandler productionHandler,
-            IUserService userService,
-            IProdRepo prodRepo) {
+            IProdRepo prodRepo,
+            ProductionEventPublisher productionEventPublisher) {
         this.authenticationService = authenticationService;
         this.productionHandler = productionHandler;
-        this.userService = userService;
         this.prodRepo = prodRepo;
-        this.publisher = ProdPublisher.getInstance();
-    }
-
-    public ProductionService(AuthenticationService authenticationService,
-            ProductionHandler productionHandler,
-            IProdRepo prodRepo) {
-        this(authenticationService, productionHandler, null, prodRepo);
+        this.productionEventPublisher = productionEventPublisher;
     }
 
     @Override
@@ -56,7 +51,7 @@ public class ProductionService implements IProductionService {
 
         try {
             ProductionCompany saved = prodRepo.save(company);
-            publisher.publish(new NewProdEvent(saved));
+            productionEventPublisher.publishNewProdEvent(saved);
             return true;
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to save company: " + e.getMessage());
@@ -70,7 +65,8 @@ public class ProductionService implements IProductionService {
             return false;
         }
         String appointerId = authenticationService.getUser(sessionToken);
-        if (userService.getUser(appointeeUserId) == null) {
+
+        if (!productionEventPublisher.publishIsUserRegisteredEvent(appointeeUserId)) {
             return false;
         }
 
@@ -88,7 +84,7 @@ public class ProductionService implements IProductionService {
 
         try {
             ProductionCompany saved = prodRepo.save(company);
-            publisher.publish(new AssignOwnerEvent(saved, appointerId, appointeeUserId));
+            productionEventPublisher.publishAssignOwnerEvent(saved, appointerId, appointeeUserId);
             loggerDef.getInstance().info(
                     "assignOwner: " + appointeeUserId + " appointed as owner of company "
                             + companyId + " by " + appointerId);
@@ -100,13 +96,106 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    public boolean appointManager(String sessionToken, Integer companyId, String managerId,
+            Set<ManagerPermission> permissions) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String appointerId = authenticationService.getUser(sessionToken);
+
+        if (!productionEventPublisher.publishIsUserRegisteredEvent(managerId)) {
+            return false;
+        }
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("appointManager: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.appointManager(
+                appointerId, companyId, managerId, permissions, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            ProductionCompany saved = prodRepo.save(company);
+            productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
+            loggerDef.getInstance().info(
+                    "appointManager: " + managerId + " appointed as manager of company "
+                            + companyId + " by " + appointerId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) {
+            loggerDef.getInstance().error("getCompanyPurchaseHistory: invalid session token");
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("getCompanyPurchaseHistory: company not found, id=" + companyId);
+            return null;
+        }
+
+        if (!(productionHandler.validateOwnerAccess(userId, companyOpt.get())
+                || productionHandler.validateFounderAccess(userId, companyOpt.get()))) {
+            return null;
+        }
+
+        List<HistoryOrderItem> history = productionEventPublisher.publishGetCompanyHistoryEvent(companyId);
+        return history != null ? history : Collections.emptyList();
+    }
+
+    @Override
+    public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String ownerId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("modifyManagerPermissions: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.modifyManagerPermissions(
+                ownerId, companyId, managerId, permissions, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            ProductionCompany saved = prodRepo.save(company);
+            productionEventPublisher.publishModifyManagerPermissionsEvent(saved, ownerId, managerId, permissions);
+            loggerDef.getInstance().info(
+                    "modifyManagerPermissions: permissions updated for manager " + managerId
+                            + " in company " + companyId + " by " + ownerId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'createEvent'");
     }
 
     @Override
-    public void updateEvent(String eventId, String eventName, String eventDate, String eventLocation, int totalTickets,
-            String userId) {
+    public void updateEvent(String eventId, String eventName, String eventDate, String eventLocation,
+            int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'updateEvent'");
     }
 
@@ -129,5 +218,4 @@ public class ProductionService implements IProductionService {
     public String getEventAsCustomer(String eventId) {
         throw new UnsupportedOperationException("Unimplemented method 'getEventAsCustomer'");
     }
-
 }

@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
+
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestEvents;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserEvents;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogInEvent;
