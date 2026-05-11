@@ -5,10 +5,13 @@ public class ProductionCompanyDTO {
     private String companyDescription;
     private String companyEmail;
 
-    public ProductionCompanyDTO(String companyName, String companyEmail, String companyDescription) {
+    public ProductionCompanyDTO(String companyName, String companyDescription, String companyEmail) {
         this.companyName = companyName;
         this.companyDescription = companyDescription;
         this.companyEmail = companyEmail;
+    }
+
+    public ProductionCompanyDTO() {
     }
 
     public String getCompanyName() {
@@ -21,5 +24,17 @@ public class ProductionCompanyDTO {
 
     public String getCompanyEmail() {
         return companyEmail;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
+
+    public void setCompanyEmail(String companyEmail) {
+        this.companyEmail = companyEmail;
+    }
+
+    public void setCompanyDescription(String companyDescription) {
+        this.companyDescription = companyDescription;
     }
 }

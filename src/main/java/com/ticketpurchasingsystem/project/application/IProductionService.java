@@ -1,5 +1,8 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.List;
+
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 
 public interface IProductionService {
@@ -20,4 +23,6 @@ public interface IProductionService {
             ProductionCompanyDTO companyDetails);
 
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId);
+
+    public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId);
 }
