@@ -140,20 +140,30 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public SeatingMap configureSeatingMap(List<SeatingAreaConfig> seatingAreas, List<SeatingAreaConfig> standingAreas) {
+    public boolean editEventSeatingMap(String EventId, SeatingMap seatingMap) {
+        try{
+            Event event = eventRepo.findById(EventId);
+            if (event == null) {
+                return false;
+            }
+            event.setSeatingMap(seatingMap);
+        }
+        catch(Exception e){
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public SeatingMap configureSeatingMap(List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas) {
         SeatingMap seatingMap = new SeatingMap();
         for(SeatingAreaConfig seatingConfig : seatingAreas) {
             seatingMap.addSeatingArea(seatingConfig.getRows(), seatingConfig.getseatsPerRow(), seatingConfig.getPrice());
         }
-        for(SeatingAreaConfig seatingAreaConfig : standingAreas) {
-            seatingMap.addStandingArea(seatingAreaConfig.getRows(), seatingAreaConfig.getseatsPerRow());
+        for(StandingAreaConfig standingAreaConfig : standingAreas) {
+            seatingMap.addStandingArea(standingAreaConfig.getCapacity(), standingAreaConfig.getPrice());
         }
+
         return seatingMap;
     }
 }
-
-
-//    @Override
-//    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
-//        return true;
-//    }
