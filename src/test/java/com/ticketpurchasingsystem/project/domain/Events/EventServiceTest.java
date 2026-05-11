@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+
+import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,7 +27,7 @@ public class EventServiceTest {
     @BeforeEach
     void setUp() {
         mockRepo = mock(IEventRepo.class);
-        eventService = new EventService(mockRepo);
+        eventService = new EventService(mockRepo, mock(EventAggregatePublisher.class), mock(EventAggregateListener.class));
     }
 
     // ================= CREATE EVENT =================
