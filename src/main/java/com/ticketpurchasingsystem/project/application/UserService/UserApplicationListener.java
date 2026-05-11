@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application.UserService;
 
+import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -61,5 +62,11 @@ public class UserApplicationListener {
     @EventListener
     public void onNewProduction(NewProdEvent event) {
         userService.assignProductionRole(event.getCompany().getFounderId(), event.getCompany().getCompanyId(), UserProduction.RoleInProduction.FOUNDER);
+    }
+    // Cross-aggregate: Production asks whether a user is registered
+    @EventListener
+    public void onIsUserRegistered(IsUserRegisteredEvent event) {
+        boolean isRegistered = userService.isUserRegistered(event.getUserId());
+        event.setRegistered(isRegistered);
     }
 }

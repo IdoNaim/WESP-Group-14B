@@ -242,5 +242,9 @@ public class UserService implements IUserService {
              loggerDef.getInstance().error("Failed to assign production role: " + e.getMessage());
         }
     }
+    public boolean isUserRegistered(String userId){
+        UserInfo user = userRepo.findByID(userId);
+        return user != null;
+    }
 
 }
