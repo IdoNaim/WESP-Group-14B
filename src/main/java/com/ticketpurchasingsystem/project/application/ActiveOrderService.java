@@ -50,14 +50,11 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void getActiveOrders(String userId) {
+    public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken ,String orderId) throws Exception {
         // TODO Auto-generated method stub
-        
-    }
-
-    @Override
-    public void getActiveOrder(String orderId) {
-        // TODO Auto-generated method stub
+        if(!authenticationService.validate(sessionToken.getToken())){
+            throw new IllegalArgumentException("Session has ended");
+        }
 
     }
 
