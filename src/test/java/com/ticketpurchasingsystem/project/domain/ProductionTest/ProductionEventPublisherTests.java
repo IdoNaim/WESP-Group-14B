@@ -104,7 +104,7 @@ class ProductionEventPublisherTests {
         HashMap<String,Integer> standing = new HashMap<>();
         standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", USER_ID, "e1", 10.0, seats, standing));
+                new HistoryOrderItem("o1", USER_ID, "e1", 10.0,seats, standing));
         doAnswer(inv -> {
             GetCompanyHistoryEvent event = inv.getArgument(0);
             event.setResult(mockHistory);
