@@ -1,10 +1,12 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointManagerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
@@ -36,5 +38,10 @@ public class ProductionEventPublisher {
 
     public void publishAssignOwnerEvent(ProductionCompany company, String appointerId, String appointeeId) {
         eventPublisher.publishEvent(new AssignOwnerEvent(company, appointerId, appointeeId));
+    }
+
+    public void publishAppointManagerEvent(ProductionCompany company, String appointerId,
+            String managerId, Set<ManagerPermission> permissions) {
+        eventPublisher.publishEvent(new AppointManagerEvent(company, appointerId, managerId, permissions));
     }
 }

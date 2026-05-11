@@ -3,6 +3,8 @@ package com.ticketpurchasingsystem.project.domain.Production;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+import java.util.Set;
+
 public class ProductionHandler {
 
     public ProductionCompany createProductionCompany(String userId, ProductionCompanyDTO companyDetails) {
@@ -63,6 +65,30 @@ public class ProductionHandler {
             return false;
         }
         return true;
+    }
+
+    public ProductionCompany appointManager(String appointerId, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions, ProductionCompany company) {
+        if (isInvalid(appointerId) || companyId == null || isInvalid(managerId)
+                || permissions == null || company == null) {
+            loggerDef.getInstance().error("appointManager called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwnerOrManager(appointerId)) {
+            loggerDef.getInstance().error(
+                    "appointManager: caller " + appointerId + " is not an owner or manager of company " + companyId);
+            return null;
+        }
+        if (company.isManager(managerId)) {
+            loggerDef.getInstance().error(
+                    "appointManager: " + managerId + " is already a manager of company " + companyId);
+            return null;
+        }
+        boolean appointed = company.appointManager(appointerId, managerId, permissions);
+        if (!appointed) {
+            return null;
+        }
+        return company;
     }
 
     private boolean isInvalid(String str) {
