@@ -1,24 +1,29 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class HistoryOrderItem {
     private String orderId;
     private String userId;
     private String eventId;
-    private int companyId;
-    private int quantity;
     private Timestamp purchaseDate;
+    private double price;
+    private List<String> seatIds;
+    private HashMap<String, Integer> StandingAreaQuantities;
 
     public HistoryOrderItem() {}
 
-    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, int quantity) {
+    public HistoryOrderItem(String orderId, String userId, String eventId, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
-        this.companyId = companyId;
-        this.quantity = quantity;
         this.purchaseDate = new Timestamp(System.currentTimeMillis());
+        this.price = price;
+        this.seatIds = new ArrayList<>(seatIds);
+        this.StandingAreaQuantities = new HashMap<>(standingAreaQuantities);
     }
 
     public String getOrderId() { return orderId; }
@@ -29,13 +34,6 @@ public class HistoryOrderItem {
 
     public String getEventId() { return eventId; }
     public void setEventId(String eventId) { this.eventId = eventId; }
-
-    public int getCompanyId() { return companyId; }
-    public void setCompanyId(int companyId) { this.companyId = companyId; }
-
-    public int getQuantity() { return quantity; }
-    public void setQuantity(int quantity) { this.quantity = quantity; }
-
     public Timestamp getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 }
