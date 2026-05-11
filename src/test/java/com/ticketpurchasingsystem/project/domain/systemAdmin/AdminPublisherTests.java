@@ -4,9 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,7 +82,7 @@ class AdminPublisherTests {
 
     @Test
     void WhenPublishGetAllOrdersHistoryGivenListenerResponds_ThenReturnHistory() {
-        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1","user","event", 1, new Date()));
+        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event",10.0, new ArrayList<>(), new HashMap<>()));
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             event.setResult(mockHistory);

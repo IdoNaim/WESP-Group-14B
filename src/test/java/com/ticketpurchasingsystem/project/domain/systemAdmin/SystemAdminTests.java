@@ -1,8 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.systemAdmin;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -69,7 +67,7 @@ class SystemAdminTests {
 
     @Test
     void WhenGetAllHistoryOrderItemsGivenPublisherReturnsHistory_ThenReturnHistory() {
-        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user", "event", 1, new Date()));
+        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event",10.0, new ArrayList<>(), new HashMap<>()));
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(mockHistory);
 
         List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();

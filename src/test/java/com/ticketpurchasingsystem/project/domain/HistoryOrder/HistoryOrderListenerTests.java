@@ -3,9 +3,8 @@ package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.sql.Timestamp;
+import java.util.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +31,7 @@ class HistoryOrderListenerTests {
     @Test
     void WhenHandleGetAllHistoryOrdersEventGivenOrders_ThenEventResultIsSet() {
 
-        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event",10.0, new Date()));
+        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event",10.0, new ArrayList<>(), new HashMap<>()));
         when(historyOrderRepo.findAll()).thenReturn(mockHistory);
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
 
