@@ -13,6 +13,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class ProductionService implements IProductionService {
@@ -208,6 +209,31 @@ public class ProductionService implements IProductionService {
         }
         loggerDef.getInstance().error("modifyManagerPermissions failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
+    }
+    @Override
+    public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) {
+            loggerDef.getInstance().error("getRolesTree: invalid session token");
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("getRolesTree: company not found, id=" + companyId);
+            return null;
+        }
+
+        RolesTreeDTO result = productionHandler.getRolesTree(userId, companyOpt.get());
+        if (result == null) {
+            loggerDef.getInstance().error(
+                    "getRolesTree: user " + userId + " is not authorized or fetch failed for company " + companyId);
+            return null;
+        }
+
+        loggerDef.getInstance().info(
+                "getRolesTree: roles tree fetched successfully for company " + companyId + " by user " + userId);
+        return result;
     }
 
     @Override

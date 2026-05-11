@@ -1,8 +1,13 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
+import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 import java.util.Set;
@@ -117,6 +122,30 @@ public class ProductionHandler {
         }
         return company;
     }
+    public RolesTreeDTO getRolesTree(String userId, ProductionCompany company) {
+        if (isInvalid(userId) || company == null) {
+            loggerDef.getInstance().error("getRolesTree: null or blank arguments");
+            return null;
+        }
+        if (!company.isOwner(userId) && !company.isFounder(userId)) {
+            loggerDef.getInstance().error(
+                    "getRolesTree: user " + userId + " is not an owner or founder of company "
+                            + company.getCompanyId());
+            return null;
+        }
+
+        Map<String, OwnerDTO> ownershipTree = new LinkedHashMap<>(company.getOwnershipTree());
+
+        Map<String, ManagerDTO> managerTree = new LinkedHashMap<>(company.getManagerTree());
+
+        Map<String, Set<ManagerPermission>> managerPermissions = new LinkedHashMap<>();
+        for (String managerId : managerTree.keySet()) {
+            managerPermissions.put(managerId, company.getManagerPermissions(managerId));
+        }
+
+        return new RolesTreeDTO(company.getCompanyId(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
+    }
+
 
     private boolean isInvalid(String str) {
         return str == null || str.trim().isEmpty();
