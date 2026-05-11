@@ -118,6 +118,27 @@ public class ProductionHandler {
         return company;
     }
 
+    public ProductionCompany removeManager(String ownerId, Integer companyId, String managerId, ProductionCompany company){
+        if (isInvalid(ownerId) || companyId == null || isInvalid(managerId) || company == null) {
+            loggerDef.getInstance().error("removeManager called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwner(ownerId)) {
+            loggerDef.getInstance().error(
+                    "modifyManagerPermissions: caller " + ownerId + " is not an owner of company " + companyId);
+            return null;
+        }
+        if (company.isManager(managerId)) {
+            loggerDef.getInstance().error(
+                    "appointManager: " + managerId + " is already a manager of company " + companyId);
+            return null;
+        }
+        boolean appointed = company.removeManager(ownerId, managerId);
+        if (!appointed) {
+            return null;
+        }
+        return company;
+    }
     private boolean isInvalid(String str) {
         return str == null || str.trim().isEmpty();
     }

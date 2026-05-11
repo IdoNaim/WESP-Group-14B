@@ -108,7 +108,16 @@ public class ProductionCompany {
         managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
         return true;
     }
-
+    public boolean removeManager(String appointerId, String managerId){
+        if(!isManager(managerId) || !isAppointedBy(managerId, appointerId)){
+            return false;
+        }
+        managerTree.remove(managerId);
+        if(managerPermissions.containsKey(managerId)) {
+            managerPermissions.remove(managerId);
+        }
+        return true;
+    }
     public boolean isManager(String userId) {
         return managerTree.containsKey(userId);
     }
