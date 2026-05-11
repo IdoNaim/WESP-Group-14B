@@ -19,7 +19,6 @@ public class ActiveOrderService implements IActiveOrderService {
     AuthenticationService authenticationService;
     IBarCodeGateway barCodeGateway;
     loggerDef logger = loggerDef.getInstance();
-    ActiveOrderHandler activeOrderHandler;
     public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService, IBarCodeGateway barCodeGateway) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
@@ -75,8 +74,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
 
-    //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
-    //called after "checkout" is pressed in UI
+
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId){
         if(authenticationService.validate(sessionToken.getToken())){
             if(activeOrderRepo.findByUserId(userId) != null){
