@@ -8,6 +8,7 @@ import java.util.Set;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
+import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFailureException;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
@@ -70,29 +71,36 @@ public class ProductionService implements IProductionService {
             return false;
         }
 
-        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
-        if (companyOpt.isEmpty()) {
-            loggerDef.getInstance().error("assignOwner: company not found, id=" + companyId);
-            return false;
-        }
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("assignOwner: company not found, id=" + companyId);
+                return false;
+            }
 
-        ProductionCompany company = productionHandler.assignOwner(
-                appointerId, companyId, appointeeUserId, companyOpt.get());
-        if (company == null) {
-            return false;
-        }
+            ProductionCompany company = productionHandler.assignOwner(
+                    appointerId, companyId, appointeeUserId, companyOpt.get());
+            if (company == null) {
+                return false;
+            }
 
-        try {
-            ProductionCompany saved = prodRepo.save(company);
-            productionEventPublisher.publishAssignOwnerEvent(saved, appointerId, appointeeUserId);
-            loggerDef.getInstance().info(
-                    "assignOwner: " + appointeeUserId + " appointed as owner of company "
-                            + companyId + " by " + appointerId);
-            return true;
-        } catch (Exception e) {
-            loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
-            return false;
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                productionEventPublisher.publishAssignOwnerEvent(saved, appointerId, appointeeUserId);
+                loggerDef.getInstance().info(
+                        "assignOwner: " + appointeeUserId + " appointed as owner of company "
+                                + companyId + " by " + appointerId);
+                return true;
+            } catch (OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
+                return false;
+            }
         }
+        loggerDef.getInstance().error("assignOwner failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
     }
 
     @Override
@@ -107,29 +115,36 @@ public class ProductionService implements IProductionService {
             return false;
         }
 
-        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
-        if (companyOpt.isEmpty()) {
-            loggerDef.getInstance().error("appointManager: company not found, id=" + companyId);
-            return false;
-        }
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("appointManager: company not found, id=" + companyId);
+                return false;
+            }
 
-        ProductionCompany company = productionHandler.appointManager(
-                appointerId, companyId, managerId, permissions, companyOpt.get());
-        if (company == null) {
-            return false;
-        }
+            ProductionCompany company = productionHandler.appointManager(
+                    appointerId, companyId, managerId, permissions, companyOpt.get());
+            if (company == null) {
+                return false;
+            }
 
-        try {
-            ProductionCompany saved = prodRepo.save(company);
-            productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
-            loggerDef.getInstance().info(
-                    "appointManager: " + managerId + " appointed as manager of company "
-                            + companyId + " by " + appointerId);
-            return true;
-        } catch (Exception e) {
-            loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
-            return false;
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
+                loggerDef.getInstance().info(
+                        "appointManager: " + managerId + " appointed as manager of company "
+                                + companyId + " by " + appointerId);
+                return true;
+            } catch (OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
+                return false;
+            }
         }
+        loggerDef.getInstance().error("appointManager failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
     }
 
     @Override
@@ -163,29 +178,36 @@ public class ProductionService implements IProductionService {
         }
         String ownerId = authenticationService.getUser(sessionToken);
 
-        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
-        if (companyOpt.isEmpty()) {
-            loggerDef.getInstance().error("modifyManagerPermissions: company not found, id=" + companyId);
-            return false;
-        }
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("modifyManagerPermissions: company not found, id=" + companyId);
+                return false;
+            }
 
-        ProductionCompany company = productionHandler.modifyManagerPermissions(
-                ownerId, companyId, managerId, permissions, companyOpt.get());
-        if (company == null) {
-            return false;
-        }
+            ProductionCompany company = productionHandler.modifyManagerPermissions(
+                    ownerId, companyId, managerId, permissions, companyOpt.get());
+            if (company == null) {
+                return false;
+            }
 
-        try {
-            ProductionCompany saved = prodRepo.save(company);
-            productionEventPublisher.publishModifyManagerPermissionsEvent(saved, ownerId, managerId, permissions);
-            loggerDef.getInstance().info(
-                    "modifyManagerPermissions: permissions updated for manager " + managerId
-                            + " in company " + companyId + " by " + ownerId);
-            return true;
-        } catch (Exception e) {
-            loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
-            return false;
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                productionEventPublisher.publishModifyManagerPermissionsEvent(saved, ownerId, managerId, permissions);
+                loggerDef.getInstance().info(
+                        "modifyManagerPermissions: permissions updated for manager " + managerId
+                                + " in company " + companyId + " by " + ownerId);
+                return true;
+            } catch (OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
+                return false;
+            }
         }
+        loggerDef.getInstance().error("modifyManagerPermissions failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
     }
 
     @Override
