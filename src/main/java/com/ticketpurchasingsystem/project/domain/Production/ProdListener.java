@@ -1,11 +1,16 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+@Component
 public class ProdListener {
 
+    @EventListener
     public void onNewProductionCompany(NewProdEvent event) {
         String companyName = event.getCompany().getCompanyName();
         String founderId = event.getCompany().getFounderId();
@@ -13,6 +18,7 @@ public class ProdListener {
                 "New Production Company created: Name=" + companyName + ", FounderID=" + founderId);
     }
 
+    @EventListener
     public void onAssignOwner(AssignOwnerEvent event) {
         String companyName = event.getCompany().getCompanyName();
         String appointeeId = event.getAppointeeId();

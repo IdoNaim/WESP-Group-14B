@@ -37,6 +37,34 @@ public class ProductionHandler {
         return company;
     }
 
+    public boolean validateOwnerAccess(String userId, ProductionCompany company) {
+        if (isInvalid(userId) || company == null) {
+            loggerDef.getInstance().error("validateOwnerAccess: null or blank arguments");
+            return false;
+        }
+        if (!company.isOwner(userId)) {
+            loggerDef.getInstance().error(
+                    "validateOwnerAccess: user " + userId + " is not an owner of company "
+                            + company.getCompanyId());
+            return false;
+        }
+        return true;
+    }
+
+    public boolean validateFounderAccess(String userId, ProductionCompany company) {
+        if (isInvalid(userId) || company == null) {
+            loggerDef.getInstance().error("validateFounderAccess: null or blank arguments");
+            return false;
+        }
+        if (!company.isFounder(userId)) {
+            loggerDef.getInstance().error(
+                    "validateFounderAccess: user " + userId + " is not the founder of company "
+                            + company.getCompanyId());
+            return false;
+        }
+        return true;
+    }
+
     private boolean isInvalid(String str) {
         return str == null || str.trim().isEmpty();
     }
