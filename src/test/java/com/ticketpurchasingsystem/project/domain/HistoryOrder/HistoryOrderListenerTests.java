@@ -9,18 +9,23 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
 
+@ExtendWith(MockitoExtension.class)
 class HistoryOrderListenerTests {
 
+    @Mock
     private IHistoryOrderRepo historyOrderRepo;
+
     private HistoryOrderListener listener;
     private static final String REQ_ID = "admin-test";
 
     @BeforeEach
     void setUp() {
-        historyOrderRepo = mock(IHistoryOrderRepo.class);
         listener = new HistoryOrderListener(historyOrderRepo);
     }
 

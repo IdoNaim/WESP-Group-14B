@@ -6,66 +6,42 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 public class HistoryOrderItem {
-    private String id;
+
+    private String orderId;
     private String userId;
-    private String eventID;
+    private String eventId;
+    private Timestamp purchaseDate;
     private double price;
-    private HashMap<String, Integer> standingAreaQuantities;
     private List<String> seatIds;
-    private Date orderDate;
-    public HistoryOrderItem(String id, String userId, String eventID, double price, Date orderDate) {
-        this.id = id;
+    private HashMap<String, Integer> StandingAreaQuantities;
+
+    public HistoryOrderItem() {}
+
+    public HistoryOrderItem(String orderId, String userId, String eventId, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+        this.orderId = orderId;
         this.userId = userId;
-        this.eventID = eventID;
+        this.eventId = eventId;
+        this.purchaseDate = new Timestamp(System.currentTimeMillis());
         this.price = price;
-        this.orderDate = orderDate;
-        this.standingAreaQuantities = new HashMap<>();
-        this.seatIds = new ArrayList<>();
-    }
-    public HistoryOrderItem(String id, String userId, String eventID, double price, Date orderDate, HashMap<String, Integer> standingAreaQuantities, List<String> seatIds) {
-        this.id = id;
-        this.userId = userId;
-        this.eventID = eventID;
-        this.price = price;
-        this.orderDate = orderDate;
-        this.standingAreaQuantities = standingAreaQuantities;
-        this.seatIds = seatIds;
+        this.seatIds = new ArrayList<>(seatIds);
+        this.StandingAreaQuantities = new HashMap<>(standingAreaQuantities);
     }
 
-    public HistoryOrderItem(ActiveOrderItem activeOrderItem,double price, Date orderDate) {
-        this.id = activeOrderItem.getOrderId();
-        this.userId = activeOrderItem.getUserId();
-        this.eventID = activeOrderItem.getEventId();
-        this.price = price;
-        this.standingAreaQuantities = new HashMap<>(activeOrderItem.getStandingAreaQuantities());
-        this.seatIds = new ArrayList<>(activeOrderItem.getSeatIds());
-        this.orderDate = orderDate;
-    }
+    public String getOrderId() { return orderId; }
+    public void setOrderId(String orderId) { this.orderId = orderId; }
 
-    public String getId() {
-        return id;
-    }
-    public double getPrice() {
-        return price;
-    }
-    public Date getOrderDate() {
-        return orderDate;
-    }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
-    public String getEventID() {
-        return eventID;
-    }
-
-    public List<String> getSeatIds() {
-        return seatIds;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-     public HashMap<String, Integer> getStandingAreaQuantities(){
-        return standingAreaQuantities;
-     }
+    public String getEventId() { return eventId; }
+    public void setEventId(String eventId) { this.eventId = eventId; }
+    public Timestamp getPurchaseDate() { return purchaseDate; }
+    public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 }
+
