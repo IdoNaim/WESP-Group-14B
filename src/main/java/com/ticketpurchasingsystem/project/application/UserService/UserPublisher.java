@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.User;
+package com.ticketpurchasingsystem.project.application.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -35,7 +35,6 @@ public class UserPublisher {
     }
 
     public void publishGuestExited(String guestId, String sessionTokenStr) {
-        // You can create a GuestExitPlatformEvent similar to GuestEnterPlatformEvent and publish it here
         eventPublisher.publishEvent(new GuestLeavedPlatformEvent(guestId, sessionTokenStr));
     }
 
@@ -47,4 +46,6 @@ public class UserPublisher {
     public void publishUserNotFound(String userId) {
         eventPublisher.publishEvent(new UserNotFoundEvent(userId));
     }
+
+    
 }

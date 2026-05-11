@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public class Event {
 
-    private Integer eventId;
+    private String eventId;
 
     private final int companyId;
     private String eventName;
@@ -55,7 +55,7 @@ public class Event {
 
     // ---------------- GETTERS ----------------
 
-    public Integer getEventId() {
+    public String getEventId() {
         return eventId;
     }
 
@@ -89,7 +89,13 @@ public class Event {
         return seatingMap;
     }
 
-    public void setEventId(Integer eventId) {
+    public void setEventId(String eventId) {
         this.eventId = eventId;
     }
+
+    public void setEventDate(LocalDateTime eventDate) {
+        this.eventDate = eventDate;
+    }
+
+    public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 }

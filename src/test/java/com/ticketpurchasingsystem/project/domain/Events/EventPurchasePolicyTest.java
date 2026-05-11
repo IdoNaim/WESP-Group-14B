@@ -1,18 +1,14 @@
 package com.ticketpurchasingsystem.project.domain.Events;
 
+import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;
-
-import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
+import org.junit.jupiter.api.Test;;
 
 public class EventPurchasePolicyTest {
     
-    // ---------------- HAPPY PATH ----------------
-
-    @Test
-    void canPurchase_shouldReturnTrue_whenAllConditionsMet() {
-
+ @Test
+    void GivenValidConditions_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
@@ -21,149 +17,99 @@ public class EventPurchasePolicyTest {
         assertTrue(result);
     }
 
-    // ---------------- MIN TICKETS ----------------
-
     @Test
-    void canPurchase_shouldReturnFalse_whenBelowMinTickets() {
-
+    void GivenBelowMinTickets_WhenCanPurchase_ThenReturnFalse() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(3, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(2, 25, false);
-
-        assertFalse(result);
+        assertFalse(policy.canPurchase(2, 25, false));
     }
 
-    // ---------------- MAX TICKETS ----------------
-
     @Test
-    void canPurchase_shouldReturnFalse_whenAboveMaxTickets() {
-
+    void GivenAboveMaxTickets_WhenCanPurchase_ThenReturnFalse() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 5, 18, 60, true);
 
-        boolean result = policy.canPurchase(6, 25, false);
-
-        assertFalse(result);
+        assertFalse(policy.canPurchase(6, 25, false));
     }
 
-    // ---------------- MIN AGE ----------------
-
     @Test
-    void canPurchase_shouldReturnFalse_whenBelowMinAge() {
-
+    void GivenBelowMinAge_WhenCanPurchase_ThenReturnFalse() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 16, false);
-
-        assertFalse(result);
+        assertFalse(policy.canPurchase(5, 16, false));
     }
 
-    // ---------------- MAX AGE ----------------
-
     @Test
-    void canPurchase_shouldReturnFalse_whenAboveMaxAge() {
-
+    void GivenAboveMaxAge_WhenCanPurchase_ThenReturnFalse() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 65, false);
-
-        assertFalse(result);
+        assertFalse(policy.canPurchase(5, 65, false));
     }
 
-    // ---------------- EMPTY SEAT RULE ----------------
-
     @Test
-    void canPurchase_shouldReturnFalse_whenEmptySeatNotAllowed() {
-
+    void GivenEmptySeatNotAllowed_WhenCanPurchase_ThenReturnFalse() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, false);
 
-        boolean result = policy.canPurchase(5, 25, true);
-
-        assertFalse(result);
+        assertFalse(policy.canPurchase(5, 25, true));
     }
 
     @Test
-    void canPurchase_shouldReturnTrue_whenEmptySeatAllowed() {
-
+    void GivenEmptySeatAllowed_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 25, true);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 25, true));
     }
 
-    // ---------------- EDGE CASES ----------------
-
     @Test
-    void canPurchase_shouldReturnTrue_whenNoTicketLimits() {
-
+    void GivenNoTicketLimits_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(null, null, 18, 60, true);
 
-        boolean result = policy.canPurchase(100, 25, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(100, 25, false));
     }
 
     @Test
-    void canPurchase_shouldReturnTrue_whenNoAgeLimits() {
-
+    void GivenNoAgeLimits_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, null, null, true);
 
-        boolean result = policy.canPurchase(5, 5, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 5, false));
     }
 
-    // ---------------- BOUNDARY VALUES ----------------
-
     @Test
-    void canPurchase_shouldAllowExactMinTickets() {
-
+    void GivenExactMinTickets_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(5, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 25, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 25, false));
     }
 
     @Test
-    void canPurchase_shouldAllowExactMaxTickets() {
-
+    void GivenExactMaxTickets_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 5, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 25, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 25, false));
     }
 
     @Test
-    void canPurchase_shouldAllowExactMinAge() {
-
+    void GivenExactMinAge_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 18, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 18, false));
     }
 
     @Test
-    void canPurchase_shouldAllowExactMaxAge() {
-
+    void GivenExactMaxAge_WhenCanPurchase_ThenReturnTrue() {
         EventPurchasePolicy policy =
                 new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 60, false);
-
-        assertTrue(result);
+        assertTrue(policy.canPurchase(5, 60, false));
     }
 }

@@ -14,16 +14,14 @@ import java.util.function.Function;
 public class DomainAuthService {
 
     private final ISessionRepo sessionRepo;
-    private final AuthPublisher authPublisher;
 
     @Value("${jwt.secret}")
     private String secret;
     private SecretKey key;
     private final long expirationTime = 1000 * 60 * 60 * 2;
 
-    public DomainAuthService(ISessionRepo sessionRepo, AuthPublisher authPublisher) {
+    public DomainAuthService(ISessionRepo sessionRepo) {
         this.sessionRepo = sessionRepo;
-        this.authPublisher = authPublisher;
     }
 
     @PostConstruct
@@ -41,7 +39,6 @@ public class DomainAuthService {
                 .compact();
 
         sessionRepo.save(new SessionToken(tokenStr, expireTime));
-        authPublisher.publishNewSession(tokenStr);
         return tokenStr;
     }
 
