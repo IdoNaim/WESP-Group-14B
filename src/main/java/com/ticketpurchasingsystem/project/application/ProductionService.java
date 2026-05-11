@@ -211,6 +211,39 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    public boolean removeManager(String sessionToken, Integer companyId, String managerId) {
+        if(!authenticationService.validate(sessionToken)){
+            return false;
+        }
+        String ownerId = authenticationService.getUser(sessionToken);
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("removeManager: company not found, id=" + companyId);
+                return false;
+            }
+            ProductionCompany company = productionHandler.removeManger(ownerId, companyId, managerId, companyOpt.get());
+            if (company == null) {
+                return false;
+            }
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                loggerDef.getInstance().info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
+                return true;
+            }catch (OptimisticLockingFailureException e){
+                loggerDef.getInstance().info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("removeManager failed: " + e.getMessage());
+                return false;
+            }
+        }
+        loggerDef.getInstance().error("removeManager failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
+    }
+
+    @Override
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'createEvent'");
     }
