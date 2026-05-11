@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,8 +64,11 @@ public class GetCompanyPurchaseHistoryTest {
     public void GivenValidTokenAndFounder_WhenGetCompanyPurchaseHistory_ThenReturnHistory() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
+        List<String> seats = List.of("seat1");
+        HashMap<String,Integer> standing = new HashMap<>();
+        standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", FOUNDER_ID, "e1", COMPANY_ID, 2));
+                new HistoryOrderItem("o1", FOUNDER_ID, "e1", 10.0, seats, standing));
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
@@ -82,8 +86,11 @@ public class GetCompanyPurchaseHistoryTest {
     public void GivenValidTokenAndOwner_WhenGetCompanyPurchaseHistory_ThenReturnHistory() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
+        List<String> seats = List.of("seat1");
+        HashMap<String,Integer> standing = new HashMap<>();
+        standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o2", OWNER_ID, "e2", COMPANY_ID, 1));
+                new HistoryOrderItem("o2", OWNER_ID, "e2", 10.0, seats, standing));
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(OWNER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));

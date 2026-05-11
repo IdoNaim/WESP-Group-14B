@@ -6,6 +6,7 @@ import java.util.Set;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointManagerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
@@ -40,8 +41,11 @@ public class ProductionEventPublisher {
         eventPublisher.publishEvent(new AssignOwnerEvent(company, appointerId, appointeeId));
     }
 
-    public void publishModifyManagerPermissionsEvent(ProductionCompany company, String ownerId,
-            String managerId, Set<ManagerPermission> permissions) {
+    public void publishModifyManagerPermissionsEvent(ProductionCompany company, String ownerId, String managerId, Set<ManagerPermission> permissions) {
         eventPublisher.publishEvent(new ModifyManagerPermissionsEvent(company, ownerId, managerId, permissions));
+    }
+    public void publishAppointManagerEvent(ProductionCompany company, String appointerId,
+            String managerId, Set<ManagerPermission> permissions) {
+        eventPublisher.publishEvent(new AppointManagerEvent(company, appointerId, managerId, permissions));
     }
 }

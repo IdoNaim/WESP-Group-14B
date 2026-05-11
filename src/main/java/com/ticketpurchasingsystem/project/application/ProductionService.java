@@ -96,6 +96,43 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    public boolean appointManager(String sessionToken, Integer companyId, String managerId,
+            Set<ManagerPermission> permissions) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String appointerId = authenticationService.getUser(sessionToken);
+
+        if (!productionEventPublisher.publishIsUserRegisteredEvent(managerId)) {
+            return false;
+        }
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("appointManager: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.appointManager(
+                appointerId, companyId, managerId, permissions, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            ProductionCompany saved = prodRepo.save(company);
+            productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
+            loggerDef.getInstance().info(
+                    "appointManager: " + managerId + " appointed as manager of company "
+                            + companyId + " by " + appointerId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("getCompanyPurchaseHistory: invalid session token");

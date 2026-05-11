@@ -26,6 +26,9 @@ public interface IProductionService {
 
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId);
 
+    public boolean appointManager(String sessionToken, Integer companyId, String managerId,
+            Set<ManagerPermission> permissions);
+
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId);
 
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
