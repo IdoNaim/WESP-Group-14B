@@ -224,7 +224,7 @@ public class ProductionService implements IProductionService {
                 loggerDef.getInstance().error("removeManager: company not found, id=" + companyId);
                 return false;
             }
-            ProductionCompany company = productionHandler.removeManager(ownerId, companyId, managerId, companyOpt.get());
+            ProductionCompany company = productionHandler.removeManager(ownerId, companyId, managerId, new ProductionCompany(companyOpt.get()));
             if (company == null) {
                 return false;
             }

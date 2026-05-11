@@ -226,7 +226,7 @@ public class RemoveManagerTest {
         company.setCompanyId(COMPANY_ID);
         company.initFounder(FOUNDER_ID);
         // MANAGER_ID is appointed by FOUNDER_ID, not by "other-owner"
-        company.appointOwner(FOUNDER_ID, MANAGER_ID);
+        company.appointManager(FOUNDER_ID, MANAGER_ID, Set.of(ManagerPermission.INVENTORY_MANAGEMENT));
 
         ProductionCompany result = productionHandler.removeManager(
                 "other-owner", COMPANY_ID, MANAGER_ID, company);
