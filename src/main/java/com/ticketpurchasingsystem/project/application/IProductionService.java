@@ -30,4 +30,7 @@ public interface IProductionService {
             Set<ManagerPermission> permissions);
 
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId);
+
+    public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
+            String managerId, Set<ManagerPermission> permissions);
 }

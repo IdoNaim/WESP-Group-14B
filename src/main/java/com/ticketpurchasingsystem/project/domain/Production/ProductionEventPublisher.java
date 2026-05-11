@@ -10,6 +10,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.App
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.ModifyManagerPermissionsEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 
 public class ProductionEventPublisher {
@@ -40,6 +41,9 @@ public class ProductionEventPublisher {
         eventPublisher.publishEvent(new AssignOwnerEvent(company, appointerId, appointeeId));
     }
 
+    public void publishModifyManagerPermissionsEvent(ProductionCompany company, String ownerId, String managerId, Set<ManagerPermission> permissions) {
+        eventPublisher.publishEvent(new ModifyManagerPermissionsEvent(company, ownerId, managerId, permissions));
+    }
     public void publishAppointManagerEvent(ProductionCompany company, String appointerId,
             String managerId, Set<ManagerPermission> permissions) {
         eventPublisher.publishEvent(new AppointManagerEvent(company, appointerId, managerId, permissions));

@@ -1,10 +1,15 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+
+import static com.ticketpurchasingsystem.project.domain.Production.ManagerPermission.none;
 import java.util.Collections;
 import java.util.Set;
 
@@ -25,6 +30,7 @@ public class ProductionCompany {
     private final Map<String, ManagerDTO> managerTree;
     private PurchasePolicy purchasePolicy;
     private DiscountPolicy discountPolicy;
+    private final Map<String, Set<ManagerPermission>> managerPermissions;
 
     public ProductionCompany(ProductionCompanyDTO dto) {
         this.companyName = dto.getCompanyName();
@@ -35,6 +41,7 @@ public class ProductionCompany {
         this.managerTree = new LinkedHashMap<>();
         this.purchasePolicy = new PurchasePolicy();
         this.discountPolicy = new DiscountPolicy();
+        this.managerPermissions = new LinkedHashMap<>();
     }
 
     public void initFounder(String userId) {
@@ -136,5 +143,23 @@ public class ProductionCompany {
 
     public DiscountPolicy getDiscountPolicy() {
         return discountPolicy;
+    }
+
+    public void setManagerPermissions(String managerId, Set<ManagerPermission> permissions) {
+        if (permissions.isEmpty()) {
+            managerPermissions.put(managerId, none());
+        } else {
+            managerPermissions.put(managerId, EnumSet.copyOf(permissions));
+        }
+    }
+
+    public Set<ManagerPermission> getManagerPermissions(String managerId) {
+        return Collections.unmodifiableSet(
+                managerPermissions.getOrDefault(managerId, none()));
+    }
+
+    public boolean isAppointedBy(String managerId, String ownerId) {
+        return ownershipTree.containsKey(managerId)
+                && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
     }
 }
