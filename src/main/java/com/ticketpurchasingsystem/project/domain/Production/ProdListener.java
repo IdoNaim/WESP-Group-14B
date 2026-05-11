@@ -37,6 +37,9 @@ public class ProdListener {
                 "Manager permissions updated: Company=" + event.getCompany().getCompanyName()
                         + ", Manager=" + event.getManagerId()
                         + ", UpdatedBy=" + event.getOwnerId()
+                        + ", Permissions=" + event.getPermissions());
+    }
+
     @EventListener
     public void onAppointManager(AppointManagerEvent event) {
         String companyName = event.getCompany().getCompanyName();
