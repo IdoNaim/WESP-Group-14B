@@ -65,3 +65,16 @@ Approximate percentage of code influenced by LLMs: 30%
 Approximate percentage of code influenced by LLMs: 30
  - Main areas where LLMs were used:ProductionEventPublisher and ProductionEventHandler
  - Main areas implemented without LLM assistance:other production features and business logic and domain
+
+   Feature / Component: [Name]-help understand and implement the locking system and optimisitic locking in production
+  Purpose of LLM use:
+  - Summary of prompt(s):ask for help which optimisitc or pasmistic locking is better and how to use the locking system and optimisitic locking in production and how its correct way that the spring is working
+  - Output received (short description):explain and show how the locking system and optimisitic locking is working and how to use it correctly and make a little bit changes in the privious file to make it work correctly of locking system and optimisitic locking
+  - Files / components affected:ProductionCompany, ProductionCompanyService
+  - Modifications made:add version column to production company table and use it in the locking system and optimisitic locking
+  - Initial gaps in understanding (if any):yes it did explain me well how the locking system and optimisitic locking is working and i did understand it
+  - Final understanding (brief explanation in your own words): help me know how to implement locking system and optimisitic locking in spring and how to use it correctly in production
+ Overall Usage Summary- 
+Approximate percentage of code influenced by LLMs: 20
+ - Main areas where LLMs were used:ProductionCompanyService
+ - Main areas implemented without LLM assistance:business logic and domain

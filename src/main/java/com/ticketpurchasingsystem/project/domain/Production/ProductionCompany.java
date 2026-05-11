@@ -11,6 +11,7 @@ import java.util.Set;
 
 import static com.ticketpurchasingsystem.project.domain.Production.ManagerPermission.none;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.DiscountPolicy.DiscountPolicy;
@@ -31,6 +32,7 @@ public class ProductionCompany {
     private PurchasePolicy purchasePolicy;
     private DiscountPolicy discountPolicy;
     private final Map<String, Set<ManagerPermission>> managerPermissions;
+    private long version;
 
     public ProductionCompany(ProductionCompanyDTO dto) {
         this.companyName = dto.getCompanyName();
@@ -42,6 +44,28 @@ public class ProductionCompany {
         this.purchasePolicy = new PurchasePolicy();
         this.discountPolicy = new DiscountPolicy();
         this.managerPermissions = new LinkedHashMap<>();
+        this.version = 0;
+    }
+
+    public ProductionCompany(ProductionCompany other) {
+        this.companyId = other.companyId;
+        this.companyName = other.companyName;
+        this.companyEmail = other.companyEmail;
+        this.companyDescription = other.companyDescription;
+        this.founderId = other.founderId;
+        this.ownerIds = new ArrayList<>(other.ownerIds);
+        this.ownershipTree = new LinkedHashMap<>(other.ownershipTree);
+        this.managerTree = new LinkedHashMap<>(other.managerTree);
+        this.purchasePolicy = other.purchasePolicy;
+        this.discountPolicy = other.discountPolicy;
+        this.managerPermissions = new LinkedHashMap<>();
+        for (Map.Entry<String, Set<ManagerPermission>> entry : other.managerPermissions.entrySet()) {
+            Set<ManagerPermission> permCopy = entry.getValue().isEmpty()
+                    ? new HashSet<>()
+                    : EnumSet.copyOf(entry.getValue());
+            this.managerPermissions.put(entry.getKey(), permCopy);
+        }
+        this.version = other.version;
     }
 
     public void initFounder(String userId) {
@@ -161,5 +185,13 @@ public class ProductionCompany {
     public boolean isAppointedBy(String managerId, String ownerId) {
         return ownershipTree.containsKey(managerId)
                 && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
     }
 }
