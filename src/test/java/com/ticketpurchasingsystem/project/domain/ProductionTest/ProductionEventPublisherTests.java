@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -99,8 +100,11 @@ class ProductionEventPublisherTests {
     @Test
     void WhenPublishGetCompanyHistoryGivenListenerResponds_ThenReturnHistory() {
         // Arrange
+        List<String> seats = List.of("seat1");
+        HashMap<String,Integer> standing = new HashMap<>();
+        standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", USER_ID, "e1", COMPANY_ID, 2));
+                new HistoryOrderItem("o1", USER_ID, "e1", 10.0,seats, standing));
         doAnswer(inv -> {
             GetCompanyHistoryEvent event = inv.getArgument(0);
             event.setResult(mockHistory);

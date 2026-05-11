@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,8 +33,11 @@ class HistoryOrderListenerCompanyHistoryTests {
     @Test
     void WhenOnGetCompanyHistoryGivenOrders_ThenEventResultIsSet() {
         // Arrange
+        List<String> seats = List.of("seat1");
+        HashMap<String,Integer> standing = new HashMap<>();
+        standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", "user-1", "e1", COMPANY_ID, 2));
+                new HistoryOrderItem("o1", "user-1", "e1", 10.0, seats, standing));
         when(historyOrderRepo.findByCompanyId(COMPANY_ID)).thenReturn(mockHistory);
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
