@@ -2,57 +2,128 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ActiveOrderMemRepo implements IActiveOrderRepo {
-    List<ActiveOrderItem> activeOrders;
-    public ActiveOrderMemRepo() {
-        this.activeOrders = new ArrayList<>();
+
+    private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ReentrantLock> orderLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> userToOrder = new ConcurrentHashMap<>();
+    private ReentrantLock getLockFor(String orderId) {
+        return orderLocks.computeIfAbsent(orderId, id -> new ReentrantLock());
     }
+
     @Override
     public boolean save(ActiveOrderItem order) {
-        activeOrders.add(order);
+        if(order == null){
+            return false;
+        }
+        String existing = userToOrder.putIfAbsent(order.getUserId(), order.getOrderId());
+        if (existing != null) {
+            return false;
+        }
+        activeOrders.put(order.getOrderId(), order);
+        getLockFor(order.getOrderId());
         return true;
     }
 
     @Override
     public ActiveOrderItem findById(String orderId) {
-        for(ActiveOrderItem order : activeOrders)
-        {
-            if(order.getOrderId().equals(orderId)) {
-                return order;
-            }
+        ReentrantLock lock = orderLocks.get(orderId);
+        if (lock == null) {
+            return null;
         }
-        return null;
+        lock.lock();
+        try {
+            ActiveOrderItem order = activeOrders.get(orderId);
+            if(order != null) {
+                return new ActiveOrderItem(order);
+            }
+            else {
+                return null;
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public void delete(String orderId) {
-        for(ActiveOrderItem order : activeOrders) {
-            if(order.getOrderId().equals(orderId)) {
-                activeOrders.remove(order);
-                break;
+        ReentrantLock lock = orderLocks.get(orderId);
+        if (lock == null) {
+            return;
+        }
+        lock.lock();
+        try {
+            ActiveOrderItem order = activeOrders.get(orderId);
+            if (order != null) {
+                userToOrder.remove(order.getUserId());
+                activeOrders.remove(orderId);
             }
+            orderLocks.remove(orderId);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void update(ActiveOrderItem order) {
-        boolean found = false;
-        for(ActiveOrderItem o : activeOrders) {
-            if(o.getOrderId().equals(order.getOrderId())) {
-                o.editOrder(order);
-                found = true;
-                break;
+        ReentrantLock lock = getLockFor(order.getOrderId());
+        lock.lock();
+        try {
+            ActiveOrderItem existing = activeOrders.get(order.getOrderId());
+            if (existing != null) {
+                existing.editOrder(order);
+            } else {
+                activeOrders.put(order.getOrderId(), new ActiveOrderItem(order)); // upsert
             }
-        }
-        if(!found) {
-            activeOrders.add(order);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public List<ActiveOrderItem> findAll() {
-        return List.copyOf(activeOrders);
+        return List.copyOf(activeOrders.values());
     }
 
+    @Override
+    public ActiveOrderItem findByUserId(String userId) {
+        for (String orderId : activeOrders.keySet()) {
+            ReentrantLock lock = orderLocks.get(orderId);
+            if (lock == null) {
+                continue;
+            }
+            
+            lock.lock();
+            try {
+                ActiveOrderItem order = activeOrders.get(orderId);
+                if (order != null && order.getUserId().equals(userId)) {
+                    return order;
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return null;
+    }
+    public boolean markAsProcessing(String orderId){
+        ReentrantLock lock = orderLocks.get(orderId);
+        if(lock == null){
+            throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+        }
+        lock.lock();
+        try{
+            ActiveOrderItem existing = activeOrders.get(orderId);
+            if(existing == null){
+                    throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+            }
+            return existing.markAsProcessing();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
 }
+

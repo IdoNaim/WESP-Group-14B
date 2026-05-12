@@ -1,4 +1,10 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -6,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class HistoryOrderItem {
+
     private String orderId;
     private String userId;
     private String eventId;
@@ -37,3 +44,4 @@ public class HistoryOrderItem {
     public Timestamp getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 }
+

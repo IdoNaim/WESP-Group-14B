@@ -1,15 +1,62 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
-import com.ticketpurchasingsystem.project.domain.Utils.Publisher;
 import org.springframework.context.ApplicationEventPublisher;
+
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
+
+import java.util.List;
+
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
+
     public ActiveOrderPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
+
     public boolean publishIsValidEventIDEvent(String eventId) {
         IsValidEventIDEvent event = new IsValidEventIDEvent(this, eventId);
         eventPublisher.publishEvent(event);
         return event.isValid();
     }
+
+
+    public boolean publishReserveSeats(String eventId, List<String> seatIds) {
+        SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishReleaseSeats(String eventID, List<String> seatIds){
+        SeatReleaseEvent event = new SeatReleaseEvent(this, eventID, seatIds);
+        eventPublisher.publishEvent(event);
+    }
+
+    public boolean publishReserveStandingArea(String eventId, String areaId, int quantity) {
+        StandingAreaReservationEvent event = new StandingAreaReservationEvent(this, eventId, areaId, quantity);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishReleaseStandingArea(String eventId, String areaID, int quantity){
+        StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(this, eventId, areaID, quantity);
+        eventPublisher.publishEvent(event);
+    }
+    public boolean publishIsMember(String userId){
+        IsMemberEvent event = new IsMemberEvent(this, userId);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishUnreserveTickets(String eventID, int quantity){
+        TicketUnreservationEvent event = new TicketUnreservationEvent(this, eventID, quantity);
+        eventPublisher.publishEvent(event);
+    }
+
+    public boolean publishIsUpToPolicy(ActiveOrderDTO order){
+        IsUpToPolicyEvent event = new IsUpToPolicyEvent(this,order);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid){
+        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid);
+        eventPublisher.publishEvent(event);
+    }
+
 }
