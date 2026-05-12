@@ -76,7 +76,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             if (existing != null) {
                 existing.editOrder(order);
             } else {
-                activeOrders.put(order.getOrderId(), order); // upsert
+                activeOrders.put(order.getOrderId(), new ActiveOrderItem(order)); // upsert
             }
         } finally {
             lock.unlock();
@@ -100,7 +100,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             try {
                 ActiveOrderItem order = activeOrders.get(orderId);
                 if (order != null && order.getUserId().equals(userId)) {
-                    return new ActiveOrderItem(order); // defensive copy
+                    return order;
                 }
             } finally {
                 lock.unlock();
