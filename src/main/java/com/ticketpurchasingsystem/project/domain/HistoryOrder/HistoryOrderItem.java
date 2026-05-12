@@ -43,5 +43,9 @@ public class HistoryOrderItem {
     public void setEventId(String eventId) { this.eventId = eventId; }
     public Timestamp getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
+
+    public HistoryOrderDTO makeDTO() {
+        return new HistoryOrderDTO(orderId, userId, eventId, purchaseDate, price, seatIds, StandingAreaQuantities);
+    }
 }
 

@@ -1,7 +1,10 @@
 package com.ticketpurchasingsystem.project.application;
 
-public interface  HistoryOrderService {
-    public void getHistoryOrders(String userId) ;
-    public void getHistoryOrder(String orderId) ;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+public class HistoryOrderService implements IHistoryOrderService {
     
 }
