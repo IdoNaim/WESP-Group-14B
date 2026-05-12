@@ -44,6 +44,16 @@ public class ActiveOrderTests {
     private IBarCodeGateway barcodeGatewayMock;
     private ActiveOrderHandler activeOrderHandler;
 
+    private static final String VALID_TOKEN   = "valid-token";
+    private static final String INVALID_TOKEN = "bad-token";
+    private static final String USER_ID       = "user123";
+    private static final String OTHER_USER_ID = "user456";
+    private static final String ORDER_ID      = "order-001";
+    private static final String EVENT_ID      = "event-001";
+
+    private static final SessionToken VALID_SESSION   = new SessionToken(VALID_TOKEN, 9999999999L);
+    private static final SessionToken INVALID_SESSION = new SessionToken(INVALID_TOKEN, 9999999999L);
+
     @BeforeEach
     public void setUp() {
         activeOrderRepoMock = mock(IActiveOrderRepo.class);
@@ -60,6 +70,18 @@ public class ActiveOrderTests {
             authenticationService, 
             barcodeGatewayMock
         );
+    }
+    /**
+       helper functions
+     */
+    private ActiveOrderItem orderForUser(String userId) {
+        return new ActiveOrderItem(ORDER_ID, userId, EVENT_ID);
+    }
+
+    private ActiveOrderItem orderWithSeats(String userId) {
+        ActiveOrderItem order = new ActiveOrderItem(ORDER_ID, userId, EVENT_ID);
+        order.addSeatIds(List.of("seat-1", "seat-2"));
+        return order;
     }
 
     @Test
@@ -877,5 +899,83 @@ public class ActiveOrderTests {
             assertNull(realRepo.findById(orderId), "Order " + orderId + " should be deleted after completion");
         }
         verify(paymentGateway, times(N)).pay(); // each order charged exactly once
+    }
+
+    @Test
+    public void GivenValidUserAndOwnOrder_WhenHandlerGetActiveOrderInfo_ThenReturnCompleteDTO() {
+        ActiveOrderItem order = orderWithSeats(USER_ID);
+        order.addStandingAreaQuantity("area-A", 3);
+
+        ActiveOrderDTO result = activeOrderHandler.getActiveOrderInfo(USER_ID, order);
+
+        assertNotNull(result);
+        assertEquals(ORDER_ID, result.getOrderId());
+        assertEquals(USER_ID, result.getUserId());
+        assertEquals(EVENT_ID, result.getEventId());
+        assertEquals(order.getCreatedAt(), result.getCreatedAt());
+        assertEquals(List.of("seat-1", "seat-2"), result.getSeatIds());
+        assertEquals(3, result.getStandingAreaQuantities().get("area-A"));
+    }
+    @Test
+    public void GivenInvalidSession_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+        assertThrows(Exception.class, () -> activeOrderService.getActiveOrderInfo(INVALID_SESSION, ORDER_ID));
+    }
+
+    @Test
+    public void GivenOrderNotFound_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(null);
+
+        assertThrows(Exception.class,
+                () -> activeOrderService.getActiveOrderInfo(VALID_SESSION, ORDER_ID));
+
+    }
+
+    @Test
+    public void GivenOrderBelongsToOtherUser_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+        ActiveOrderItem order = orderForUser(OTHER_USER_ID); // order belongs to OTHER_USER_ID
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID); // but caller is USER_ID
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(order);
+
+        assertThrows(Exception.class,
+                () -> activeOrderService.getActiveOrderInfo(VALID_SESSION, ORDER_ID));
+    }
+
+    @Test
+    public void GivenNullOrderId_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(activeOrderRepoMock.findById(null)).thenReturn(null);
+
+        assertThrows(Exception.class,
+                () -> activeOrderService.getActiveOrderInfo(VALID_SESSION, null));
+    }
+    @Test
+    public void GivenNullUserId_WhenHandlerGetActiveOrderInfo_ThenReturnNull() {
+        ActiveOrderItem order = orderForUser(USER_ID);
+
+        ActiveOrderDTO result = activeOrderHandler.getActiveOrderInfo(null, order);
+
+        assertNull(result);
+    }
+
+    @Test
+    public void GivenNullOrder_WhenHandlerGetActiveOrderInfo_ThenReturnNull() {
+        ActiveOrderDTO result = activeOrderHandler.getActiveOrderInfo(USER_ID, null);
+
+        assertNull(result);
+    }
+
+    @Test
+    public void GivenOrderWithNullOrderId_WhenHandlerGetActiveOrderInfo_ThenReturnNull() {
+        ActiveOrderItem order = orderForUser(USER_ID);
+        order.setOrderId(null);
+
+        ActiveOrderDTO result = activeOrderHandler.getActiveOrderInfo(USER_ID, order);
+
+        assertNull(result);
     }
 }

@@ -6,8 +6,8 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public interface  IActiveOrderService {
     public void cancelActiveOrder(SessionToken sessionToken, String userId, String orderId);
-    public void getActiveOrders(String userId) ;
-    public void getActiveOrder(String orderId) ;
+
+    public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken, String orderId) throws Exception ;
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId);
     public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, List<String> seatIds);
     public void addStandingAreaToActiveOrder(SessionToken sessionToken, String orderId, String areaId, int quantity);

@@ -3,7 +3,9 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
-
+import com.ticketpurchasingsystem.project.infrastructure.logging.logLevel;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
+import com.ticketpurchasingsystem.project.infrastructure.logging.logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +18,9 @@ public class ActiveOrderService implements IActiveOrderService {
     IActiveOrderRepo activeOrderRepo;
     AuthenticationService authenticationService;
     IBarCodeGateway barCodeGateway;
+
+    loggerDef logger = loggerDef.getInstance();
+
     ActiveOrderHandler activeOrderHandler;
     public ActiveOrderService(ActiveOrderListener activeOrderListener,
                               ActiveOrderPublisher activeOrderPublisher,
@@ -23,6 +28,7 @@ public class ActiveOrderService implements IActiveOrderService {
                               ActiveOrderHandler activeOrderHandler,
                               AuthenticationService authenticationService,
                               IBarCodeGateway barCodeGateway) {
+
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
@@ -57,20 +63,27 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
-    public void getActiveOrders(String userId) {
+    public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken ,String orderId) throws Exception {
         // TODO Auto-generated method stub
-        
+        if(!authenticationService.validate(sessionToken.getToken())){
+            throw new IllegalArgumentException("Session has ended");
+        }
+        String userId = authenticationService.getUser(sessionToken.getToken());
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if(order == null){
+            logger.info("Active order not found with id: "+ orderId);
+            throw new IllegalArgumentException("the active order was not found");
+        }
+        ActiveOrderDTO orderDTO = activeOrderHandler.getActiveOrderInfo(userId, order);
+        if(orderDTO == null){
+            logger.error("user "+ userId+ " tried seeing a different users order: "+ orderId);
+            throw new IllegalArgumentException("you can only view your own active order");
+        }
+        return orderDTO;
     }
 
-    @Override
-    public void getActiveOrder(String orderId) {
-        // TODO Auto-generated method stub
-
-    }
 
 
-    //changed signature from completeActiveOrder to createPendingOrder, since completeActiveOrder should be called after payment is successful, and createPendingOrder should be called when the user finishes choosing the tickets and wants to checkout
-    //called after "checkout" is pressed in UI
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId){
         if(authenticationService.validate(sessionToken.getToken())){
             if(activeOrderRepo.findByUserId(userId) != null){
