@@ -42,6 +42,7 @@ public class ActiveOrderTests {
     private ActiveOrderPublisher activeOrderPublisher;
     private AuthenticationService authenticationService;
     private IBarCodeGateway barcodeGatewayMock;
+    private ActiveOrderHandler activeOrderHandler;
 
     @BeforeEach
     public void setUp() {
@@ -49,11 +50,13 @@ public class ActiveOrderTests {
         activeOrderPublisher = mock(ActiveOrderPublisher.class);
         authenticationService = mock(AuthenticationService.class);
         barcodeGatewayMock = mock(IBarCodeGateway.class);
-        
+
+        activeOrderHandler = new ActiveOrderHandler();
         activeOrderService = new ActiveOrderService(
             new ActiveOrderListener(activeOrderRepoMock), 
             activeOrderPublisher, 
             activeOrderRepoMock,
+            activeOrderHandler,
             authenticationService, 
             barcodeGatewayMock
         );
@@ -485,7 +488,7 @@ public class ActiveOrderTests {
     public void GivenTwoDifferentUsers_WhenCreatePendingOrderConcurrently_ThenBothSucceedWithUniqueOrderIds() throws InterruptedException {
         // use real repo so concurrency is actually tested
         ActiveOrderMemRepo realRepo = new ActiveOrderMemRepo();
-        ActiveOrderService service = new ActiveOrderService(new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+        ActiveOrderService service = new ActiveOrderService(new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
@@ -528,7 +531,7 @@ public class ActiveOrderTests {
         com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo realRepo =
                 new com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo();
         ActiveOrderService service = new ActiveOrderService(
-                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
@@ -567,7 +570,7 @@ public class ActiveOrderTests {
         com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo realRepo =
                 new com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo();
         ActiveOrderService service = new ActiveOrderService(
-                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
@@ -611,7 +614,7 @@ public class ActiveOrderTests {
         com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo realRepo =
                 new com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo();
         ActiveOrderService service = new ActiveOrderService(
-                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
@@ -662,7 +665,7 @@ public class ActiveOrderTests {
         com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo realRepo =
                 new com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo();
         ActiveOrderService service = new ActiveOrderService(
-                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
@@ -718,7 +721,7 @@ public class ActiveOrderTests {
         com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo realRepo =
                 new com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo();
         ActiveOrderService service = new ActiveOrderService(
-                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo,
+                new ActiveOrderListener(realRepo), activeOrderPublisher, realRepo, activeOrderHandler,
                 authenticationService, barcodeGatewayMock);
 
         SessionToken sessionToken = mock(SessionToken.class);
