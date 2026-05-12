@@ -102,10 +102,15 @@ public class ProductionCompany {
     }
 
     public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
-        if (managerTree.containsKey(managerId)) {
+        ManagerDTO managerDTO = managerTree.putIfAbsent(managerId, new ManagerDTO(managerId, appointerId, permissions));
+        if(managerDTO != null){
             return false;
         }
-        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
+        setManagerPermissions(managerId, permissions);
+//        if (managerTree.containsKey(managerId)) {
+//            return false;
+//        }
+//        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
         return true;
     }
     public boolean removeManager(String appointerId, String managerId){
