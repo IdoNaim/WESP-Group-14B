@@ -28,7 +28,7 @@ public class ActiveOrderService implements IActiveOrderService {
                               ActiveOrderHandler activeOrderHandler,
                               AuthenticationService authenticationService,
                               IBarCodeGateway barCodeGateway) {
-t 
+
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
@@ -80,7 +80,6 @@ t
             throw new IllegalArgumentException("you can only view your own active order");
         }
         return orderDTO;
-
     }
 
 
