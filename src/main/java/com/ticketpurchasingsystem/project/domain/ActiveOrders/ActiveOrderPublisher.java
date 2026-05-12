@@ -39,14 +39,6 @@ public class ActiveOrderPublisher {
         StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(this, eventId, areaID, quantity);
         eventPublisher.publishEvent(event);
     }
-
-
-    // public boolean publishReserveTickets(String eventId, int quantity)
-    // {
-    //     TicketReservationEvent event = new TicketReservationEvent(this,eventId, quantity);
-    //     eventPublisher.publishEvent(event);
-    //     return event.getResult();
-    // }
     public boolean publishIsMember(String userId){
         IsMemberEvent event = new IsMemberEvent(this, userId);
         eventPublisher.publishEvent(event);
@@ -66,8 +58,5 @@ public class ActiveOrderPublisher {
         CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid);
         eventPublisher.publishEvent(event);
     }
-    // public boolean publishPaymentEvent(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
-    //     // TODO Auto-generated method stub
-    //     throw new UnsupportedOperationException("Unimplemented method 'publishPaymentEvent'");
-    // }
+
 }

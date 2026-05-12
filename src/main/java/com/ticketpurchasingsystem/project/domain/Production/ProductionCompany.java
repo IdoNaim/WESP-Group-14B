@@ -102,13 +102,27 @@ public class ProductionCompany {
     }
 
     public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
-        if (managerTree.containsKey(managerId)) {
+        ManagerDTO managerDTO = managerTree.putIfAbsent(managerId, new ManagerDTO(managerId, appointerId, permissions));
+        if(managerDTO != null){
             return false;
         }
-        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
+        setManagerPermissions(managerId, permissions);
+//        if (managerTree.containsKey(managerId)) {
+//            return false;
+//        }
+//        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
         return true;
     }
-
+    public boolean removeManager(String appointerId, String managerId){
+        if(!isManager(managerId) || !isManagerAppointedByOwner(managerId, appointerId)){
+            return false;
+        }
+        managerTree.remove(managerId);
+        if(managerPermissions.containsKey(managerId)) {
+            managerPermissions.remove(managerId);
+        }
+        return true;
+    }
     public boolean isManager(String userId) {
         return managerTree.containsKey(userId);
     }
@@ -186,7 +200,10 @@ public class ProductionCompany {
         return ownershipTree.containsKey(managerId)
                 && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
     }
-
+    public boolean isManagerAppointedByOwner(String managerId, String ownerId){
+        return managerTree.containsKey(managerId)
+                && ownerId.equals(managerTree.get(managerId).getAppointerId());
+    }
     public long getVersion() {
         return version;
     }

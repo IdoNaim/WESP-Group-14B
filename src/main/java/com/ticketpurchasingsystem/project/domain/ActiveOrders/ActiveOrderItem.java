@@ -82,10 +82,10 @@ public class ActiveOrderItem {
     }
 
     public List<String> getSeatIds() {
-        return seatIds;
+        return new ArrayList<>(seatIds);
     }
     public HashMap<String, Integer> getStandingAreaQuantities() {
-        return StandingAreaQuantities;
+        return new HashMap<>(StandingAreaQuantities);
     }
 
     public boolean isExpired() {
@@ -93,18 +93,6 @@ public class ActiveOrderItem {
         long minutesElapsed = (now.getTime() - createdAt.getTime()) / (60 * 1000);
         return minutesElapsed >= EXPIRATION_TIME_MINUTES;
     }
-
-
-    // public int getQuantity() {
-    //     return quantity;
-    // }
-
-    // public void setQuantity(int quantity) {
-    //     if(quantity <= 0) {
-    //         throw  new IllegalArgumentException("cant buy negative number of tickets");
-    //     }
-    //     this.quantity = quantity;
-    // }
 
     public void editOrder(ActiveOrderItem order) {
         if (!order.getOrderId().equals(this.orderId)) {
