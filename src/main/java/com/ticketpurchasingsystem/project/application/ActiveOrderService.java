@@ -16,10 +16,17 @@ public class ActiveOrderService implements IActiveOrderService {
     IActiveOrderRepo activeOrderRepo;
     AuthenticationService authenticationService;
     IBarCodeGateway barCodeGateway;
-    public ActiveOrderService(ActiveOrderListener activeOrderListener, ActiveOrderPublisher activeOrderPublisher, IActiveOrderRepo activeOrderRepo, AuthenticationService authenticationService, IBarCodeGateway barCodeGateway) {
+    ActiveOrderHandler activeOrderHandler;
+    public ActiveOrderService(ActiveOrderListener activeOrderListener,
+                              ActiveOrderPublisher activeOrderPublisher,
+                              IActiveOrderRepo activeOrderRepo,
+                              ActiveOrderHandler activeOrderHandler,
+                              AuthenticationService authenticationService,
+                              IBarCodeGateway barCodeGateway) {
         this.activeOrderListener = activeOrderListener;
         this.activeOrderPublisher = activeOrderPublisher;
         this.activeOrderRepo = activeOrderRepo;
+        this.activeOrderHandler = activeOrderHandler;
         this.authenticationService = authenticationService;
         this.barCodeGateway = barCodeGateway;
     }
