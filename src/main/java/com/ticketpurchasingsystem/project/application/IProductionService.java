@@ -34,5 +34,6 @@ public interface IProductionService {
 
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
             String managerId, Set<ManagerPermission> permissions);
+    public boolean removeManager(String sessionToken, Integer companyId, String managerId);
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId);
 }
