@@ -1,5 +1,8 @@
+package com.ticketpurchasingsystem.project.domain.Utils;
+
 import java.util.HashMap;
 import java.util.List;
+import java.sql.Timestamp;
 
 public class HistoryOrderDTO {
     public String orderId;

@@ -1,5 +1,8 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
+
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
 import java.util.ArrayList;
 import java.util.Date;
