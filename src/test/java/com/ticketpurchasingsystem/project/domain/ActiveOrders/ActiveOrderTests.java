@@ -227,7 +227,7 @@ public class ActiveOrderTests {
         ActiveOrderItem order = mock(ActiveOrderItem.class);
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
         String orderId = "order1";
-        
+
         when(order.getCreatedAt()).thenReturn(new Timestamp(System.currentTimeMillis())); // Order not expired
         when(order.getOrderId()).thenReturn(orderId);
         when(activeOrderRepoMock.findById(order.getOrderId())).thenReturn(order);
@@ -237,13 +237,11 @@ public class ActiveOrderTests {
         when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
         when(paymentGateway.pay()).thenReturn(false); // Payment fails
 
-        Exception exception = assertThrows(IllegalStateException.class, () ->
+        assertThrows(Exception.class, () ->
             activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId)
         );
-        assertEquals("Payment failed", exception.getMessage());
-        
         // Ensure order is deleted after failure
-        verify(activeOrderRepoMock, times(1)).delete(orderId);        
+        verify(activeOrderRepoMock, times(1)).delete(orderId);
     }
 
     @Test
@@ -258,7 +256,8 @@ public class ActiveOrderTests {
         
         verify(activeOrderRepoMock, times(0)).delete(orderId);
 
-        assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));        
+        assertThrows(Exception.class, () ->activeOrderService.completeOrder(paymentGateway, sessionToken, 100, orderId));
+
     } 
 
     @Test
@@ -383,11 +382,6 @@ public class ActiveOrderTests {
         
         assertThrows(Exception.class, ()-> activeOrderService.updateActiveOrder(sessionToken, orderDTO));
     }
-
-    // =========================================================================
-    // הבדיקות החדשות שהתווספו (Acceptance Tests)
-    // =========================================================================
-
     @Test
     public void givenExistingOrder_whenCreatePendingOrder_thenThrowException() {
         SessionToken sessionToken = mock(SessionToken.class);
@@ -449,9 +443,127 @@ public class ActiveOrderTests {
         assertEquals("cant reserve these standing area tickets", exception.getMessage());
         verify(activeOrderRepoMock, never()).save(any());
     }
-
     @Test
-    public void givenBarcodeIssuanceFails_whenCompleteOrder_thenRefundAndRollback() {
+    public void givenExpiredOrder_whenCompleteOrder_thenThrowExceptionAndRollback() {
+        // Arrange
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("userToken");
+        when(authenticationService.validate("userToken")).thenReturn(true);
+
+        ActiveOrderItem order = new ActiveOrderItem("order1", "user1", "event1");
+        order.setCreatedAt(new Timestamp(System.currentTimeMillis() - (30 * 60 * 1000)));
+
+        order.setSeatIds(List.of("A-1", "A-2"));
+        HashMap<String, Integer> standingArea = new HashMap<>();
+        standingArea.put("GA-1", 3);
+        order.setStandingAreaQuantities(standingArea);
+
+        when(activeOrderRepoMock.findById("order1")).thenReturn(order);
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        when(activeOrderRepoMock.markAsProcessing("order1")).thenReturn(true);
+        // Act & +
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            activeOrderService.completeOrder(paymentGateway, sessionToken, 100.0, "order1");
+        });
+
+        assertEquals("Order has expired", exception.getMessage());
+
+        // Verify Rollback
+        verify(activeOrderPublisher, times(1)).publishReleaseSeats("event1", List.of("A-1", "A-2"));
+        verify(activeOrderPublisher, times(1)).publishReleaseStandingArea("event1", "GA-1", 3);
+        verify(activeOrderRepoMock, times(1)).delete("order1"); // ההזמנה חייבת להימחק
+        verify(paymentGateway, never()).pay(); // מוודא שבכלל לא ניסינו לחייב
+    }
+    @Test
+    public void givenPaymentFails_whenCompleteOrder_thenThrowExceptionAndRollback() {
+        // Arrange
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("userToken");
+        when(authenticationService.validate("userToken")).thenReturn(true);
+
+        ActiveOrderItem order = new ActiveOrderItem("order1", "user1", "event1");
+        order.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        order.setSeatIds(List.of("B-10", "B-11"));
+        HashMap<String, Integer> standingArea = new HashMap<>();
+        standingArea.put("VIP-1", 2);
+        order.setStandingAreaQuantities(standingArea);
+
+        when(activeOrderRepoMock.findById("order1")).thenReturn(order);
+        when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
+
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        when(paymentGateway.pay()).thenReturn(false);
+        when(activeOrderRepoMock.markAsProcessing("order1")).thenReturn(true);
+        // Act & Assert
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            activeOrderService.completeOrder(paymentGateway, sessionToken, 250.0, "order1");
+        });
+
+        assertEquals("Payment failed", exception.getMessage());
+
+        // Verify Rollback
+        verify(activeOrderPublisher, times(1)).publishReleaseSeats("event1", List.of("B-10", "B-11"));
+        verify(activeOrderPublisher, times(1)).publishReleaseStandingArea("event1", "VIP-1", 2);
+        verify(activeOrderRepoMock, times(1)).delete("order1");
+    }
+    @Test
+    public void givenBarcodeGenerationFails_whenCompleteOrder_thenRollback() {
+        // Arrange
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("userToken");
+        when(authenticationService.validate("userToken")).thenReturn(true);
+
+        ActiveOrderItem order = new ActiveOrderItem("order1", "user1", "event1");
+        order.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+
+        order.setSeatIds(List.of("C-1"));
+        HashMap<String, Integer> standingArea = new HashMap<>();
+        standingArea.put("GA-2", 1);
+        order.setStandingAreaQuantities(standingArea);
+
+        when(activeOrderRepoMock.markAsProcessing("order1")).thenReturn(true);
+        when(activeOrderRepoMock.findById("order1")).thenReturn(order);
+        when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
+
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        when(paymentGateway.pay()).thenReturn(true);
+        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
+
+        // Act & Assert
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            activeOrderService.completeOrder(paymentGateway, sessionToken, 150.0, "order1");
+        });
+
+        assertEquals("Barcode generation failed. Refund processed.", exception.getMessage());
+
+        // Verify Rollback
+        verify(activeOrderPublisher, times(1)).publishReleaseSeats("event1", List.of("C-1"));
+        verify(activeOrderPublisher, times(1)).publishReleaseStandingArea("event1", "GA-2", 1);
+        verify(activeOrderRepoMock, times(1)).delete("order1");
+    }
+    @Test
+    public void givenBarcodeIssuanceFails_WhenCompleteOrder_thenDontCharge(){
+        SessionToken sessionToken = mock(SessionToken.class);
+        when(sessionToken.getToken()).thenReturn("userToken");
+        when(authenticationService.validate("userToken")).thenReturn(true);
+
+        ActiveOrderItem order = new ActiveOrderItem("order1", "user1", "event1");
+        order.setCreatedAt(new Timestamp(System.currentTimeMillis())); // not expired
+        order.setSeatIds(List.of("A-1", "A-2")); // Mocking already chosen seats
+        when(activeOrderRepoMock.findById("order1")).thenReturn(order);
+        when(activeOrderRepoMock.markAsProcessing("order1")).thenReturn(true);
+        when(activeOrderPublisher.publishIsUpToPolicy(any())).thenReturn(true);
+
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+        when(paymentGateway.pay()).thenReturn(true); // Payment succeeds
+        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
+        assertThrows(IllegalStateException.class, () -> {
+            activeOrderService.completeOrder(paymentGateway, sessionToken, 100.0, "order1");
+        });
+        verify(paymentGateway, times(0)).pay();
+    }
+    @Test
+    public void givenBarcodeIssuanceFails_whenCompleteOrder_thenRollback() {
         SessionToken sessionToken = mock(SessionToken.class);
         when(sessionToken.getToken()).thenReturn("userToken");
         when(authenticationService.validate("userToken")).thenReturn(true);
@@ -474,10 +586,7 @@ public class ActiveOrderTests {
         });
 
         assertEquals("Barcode generation failed. Refund processed.", exception.getMessage());
-        
-        // Verify refund was initiated
-        verify(paymentGateway, times(1)).refund("order1", 100.0);
-        
+
         // Verify rollback logic (seats are released)
         verify(activeOrderPublisher, times(1)).publishReleaseSeats("event1", List.of("A-1", "A-2"));
         

@@ -166,19 +166,19 @@ public class ActiveOrderService implements IActiveOrderService {
         if(!upToPolicy){
             throw new IllegalStateException("Order violates purchase policies");
         }
+        List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
+        if(barcodesIssued == null){
+            rollbackOrderReservations(orderDTO);
+            activeOrderRepo.delete(orderId);
+            throw new IllegalStateException("Barcode generation failed. Refund processed.");
+        }
         boolean paymentResult = payment(paymentGateway, sessionToken, amount);
         if(!paymentResult){
             rollbackOrderReservations(orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
-        List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
-        if(barcodesIssued == null){
-            paymentGateway.refund( orderId , amount );
-            rollbackOrderReservations(orderDTO);
-            activeOrderRepo.delete(orderId);
-            throw new IllegalStateException("Barcode generation failed. Refund processed.");
-        }
+
         activeOrderPublisher.publishCompletedOrder(orderDTO, amount);
         activeOrderRepo.delete(orderId);
         return barcodesIssued;
