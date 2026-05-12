@@ -21,6 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -337,5 +342,82 @@ public class AppointManagerTest {
         // Assert
         ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
         assertTrue(node.getPermissions().isEmpty());
+    }
+    @Test
+    public void GivenTwoThreadsTryingToAppointManagerWithDifferentPermissions_WhenAppointManager_ThenOneSucceedsAndOneFails() throws InterruptedException {
+        // Arrange
+        ProductionCompany company = companyWithFounderAndOwner();
+
+        // Mocking setup
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
+        when(productionEventPublisher.publishIsUserRegisteredEvent(MANAGER_ID)).thenReturn(true);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Define two different sets of permissions
+        Set<ManagerPermission> permissionsA = EnumSet.of(ManagerPermission.INVENTORY_MANAGEMENT);
+        Set<ManagerPermission> permissionsB = EnumSet.of(ManagerPermission.COMPANY_POLICY_MANAGEMENT);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(2);
+
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        // Act
+
+        // Thread 1: Attempts with permissionsA
+        executorService.execute(() -> {
+            try {
+                startLatch.await();
+                if (productionService.appointManager(VALID_TOKEN, COMPANY_ID, MANAGER_ID, permissionsA)) {
+                    successCount.incrementAndGet();
+                } else {
+                    failureCount.incrementAndGet();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                finishLatch.countDown();
+            }
+        });
+
+        // Thread 2: Attempts with permissionsB
+        executorService.execute(() -> {
+            try {
+                startLatch.await();
+                if (productionService.appointManager(VALID_TOKEN, COMPANY_ID, MANAGER_ID, permissionsB)) {
+                    successCount.incrementAndGet();
+                } else {
+                    failureCount.incrementAndGet();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                finishLatch.countDown();
+            }
+        });
+
+        startLatch.countDown(); // Race starts here
+        boolean completed = finishLatch.await(5, TimeUnit.SECONDS);
+
+        // Assert
+        assertTrue(completed, "The threads did not finish in time");
+        assertEquals(1, successCount.get(), "Exactly one thread should have succeeded");
+        assertEquals(1, failureCount.get(), "Exactly one thread should have failed");
+
+        // Verify that the manager's permissions in the company match exactly ONE of the sets
+        // (Ensuring the second thread didn't overwrite or merge permissions)
+        ManagerDTO finalManager = company.getManagerDTO(MANAGER_ID).orElseThrow();
+        Set<ManagerPermission> finalPermissions = finalManager.getPermissions();
+
+        boolean matchesA = finalPermissions.equals(permissionsA);
+        boolean matchesB = finalPermissions.equals(permissionsB);
+
+        assertTrue(matchesA ^ matchesB, "Permissions should match either Set A or Set B, but not both or none");
+
+        executorService.shutdown();
     }
 }
