@@ -1,10 +1,12 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents;
 
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import org.springframework.context.ApplicationEvent;
+
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 
 public class CompletedOrderEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
+    private int companyId;
     private double amountPaid;
     public CompletedOrderEvent(Object source, ActiveOrderDTO order, double amountPaid){
         super(source);
@@ -18,5 +20,9 @@ public class CompletedOrderEvent extends ApplicationEvent {
 
     public double getAmountPaid() {
         return amountPaid;
+    }
+
+    public int getCompanyId() {
+        return 15;
     }
 }

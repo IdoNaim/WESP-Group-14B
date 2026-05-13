@@ -36,6 +36,6 @@ public class HistoryOrderListener {
     @EventListener
     public void onCompletedpublishedOrder(CompletedOrderEvent event){
         ActiveOrderDTO order = event.getOrder();
-        historyOrderService.createHistoryOrder(order.getOrderId(), order.getUserId(), order.getEventId(), 15, Timestamp.from(java.time.Instant.now()), event.getAmountPaid(), order.getSeatIds(), order.getStandingAreaQuantities());
+        historyOrderService.createHistoryOrder(order.getOrderId(), order.getUserId(), order.getEventId(), event.getCompanyId(), Timestamp.from(java.time.Instant.now()), event.getAmountPaid(), order.getSeatIds(), order.getStandingAreaQuantities());
     }
 }
