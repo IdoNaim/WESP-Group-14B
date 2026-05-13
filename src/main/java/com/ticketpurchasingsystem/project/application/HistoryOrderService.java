@@ -1,21 +1,14 @@
 package com.ticketpurchasingsystem.project.application;
 
-import java.util.Collections;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.sql.Timestamp;
 
-import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
-import com.ticketpurchasingsystem.project.application.ISystemAdminService;
-import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.UserService.*;
+import com.ticketpurchasingsystem.project.application.UserService.IUserService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 
 public class HistoryOrderService implements IHistoryOrderService {
 
@@ -36,9 +29,8 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
 
-    @Override
-    public boolean createHistoryOrder(String sessionToken, String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
-        if (!authenticationService.validate(sessionToken)) {
+    public boolean createHistoryOrder(SessionToken sessionToken, String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+        if (!authenticationService.validate(sessionToken.getToken())) {
             return false;
         }
         HistoryOrderItem newHistoryOrder = historyOrderHandler.saveHistoryOrder(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);
@@ -67,5 +59,5 @@ public class HistoryOrderService implements IHistoryOrderService {
     @Override
     public void getAllHistoryOrders(SessionToken sessionToken) {
         // TODO Auto-generated method stub
-    }  
+    }
 }
