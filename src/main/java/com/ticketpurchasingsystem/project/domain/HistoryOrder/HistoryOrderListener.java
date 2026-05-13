@@ -30,7 +30,7 @@ public class HistoryOrderListener {
 
     @EventListener
     public void onGetCompanyHistory(GetCompanyHistoryEvent event) {
-        event.setResult(historyOrderRepo.findByCompanyId(event.getCompanyId()));
+        event.setResult(historyOrderRepo.findAllByCompanyId(event.getCompanyId()));
     }
 
     @EventListener
