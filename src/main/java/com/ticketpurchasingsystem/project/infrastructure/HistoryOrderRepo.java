@@ -11,8 +11,7 @@ import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
 public class HistoryOrderRepo implements IHistoryOrderRepo {
 
-    private final ConcurrentHashMap<Integer, HistoryOrderItem> storage = new ConcurrentHashMap<>();
-    private final AtomicInteger idGenerator = new AtomicInteger(1);
+    private final ConcurrentHashMap<String, HistoryOrderItem> storage = new ConcurrentHashMap<>();
 
     private static HistoryOrderRepo instance;
 
@@ -25,8 +24,7 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
 
     @Override
     public void save(HistoryOrderItem historyOrder) {
-        int id = idGenerator.getAndIncrement();
-        storage.put(id, historyOrder);
+        storage.put(historyOrder.getId(), historyOrder);
     }
 
     @Override
