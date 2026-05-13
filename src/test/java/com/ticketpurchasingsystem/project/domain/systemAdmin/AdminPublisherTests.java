@@ -1,13 +1,20 @@
 package com.ticketpurchasingsystem.project.domain.systemAdmin;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 
-import java.util.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
@@ -82,7 +89,7 @@ class AdminPublisherTests {
 
     @Test
     void WhenPublishGetAllOrdersHistoryGivenListenerResponds_ThenReturnHistory() {
-        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event",10.0, new ArrayList<>(), new HashMap<>()));
+        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event", 15,10.0, new ArrayList<>(), new HashMap<>()));
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             event.setResult(mockHistory);
