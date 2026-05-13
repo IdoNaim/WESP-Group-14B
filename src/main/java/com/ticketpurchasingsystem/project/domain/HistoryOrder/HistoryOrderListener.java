@@ -31,7 +31,6 @@ public class HistoryOrderListener {
     }
 
     @EventListener
-    @Async
     public void onCompletedpublishedOrder(CompletedOrderEvent event){
         historyOrderService.createHistoryOrder(event.getSessionToken(), event.getOrderId(), event.getUserId(), event.getEventId(), event.getCompanyId(), event.getPurchaseDate(), event.getPrice(), event.getSeatIds(), event.getStandingAreaQuantities());
     }

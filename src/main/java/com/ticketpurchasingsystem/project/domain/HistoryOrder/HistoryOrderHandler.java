@@ -1,7 +1,9 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import java.util.HashMap;
 import java.util.List;
+import java.sql.Timestamp;
 
 public class HistoryOrderHandler {
 
