@@ -24,7 +24,7 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
 
     @Override
     public void save(HistoryOrderItem historyOrder) {
-        storage.put(historyOrder.getId(), historyOrder);
+        storage.put(historyOrder.getOrderId(), historyOrder);
     }
 
     @Override
