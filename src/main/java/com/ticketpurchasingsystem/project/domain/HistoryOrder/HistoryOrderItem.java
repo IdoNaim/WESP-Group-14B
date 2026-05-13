@@ -1,14 +1,11 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
-
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.sql.Timestamp;
+
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
 public class HistoryOrderItem {
 
@@ -34,6 +31,17 @@ public class HistoryOrderItem {
         this.StandingAreaQuantities = new HashMap<>(standingAreaQuantities);
     }
 
+    public HistoryOrderItem(HistoryOrderDTO dto) {
+        this.orderId = dto.getOrderId();
+        this.userId = dto.getUserId();
+        this.eventId = dto.getEventId();
+        this.companyId = dto.getCompanyId();
+        this.purchaseDate = dto.getPurchaseDate();
+        this.price = dto.getPrice();
+        this.seatIds = new ArrayList<>(dto.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(dto.getStandingAreaQuantities());
+    }
+
     public String getOrderId() { return orderId; }
     public void setOrderId(String orderId) { this.orderId = orderId; }
 
@@ -46,7 +54,7 @@ public class HistoryOrderItem {
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 
     public HistoryOrderDTO makeDTO() {
-        return new HistoryOrderDTO(orderId, userId, eventId, purchaseDate, price, seatIds, StandingAreaQuantities);
+        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, StandingAreaQuantities);
     }
 }
 

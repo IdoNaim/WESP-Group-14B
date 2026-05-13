@@ -8,6 +8,7 @@ import com.ticketpurchasingsystem.project.application.UserService.IUserService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public class HistoryOrderService implements IHistoryOrderService {
@@ -29,11 +30,9 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
 
-    public boolean createHistoryOrder(SessionToken sessionToken, String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
-        if (!authenticationService.validate(sessionToken.getToken())) {
-            return false;
-        }
-        HistoryOrderItem newHistoryOrder = historyOrderHandler.saveHistoryOrder(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);
+    public boolean createHistoryOrder(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+        HistoryOrderDTO historyOrderDTO = new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);
+        HistoryOrderItem newHistoryOrder = historyOrderHandler.saveHistoryOrder(historyOrderDTO);
         if (newHistoryOrder != null) {
             historyOrderRepo.save(newHistoryOrder);
             return true;

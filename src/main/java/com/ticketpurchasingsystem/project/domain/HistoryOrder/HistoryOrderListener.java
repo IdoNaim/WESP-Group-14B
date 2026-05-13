@@ -1,9 +1,12 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 
+import java.sql.Timestamp;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.CompletedOrderEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
@@ -32,6 +35,7 @@ public class HistoryOrderListener {
 
     @EventListener
     public void onCompletedpublishedOrder(CompletedOrderEvent event){
-        historyOrderService.createHistoryOrder(event.getSessionToken(), event.getOrderId(), event.getUserId(), event.getEventId(), event.getCompanyId(), event.getPurchaseDate(), event.getPrice(), event.getSeatIds(), event.getStandingAreaQuantities());
+        ActiveOrderDTO order = event.getOrder();
+        historyOrderService.createHistoryOrder(order.getOrderId(), order.getUserId(), order.getEventId(), 15, Timestamp.from(java.time.Instant.now()), event.getAmountPaid(), order.getSeatIds(), order.getStandingAreaQuantities());
     }
 }
