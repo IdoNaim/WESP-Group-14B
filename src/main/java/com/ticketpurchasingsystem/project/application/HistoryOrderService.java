@@ -41,22 +41,49 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
-    public void getHistoryOrder(SessionToken sessionToken, String orderId) {
+    public HistoryOrderDTO getHistoryOrder(SessionToken sessionToken, String orderId) {
         // TODO Auto-generated method stub
+        return null;
     }
 
     @Override
-    public void getAllHistoryOrdersByUser(SessionToken sessionToken, String userId) {
-        // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken sessionToken, String userId) {
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if(!isSessionTokenValid(sessionToken)) return historyOrders;
+        if(!isUserInSystem(userId) || !isAdminInSystem(userId)) return historyOrders;
+        for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userId)) {
+            historyOrders.add(item.makeDTO());
+        }
+        return historyOrders;
     }
 
     @Override
-    public void getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
-        // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
+        return null;
+         // TODO Auto-generated method stub
     }
 
     @Override
-    public void getAllHistoryOrders(SessionToken sessionToken) {
-        // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken sessionToken) {
+        return null;
+         // TODO Auto-generated method stub
     }
+
+    private boolean isSessionTokenValid(SessionToken sessionToken) {
+        return authenticationService.validate(sessionToken.getToken());
+    }
+
+    private boolean isUserInSystem(String userId) {
+        return userService.getAllUsers().stream().anyMatch(user -> user.getUserId().equals(userId));
+    }
+
+    private boolean isAdminInSystem(String userId) {
+        return systemAdminService.getAllUsers().stream().anyMatch(admin -> admin.getId().equals(String.valueOf(userId)));
+    }
+
+    private boolean isCompanyInSystem(int companyId) {
+        // TODO: Implement a method in productionService to check if a company exists and use it here
+        return true; // Placeholder return value
+    }
+
 }
