@@ -8,17 +8,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 public class HistoryOrderItem {
 
     private String orderId;
     private String userId;
     private String eventId;
+    private int companyId;
     private Timestamp purchaseDate;
     private double price;
     private List<String> seatIds;
@@ -26,10 +23,11 @@ public class HistoryOrderItem {
 
     public HistoryOrderItem() {}
 
-    public HistoryOrderItem(String orderId, String userId, String eventId, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
+        this.companyId = companyId;
         this.purchaseDate = new Timestamp(System.currentTimeMillis());
         this.price = price;
         this.seatIds = new ArrayList<>(seatIds);
