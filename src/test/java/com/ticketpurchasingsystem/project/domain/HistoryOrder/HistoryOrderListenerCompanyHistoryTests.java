@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,13 +23,16 @@ class HistoryOrderListenerCompanyHistoryTests {
     @Mock
     private IHistoryOrderRepo historyOrderRepo;
 
+    @Mock
+    private IHistoryOrderService historyOrderService;
+
     private HistoryOrderListener listener;
 
     private static final int COMPANY_ID = 42;
 
     @BeforeEach
     void setUp() {
-        listener = new HistoryOrderListener(historyOrderRepo);
+        listener = new HistoryOrderListener(historyOrderRepo, historyOrderService);
     }
 
     @Test
@@ -38,7 +42,7 @@ class HistoryOrderListenerCompanyHistoryTests {
         HashMap<String,Integer> standing = new HashMap<>();
         standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", "user-1", "e1", 10.0, seats, standing));
+                new HistoryOrderItem("o1", "user-1", "e1", COMPANY_ID, 10.0, seats, standing));
         when(historyOrderRepo.findByCompanyId(COMPANY_ID)).thenReturn(mockHistory);
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
