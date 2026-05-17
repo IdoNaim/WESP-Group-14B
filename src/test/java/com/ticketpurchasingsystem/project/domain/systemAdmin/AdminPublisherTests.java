@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -38,7 +39,6 @@ class AdminPublisherTests {
 
     @Test
     void WhenPublishGetAllActiveOrdersGivenListenerResponds_ThenReturnOrders() {
-        ActiveOrderItem order = mock(ActiveOrderItem.class);
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1"));
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
@@ -49,6 +49,7 @@ class AdminPublisherTests {
         List<ActiveOrderItem> result = adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
         assertEquals(mockOrders, result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
@@ -56,6 +57,7 @@ class AdminPublisherTests {
         List<ActiveOrderItem> result = adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
         assertNull(result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
@@ -68,7 +70,7 @@ class AdminPublisherTests {
 
         adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
-        verify(springPublisher).publishEvent(any(GetAllActiveOrdersEvent.class));
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
@@ -83,6 +85,7 @@ class AdminPublisherTests {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     // --- publishGetAllOrdersHistory ---
@@ -99,6 +102,7 @@ class AdminPublisherTests {
         List<HistoryOrderItem> result = adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
         assertEquals(mockHistory, result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
@@ -106,6 +110,7 @@ class AdminPublisherTests {
         List<HistoryOrderItem> result = adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
         assertNull(result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
@@ -118,7 +123,7 @@ class AdminPublisherTests {
 
         adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
-        verify(springPublisher).publishEvent(any(GetAllHistoryOrdersEvent.class));
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
@@ -133,5 +138,6 @@ class AdminPublisherTests {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 }
