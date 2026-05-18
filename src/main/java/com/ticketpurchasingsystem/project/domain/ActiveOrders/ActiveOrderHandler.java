@@ -50,6 +50,17 @@ public class ActiveOrderHandler {
         newOrder.addSeatIds(seatIds);
         return newOrder;
     }
+    public ActiveOrderItem addStandingAreaToActiveOrder(ActiveOrderItem order, String areaId, int quantity){
+        if(order == null || areaId == null || quantity < 0){
+            return null;
+        }
+        if(quantity == 0 ){
+            return order;
+        }
+        ActiveOrderItem newOrder = new ActiveOrderItem(order);
+        newOrder.addStandingAreaQuantity(areaId,quantity);
+        return newOrder;
+    }
     public boolean isOrderExpired(ActiveOrderItem order){
         return order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis();
     }

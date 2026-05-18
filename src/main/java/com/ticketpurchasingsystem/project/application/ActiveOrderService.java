@@ -152,27 +152,32 @@ public class ActiveOrderService implements IActiveOrderService {
 
     public void addStandingAreaToActiveOrder(SessionToken sessionToken, String orderId, String areaId, int quantity) {
         logger.info("Attempting to add standing area to order: " + orderId + ", areaId: " + areaId + ", quantity: " + quantity);
-        if(authenticationService.validate(sessionToken.getToken())){
-            ActiveOrderItem order = activeOrderRepo.findById(orderId);
-            if (order == null) {
-                logger.error("Add standing area failed: Order not found with id: " + orderId);
-                throw new IllegalArgumentException("Order not found");
-            }
-            checkIfExpiredAndThrowException(order);
-            boolean reserved = activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, quantity);
-            if (!reserved) {
-                logger.error("Add standing area failed: Could not reserve area " + areaId + " for event: " + order.getEventId());
-                throw new IllegalStateException("cant reserve these standing area tickets");
-            }
-            order.addStandingAreaQuantity(areaId, quantity);
-            saveOrder(order);
-            logger.info("Successfully added standing area to order: " + orderId);
-        }
-        else{
+        if(!authenticationService.validate(sessionToken.getToken())) {
             logger.error("Session validation failed while adding standing area to order: " + orderId);
             throw new RuntimeException("the session has ended");
         }
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if (order == null) {
+            logger.error("Add standing area failed: Order not found with id: " + orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+        checkIfExpiredAndThrowException(order);
+        boolean reserved = activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, quantity);
+        if (!reserved) {
+            logger.error("Add standing area failed: Could not reserve area " + areaId + " for event: " + order.getEventId());
+            throw new IllegalStateException("cant reserve these standing area tickets");
+        }
+        ActiveOrderItem newOrder = activeOrderHandler.addStandingAreaToActiveOrder(order, areaId, quantity);
+        if(newOrder == null){
+            logger.error("failed to add standing area tickets to order : " + orderId);
+            throw new RuntimeException("failed to add standing area tickets");
+        }
+        activeOrderRepo.update(newOrder);
+//        order.addStandingAreaQuantity(areaId, quantity);
+//        saveOrder(order);
+        logger.info("Successfully added standing area to order: " + orderId);
     }
+
 
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
