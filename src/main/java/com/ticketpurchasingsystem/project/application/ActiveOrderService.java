@@ -51,8 +51,9 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalArgumentException("Order not found");
         }
 
+        boolean canCancel = activeOrderHandler.isUsersOrder(userId, order);
         // make sure the user canceling the order is the one who owns it
-        if (!order.getUserId().equals(userId)) {
+        if (!canCancel) {
             logger.error("Cancel order failed: User " + userId + " attempted to cancel order " + orderId + " belonging to " + order.getUserId());
             throw new IllegalArgumentException("this order does not belong to this user");
         }
@@ -212,10 +213,12 @@ public class ActiveOrderService implements IActiveOrderService {
 
     private void rollbackOrderReservations(String eventID, List<String> seatsToRollback, Map<String, Integer> standingToRollback) {
         logger.info("Rolling back reservations for eventID: " + eventID);
-        if (seatsToRollback != null && !seatsToRollback.isEmpty()) {
+        boolean canReleaseSeats = activeOrderHandler.canReleaseSeats(seatsToRollback);
+        boolean canReleaseStanding = activeOrderHandler.canReleaseStanding(standingToRollback);
+        if (canReleaseSeats) {
             activeOrderPublisher.publishReleaseSeats(eventID, seatsToRollback);
         }
-        if (standingToRollback != null && !standingToRollback.isEmpty()) {
+        if (canReleaseStanding) {
             for (Map.Entry<String, Integer> entry : standingToRollback.entrySet()) {
                 activeOrderPublisher.publishReleaseStandingArea(eventID, entry.getKey(), entry.getValue());
             }
@@ -224,14 +227,15 @@ public class ActiveOrderService implements IActiveOrderService {
 
     private void rollbackOrderReservations(ActiveOrderDTO order) {
         logger.info("Rolling back reservations for order: " + order.getOrderId());
+        boolean canReleaseSeats = activeOrderHandler.canReleaseSeats(order.getSeatIds());
+        boolean canReleaseStanding = activeOrderHandler.canReleaseStanding(order.getStandingAreaQuantities());
         // Unreserve specific seats
-        if (order.getSeatIds() != null && !order.getSeatIds().isEmpty()) {
+        if (canReleaseSeats) {
             List<String> seatsArray = order.getSeatIds();
             activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsArray);
         }
-
         // Unreserve standing area quantities
-        if (order.getStandingAreaQuantities() != null && !order.getStandingAreaQuantities().isEmpty()) {
+        if (canReleaseStanding) {
             for (HashMap.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
                 activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), entry.getKey(), entry.getValue());
             }
