@@ -42,4 +42,15 @@ public class ActiveOrderHandler {
     public boolean isValidOrderID(String orderId){
 
     }
+    public ActiveOrderItem addSeatsToActiveOrder(ActiveOrderItem order, List<String> seatIds){
+        if(order == null || seatIds == null){
+            return null;
+        }
+        ActiveOrderItem newOrder = new ActiveOrderItem(order);
+        newOrder.addSeatIds(seatIds);
+        return newOrder;
+    }
+    public boolean isOrderExpired(ActiveOrderItem order){
+        return order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis();
+    }
 }

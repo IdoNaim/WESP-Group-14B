@@ -124,26 +124,30 @@ public class ActiveOrderService implements IActiveOrderService {
     @Override
     public void addSeatsToActiveOrder(SessionToken sessionToken, String orderId, List<String> seatIds) {
         logger.info("Attempting to add seats to order: " + orderId);
-        if(authenticationService.validate(sessionToken.getToken())){
-            ActiveOrderItem order = activeOrderRepo.findById(orderId);
-            if (order == null) {
-                logger.error("Add seats failed: Order not found with id: " + orderId);
-                throw new IllegalArgumentException("Order not found");
-            }
-            checkIfExpiredAndThrowException(order);
-            boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatIds);
-            if (!reserved) {
-                logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
-                throw new IllegalStateException("cant reserve these seats");
-            }
-            order.addSeatIds(seatIds);
-            saveOrder(order);
-            logger.info("Successfully added seats to order: " + orderId);
-        }
-        else{
+        if(!authenticationService.validate(sessionToken.getToken())) {
             logger.error("Session validation failed while adding seats to order: " + orderId);
             throw new RuntimeException("the session has ended");
         }
+        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        if (order == null) {
+            logger.error("Add seats failed: Order not found with id: " + orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+        checkIfExpiredAndThrowException(order);
+        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatIds);
+        if (!reserved) {
+            logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
+            throw new IllegalStateException("cant reserve these seats");
+        }
+        ActiveOrderItem newOrder = activeOrderHandler.addSeatsToActiveOrder(order, seatIds);
+        if(newOrder == null){
+            logger.error("failed to add seats to order : " + orderId);
+            throw new RuntimeException("failed to add seats");
+        }
+        activeOrderRepo.update(newOrder);
+//        order.addSeatIds(seatIds);
+//        saveOrder(order);
+        logger.info("Successfully added seats to order: " + orderId);
     }
 
     public void addStandingAreaToActiveOrder(SessionToken sessionToken, String orderId, String areaId, int quantity) {
@@ -345,7 +349,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     private void checkIfExpiredAndThrowException(ActiveOrderItem order){
-        if(order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis())
+        if(activeOrderHandler.isOrderExpired(order))
         {
             logger.warn("Order " + order.getOrderId() + " has expired. Deleting and rolling back.");
             rollbackOrderReservations(new ActiveOrderDTO(order));
