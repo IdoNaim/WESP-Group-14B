@@ -100,11 +100,18 @@ public class ActiveOrderService implements IActiveOrderService {
             }
             String orderId = ""+ IdGenerator.getInstance().nextId();
             ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
-            boolean saved = saveOrder(orderItem);
-            if(!saved){
+            boolean canSave = activeOrderHandler.canCreateActiveOrder(orderItem);
+            if(!canSave){
                 logger.error("Create pending order failed: Failed to save the order for user: " + userId);
                 throw new RuntimeException("failed to save the order");
             }
+            logger.info("Saving order: " + orderItem.getOrderId());
+            activeOrderRepo.save(orderItem);
+//            boolean saved = saveOrder(orderItem);
+//            if(!saved){
+//                logger.error("Create pending order failed: Failed to save the order for user: " + userId);
+//                throw new RuntimeException("failed to save the order");
+//            }
             logger.info("Successfully created pending order: " + orderId + " for user: " + userId);
             return orderItem;
         }
