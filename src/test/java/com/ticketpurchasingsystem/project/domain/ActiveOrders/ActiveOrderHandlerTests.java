@@ -310,4 +310,98 @@ public class ActiveOrderHandlerTests {
         assertEquals(2, toReserve.get("ZoneC"));
         assertFalse(toReserve.containsKey("ZoneB"));
     }
+    @Test
+    public void GivenFewerTicketsInNewOrder_WhenCalculateStandingToRelease_ThenReturnTheDifference() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 5, "ZoneB", 3);
+        Map<String, Integer> newStanding = Map.of("ZoneA", 2, "ZoneB", 3); // ZoneA decreased, ZoneB stayed same
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, newStanding);
+
+        assertEquals(1, result.size());
+        assertEquals(3, result.get("ZoneA")); // 5 - 2 = 3 to release
+        assertFalse(result.containsKey("ZoneB"));
+    }
+
+    @Test
+    public void GivenAreaMissingInNewOrder_WhenCalculateStandingToRelease_ThenReleaseAllTicketsForThatArea() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 4, "ZoneB", 2);
+        Map<String, Integer> newStanding = Map.of("ZoneB", 2); // ZoneA is completely removed
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, newStanding);
+
+        assertEquals(1, result.size());
+        assertEquals(4, result.get("ZoneA")); // All 4 tickets should be released
+        assertFalse(result.containsKey("ZoneB"));
+    }
+
+    @Test
+    public void GivenMoreOrEqualTicketsInNewOrder_WhenCalculateStandingToRelease_ThenReturnEmptyMap() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 2, "ZoneB", 3);
+        Map<String, Integer> newStanding = Map.of("ZoneA", 5, "ZoneB", 3); // ZoneA increased, ZoneB stayed same
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, newStanding);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenEntirelyNewAreasInNewOrder_WhenCalculateStandingToRelease_ThenIgnoreTheNewAreas() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 3);
+        Map<String, Integer> newStanding = Map.of("ZoneA", 3, "ZoneC", 4); // ZoneC is a brand new addition
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, newStanding);
+
+        // New additions mean reserving, not releasing, so the release map should be empty
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenNullCurrentStanding_WhenCalculateStandingToRelease_ThenReturnEmptyMap() {
+        Map<String, Integer> newStanding = Map.of("ZoneA", 2);
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(null, newStanding);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenNullNewOrderStanding_WhenCalculateStandingToRelease_ThenReturnEmptyMap() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 3, "ZoneB", 1);
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, null);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenBothMapsNull_WhenCalculateStandingToRelease_ThenReturnEmptyMap() {
+        Map<String, Integer> result = handler.calculateStandingToRelease(null, null);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenBothMapsEmpty_WhenCalculateStandingToRelease_ThenReturnEmptyMap() {
+        Map<String, Integer> result = handler.calculateStandingToRelease(Collections.emptyMap(), Collections.emptyMap());
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void GivenMapWithNullValues_WhenCalculateStandingToRelease_ThenHandleGracefullyAsZero() {
+        Map<String, Integer> currentStanding = Map.of("ZoneA", 4);
+
+        // Simulating a scenario where a key maps to null inside the new order map
+        Map<String, Integer> newStanding = new HashMap<>();
+        newStanding.put("ZoneA", null);
+
+        Map<String, Integer> result = handler.calculateStandingToRelease(currentStanding, newStanding);
+
+        assertEquals(1, result.size());
+        assertEquals(4, result.get("ZoneA")); // Treats null as 0, meaning all 4 are released
+    }
 }
