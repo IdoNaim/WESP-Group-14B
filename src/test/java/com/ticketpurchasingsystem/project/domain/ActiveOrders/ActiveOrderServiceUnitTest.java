@@ -12,10 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension; // Added
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,27 +24,33 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class) // Added this to initialize the mocks!
 public class ActiveOrderServiceUnitTest {
 
-    @Mock private IActiveOrderRepo activeOrderRepoMock;
-    @Mock private ActiveOrderPublisher activeOrderPublisherMock;
-    @Mock private AuthenticationService authenticationServiceMock;
-    @Mock private IBarCodeGateway barcodeGatewayMock;
-    @Mock private ActiveOrderListener activeOrderListenerMock;
-    @Mock private ActiveOrderHandler activeOrderHandlerMock;
+    @Mock
+    private IActiveOrderRepo activeOrderRepoMock;
+    @Mock
+    private ActiveOrderPublisher activeOrderPublisherMock;
+    @Mock
+    private AuthenticationService authenticationServiceMock;
+    @Mock
+    private IBarCodeGateway barcodeGatewayMock;
+    @Mock
+    private ActiveOrderListener activeOrderListenerMock;
+    @Mock
+    private ActiveOrderHandler activeOrderHandlerMock;
 
     @InjectMocks
     private ActiveOrderService activeOrderService;
 
-    private static final String VALID_TOKEN   = "valid-token";
+    private static final String VALID_TOKEN = "valid-token";
     private static final String INVALID_TOKEN = "bad-token";
-    private static final String USER_ID       = "user123";
+    private static final String USER_ID = "user123";
     private static final String OTHER_USER_ID = "user456";
-    private static final String ORDER_ID      = "order-001";
-    private static final String EVENT_ID      = "event-001";
+    private static final String ORDER_ID = "order-001";
+    private static final String EVENT_ID = "event-001";
     private static final String AREA_ID = "standing-zone-A";
     private static final int QUANTITY = 3;
     private static final double AMOUNT = 100.0;
 
-    private static final SessionToken VALID_SESSION   = new SessionToken(VALID_TOKEN, 9999999999L);
+    private static final SessionToken VALID_SESSION = new SessionToken(VALID_TOKEN, 9999999999L);
     private static final SessionToken INVALID_SESSION = new SessionToken(INVALID_TOKEN, 9999999999L);
 
     private ActiveOrderItem orderForUser(String userId) {
@@ -59,9 +62,10 @@ public class ActiveOrderServiceUnitTest {
         order.addSeatIds(List.of("seat-1", "seat-2"));
         return order;
     }
-    //---------------------
+
+    //------------------------------------------------------------------------------------------------------------------
     //cancelActiveOrder
-    //---------------------
+    //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenInvalidSession_WhenCancelActiveOrder_ThenThrowRuntimeException() {
         // Arrange
@@ -142,9 +146,10 @@ public class ActiveOrderServiceUnitTest {
 
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
-    //--------------------------
+
+    //------------------------------------------------------------------------------------------------------------------
     // getActiveOrderInfo
-    //--------------------------
+    //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenInvalidSession_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
         // Arrange
@@ -222,9 +227,10 @@ public class ActiveOrderServiceUnitTest {
         assertNotNull(actualDTO);
         assertEquals(expectedDTO, actualDTO);
     }
-    //------------------
+
+    //------------------------------------------------------------------------------------------------------------------
     // createPendingOrder
-    //------------------
+    //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenValidOrderDetails_WhenCreatePendingOrder_ThenReturnCorrectOrderDetails() {
         // Arrange
@@ -318,7 +324,7 @@ public class ActiveOrderServiceUnitTest {
 
     // --- CONCURRENCY INTEGRATION TESTS ---
 
-//    @Test
+    //    @Test
 //    void GivenTwoDifferentUsers_WhenCreatePendingOrderConcurrently_ThenBothSucceedWithUniqueOrderIds() throws InterruptedException {
 //        ActiveOrderMemRepo realRepo = new ActiveOrderMemRepo();
 //        ActiveOrderService service = new ActiveOrderService(
@@ -430,21 +436,21 @@ public class ActiveOrderServiceUnitTest {
 //        long uniqueOrderIds = results.stream().map(ActiveOrderItem::getOrderId).distinct().count();
 //        assertEquals(numberOfUsers, uniqueOrderIds);
 //    }
-    //--------------
+//------------------------------------------------------------------------------------------------------------------
     // addSeatsToActiveOrder
-    //--------------
-@Test
-void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
-    // Arrange
-    List<String> seats = List.of("seat-1", "seat-2");
-    when(authenticationServiceMock.validate(INVALID_TOKEN)).thenReturn(false);
+//------------------------------------------------------------------------------------------------------------------
+    @Test
+    void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
+        // Arrange
+        List<String> seats = List.of("seat-1", "seat-2");
+        when(authenticationServiceMock.validate(INVALID_TOKEN)).thenReturn(false);
 
-    // Act & Assert
-    assertThrows(RuntimeException.class, () ->
-            activeOrderService.addSeatsToActiveOrder(INVALID_SESSION, ORDER_ID, seats)
-    );
-    verifyNoInteractions(activeOrderRepoMock, activeOrderHandlerMock, activeOrderPublisherMock);
-}
+        // Act & Assert
+        assertThrows(RuntimeException.class, () ->
+                activeOrderService.addSeatsToActiveOrder(INVALID_SESSION, ORDER_ID, seats)
+        );
+        verifyNoInteractions(activeOrderRepoMock, activeOrderHandlerMock, activeOrderPublisherMock);
+    }
 
     @Test
     void GivenOrderNotFound_WhenAddSeatsToActiveOrder_ThenThrowIllegalArgumentException() {
@@ -547,9 +553,10 @@ void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
         verify(activeOrderPublisherMock, times(1)).publishReserveSeats(validOrder.getEventId(), requestedSeats);
     }
-    //----------------
+
+    //------------------------------------------------------------------------------------------------------------------
     // addStandingAreaToActiveOrder
-    //----------------
+    //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenInvalidSession_WhenAddStandingAreaToActiveOrder_ThenThrowRuntimeException() {
         // Arrange
@@ -653,9 +660,10 @@ void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
 
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
     }
-    //---------
+
+    //------------------------------------------------------------------------------------------------------------------
     //completeOrder
-    //------------
+    //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenValidOrderAndPayment_WhenCompleteOrder_ThenOrderIsRemovedFromRepo() {
         // Arrange
@@ -681,6 +689,7 @@ void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(), eq(AMOUNT));
     }
+
     @Test
     void GivenValidOrderAndPayment_WhenCompleteOrder_ThenOrderIsRemovedAndPublished() {
         // Arrange
@@ -975,4 +984,166 @@ void GivenInvalidSession_WhenAddSeatsToActiveOrder_ThenThrowRuntimeException() {
 //        verify(paymentGatewayMock, times(orderCount)).pay();
 //    }
 
+    //------------------------------------------------------------------------------------------------------------------
+    // updateActiveOrder
+    //------------------------------------------------------------------------------------------------------------------
+    @Test
+    void GivenValidInputs_WhenUpdateActiveOrder_ThenUpdateDatabaseAndReleaseOldInventory() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        ActiveOrderItem currentOrder = orderForUser(USER_ID);
+        ActiveOrderItem updatedOrder = orderForUser(USER_ID);
+
+        List<String> seatsToReserve = List.of("seat-3");
+        List<String> seatsToRelease = List.of("seat-1");
+        Map<String, Integer> standingToReserve = Map.of("Zone-A", 2);
+        Map<String, Integer> standingToRelease = Map.of("Zone-B", 1);
+
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(currentOrder);
+        when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
+
+        // Handler Math Stubbing
+        when(activeOrderHandlerMock.getSeatsToReserve(any(), any())).thenReturn(seatsToReserve);
+        when(activeOrderHandlerMock.getSeatsToRelease(any(), any())).thenReturn(seatsToRelease);
+        when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(standingToReserve);
+        when(activeOrderHandlerMock.calculateStandingToRelease(any(), any())).thenReturn(standingToRelease);
+
+        // Network/Publisher Success Stubbing
+        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
+        when(activeOrderHandlerMock.setNewTickets(any(), any(), any())).thenReturn(updatedOrder);
+
+        // Act & Assert
+        assertDoesNotThrow(() ->
+                activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
+        );
+
+        // Verify state transitions occurred cleanly
+        verify(activeOrderRepoMock, times(1)).update(updatedOrder);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToRelease);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-B", 1);
+    }
+
+    @Test
+    void GivenExpiredSessionToken_WhenUpdateActiveOrder_ThenThrowRuntimeException() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(INVALID_TOKEN)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () ->
+                activeOrderService.updateActiveOrder(INVALID_SESSION, newOrderDTO)
+        );
+        verifyNoInteractions(activeOrderRepoMock, activeOrderHandlerMock, activeOrderPublisherMock);
+    }
+
+    @Test
+    void GivenOrderNotFoundInRepo_WhenUpdateActiveOrder_ThenThrowIllegalArgumentException() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(null);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
+        );
+        verifyNoInteractions(activeOrderPublisherMock, activeOrderHandlerMock);
+    }
+
+    @Test
+    void GivenExpiredActiveOrder_WhenUpdateActiveOrder_ThenThrowIllegalStateException() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        ActiveOrderItem expiredOrder = orderForUser(USER_ID);
+
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(expiredOrder);
+
+        // Expiration guard simulation
+        when(activeOrderHandlerMock.isOrderExpired(expiredOrder)).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () ->
+                activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
+        );
+        verify(activeOrderRepoMock, never()).update(any());
+    }
+
+    @Test
+    void GivenSeatReservationFails_WhenUpdateActiveOrder_ThenRollbackAndThrowRuntimeException() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        ActiveOrderItem currentOrder = orderForUser(USER_ID);
+        List<String> seatsToReserve = List.of("seat-3");
+
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(currentOrder);
+        when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
+
+        when(activeOrderHandlerMock.getSeatsToReserve(any(), any())).thenReturn(seatsToReserve);
+        when(activeOrderHandlerMock.getSeatsToRelease(any(), any())).thenReturn(List.of());
+        when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(Map.of());
+
+        // Seat allocation fails
+        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(false);
+        when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () ->
+                activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
+        );
+
+        // Confirm system executed isolated rollback without deleting core layout
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToReserve);
+        verify(activeOrderRepoMock, never()).update(any());
+    }
+
+    @Test
+    void GivenStandingReservationFails_WhenUpdateActiveOrder_ThenRollbackSuccessfulAllocationsAndThrowRuntimeException() {
+        // Arrange
+        ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
+        ActiveOrderItem currentOrder = orderForUser(USER_ID);
+
+        List<String> seatsToReserve = List.of("seat-3");
+
+        // Use LinkedHashMap to guarantee that Zone-A is processed before Zone-B
+        Map<String, Integer> standingToReserve = new java.util.LinkedHashMap<>();
+        standingToReserve.put("Zone-A", 2); // Will be processed first -> succeeds
+        standingToReserve.put("Zone-B", 4); // Will be processed second -> fails
+
+        when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(currentOrder);
+        when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
+
+        when(activeOrderHandlerMock.getSeatsToReserve(any(), any())).thenReturn(seatsToReserve);
+        when(activeOrderHandlerMock.getSeatsToRelease(any(), any())).thenReturn(List.of());
+        when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(standingToReserve);
+
+        // Seats succeed, Zone-A succeeds, Zone-B crashes
+        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-B", 4)).thenReturn(false);
+
+        when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
+        when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () ->
+                activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
+        );
+
+        // Verify successful reserves up to crash point are systematically reversed
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToReserve);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-A", 2);
+        verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(EVENT_ID, "Zone-B", 4);
+        verify(activeOrderRepoMock, never()).update(any());
+    }
 }
