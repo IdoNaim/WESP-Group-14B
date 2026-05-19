@@ -339,25 +339,24 @@ public class ActiveOrderService implements IActiveOrderService {
 //        order.setSeatIds(newOrderSeats);
 //        order.setStandingAreaQuantities(newOrderStanding);
 //        activeOrderRepo.update(order);
-        activeOrderRepo.update(updatedOrder);
+        try {
+            activeOrderRepo.update(updatedOrder);
 
+            //if we managed to reserve all the seats/tickets and update DB, we release the unneeded ones:
+            activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
+        }catch (Exception e){
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, standingToReserve);
+        }
+            // Calculate the exact standing area quantities that need to be released
+            Map<String, Integer> standingAreaTicketsToRelease = activeOrderHandler.calculateStandingToRelease(currentStanding, newOrderStanding);
 
-        //if we managed to reserve all the seats/tickets and update DB, we release the unneeded ones:
-        activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
-        for(String areaId : newOrderStanding.keySet()) {
-            int currentQuantity = currentStanding.getOrDefault(areaId, 0); // Get current quantity for this area, default to 0 if not present
-            int newQuantity = newOrderStanding.get(areaId);
-            if (newQuantity < currentQuantity) {
-                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentQuantity - newQuantity);
+            // Publish a release event for each area identified by the handler
+            for (Map.Entry<String, Integer> entry : standingAreaTicketsToRelease.entrySet()) {
+                String areaId = entry.getKey();
+                int quantityToRelease = entry.getValue();
+                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantityToRelease);
             }
-        }
-        //for each old standing area quantity that is not in the new order, release all the quantity
-        for (String areaId : currentStanding.keySet()) {
-            if (!newOrderStanding.containsKey(areaId)) {
-                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, currentStanding.get(areaId));
-            }
-        }
-        logger.info("Successfully updated order: " + order.getOrderId());
+            logger.info("Successfully updated order: " + order.getOrderId());
     }
 
 //    private Map<String, Integer> calculateStandingToReserve(Map<String, Integer> currentStanding,

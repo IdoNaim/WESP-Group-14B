@@ -494,7 +494,7 @@ public class ActiveOrderTests {
         verify(activeOrderPublisher, times(1)).publishReleaseSeats("event1", List.of("A-1", "A-2"));
         verify(activeOrderPublisher, times(1)).publishReleaseStandingArea("event1", "GA-1", 3);
         verify(activeOrderRepoMock, times(1)).delete("order1"); // ההזמנה חייבת להימחק
-        verify(paymentGateway, never()).pay(); // מוודא שבכלל לא ניסינו לחייב
+        verify(paymentGateway, never()).pay();
     }
     @Test
     public void givenPaymentFails_whenCompleteOrder_thenThrowExceptionAndRollback() {

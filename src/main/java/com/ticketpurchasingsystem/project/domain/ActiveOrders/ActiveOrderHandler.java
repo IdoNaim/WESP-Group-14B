@@ -3,10 +3,7 @@ package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import com.sun.java.accessibility.util.EventID;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ActiveOrderHandler {
     private loggerDef logger = loggerDef.getInstance();
@@ -101,6 +98,25 @@ public class ActiveOrderHandler {
             }
         }
         return standingToReserve;
+    }
+    public Map<String, Integer> calculateStandingToRelease(Map<String, Integer> currentStanding,
+                                                           Map<String, Integer> newOrderStanding) {
+        // Defensive null-checks for the input maps themselves
+        if (currentStanding == null) return Collections.emptyMap();
+        if (newOrderStanding == null) return Collections.emptyMap();;
+
+        Map<String, Integer> standingToRelease = new HashMap<>();
+
+        // We only care about areas we CURRENTLY have tickets for
+        for (String areaId : currentStanding.keySet()) {
+            int currentQuantity = currentStanding.getOrDefault(areaId, 0);
+            int newQuantity = newOrderStanding.getOrDefault(areaId, 0); // Safe from nulls / missing keys
+
+            if (newQuantity < currentQuantity) {
+                standingToRelease.put(areaId, currentQuantity - newQuantity);
+            }
+        }
+        return standingToRelease;
     }
 
     public ActiveOrderItem setNewTickets(ActiveOrderItem order, List<String> newOrderSeats, HashMap<String, Integer> newOrderStanding) {
