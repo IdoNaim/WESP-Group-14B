@@ -103,14 +103,19 @@ public class ActiveOrderHandler {
                                                            Map<String, Integer> newOrderStanding) {
         // Defensive null-checks for the input maps themselves
         if (currentStanding == null) return Collections.emptyMap();
-        if (newOrderStanding == null) return Collections.emptyMap();;
+        if (newOrderStanding == null) return Collections.emptyMap();
 
         Map<String, Integer> standingToRelease = new HashMap<>();
 
         // We only care about areas we CURRENTLY have tickets for
         for (String areaId : currentStanding.keySet()) {
-            int currentQuantity = currentStanding.getOrDefault(areaId, 0);
-            int newQuantity = newOrderStanding.getOrDefault(areaId, 0); // Safe from nulls / missing keys
+            // Safely extract current quantity, handling explicit null values
+            Integer currentQtyObj = currentStanding.get(areaId);
+            int currentQuantity = (currentQtyObj != null) ? currentQtyObj : 0;
+
+            // Safely extract new quantity, handling missing keys AND explicit null values
+            Integer newQtyObj = newOrderStanding.get(areaId);
+            int newQuantity = (newQtyObj != null) ? newQtyObj : 0;
 
             if (newQuantity < currentQuantity) {
                 standingToRelease.put(areaId, currentQuantity - newQuantity);
