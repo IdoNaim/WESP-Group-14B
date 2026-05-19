@@ -98,6 +98,10 @@ public class ActiveOrderService implements IActiveOrderService {
                 logger.warn("Create pending order failed: An active order already exists for user: " + userId);
                 throw new IllegalArgumentException("an active order already exists for this user: "+ userId);
             }
+            if(!isValidEventID(eventId)){
+                logger.error("Create active order failed: event id "+ eventId + " isn't associated with en existing event");
+                throw new RuntimeException(eventId + " isnt associated with any existing event");
+            }
             String orderId = ""+ IdGenerator.getInstance().nextId();
             ActiveOrderItem orderItem = new ActiveOrderItem(orderId,userId,eventId);
             boolean canSave = activeOrderHandler.canCreateActiveOrder(orderItem);
@@ -134,20 +138,27 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalArgumentException("Order not found");
         }
         checkIfExpiredAndThrowException(order);
-        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatIds);
+        List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(order.getSeatIds(), seatIds);
+        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
         if (!reserved) {
             logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
             throw new IllegalStateException("cant reserve these seats");
         }
-        ActiveOrderItem newOrder = activeOrderHandler.addSeatsToActiveOrder(order, seatIds);
+        ActiveOrderItem newOrder = activeOrderHandler.addSeatsToActiveOrder(order, seatsToReserve);
         if(newOrder == null){
             logger.error("failed to add seats to order : " + orderId);
             throw new RuntimeException("failed to add seats");
         }
-        activeOrderRepo.update(newOrder);
+        try {
+            activeOrderRepo.update(newOrder);
 //        order.addSeatIds(seatIds);
 //        saveOrder(order);
-        logger.info("Successfully added seats to order: " + orderId);
+            logger.info("Successfully added seats to order: " + orderId);
+        }catch (Exception e){
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
+            logger.error("got DB error when trying to update order: " + orderId +
+                    " with seats");
+        }
     }
 
     public void addStandingAreaToActiveOrder(SessionToken sessionToken, String orderId, String areaId, int quantity) {
@@ -172,10 +183,16 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.error("failed to add standing area tickets to order : " + orderId);
             throw new RuntimeException("failed to add standing area tickets");
         }
-        activeOrderRepo.update(newOrder);
+        try {
+            activeOrderRepo.update(newOrder);
 //        order.addStandingAreaQuantity(areaId, quantity);
 //        saveOrder(order);
-        logger.info("Successfully added standing area to order: " + orderId);
+            logger.info("Successfully added standing area to order: " + orderId);
+        }catch (Exception e){
+            activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantity);
+            logger.error("got DB error when trying to update order: " + orderId +
+                    " with "+ quantity +" tickets for area "+ areaId + " of event "+ order.getEventId());
+        }
     }
 
 
@@ -285,11 +302,13 @@ public class ActiveOrderService implements IActiveOrderService {
         HashMap<String, Integer> currentStanding = order.getStandingAreaQuantities();
         HashMap<String, Integer> newOrderStanding = newOrderDTO.getStandingAreaQuantities();
 
-        List<String> seatsToReserve = new ArrayList<>(newOrderSeats);
-        seatsToReserve.removeAll(currentSeats);
-        List<String> seatsToRelease = new ArrayList<>(currentSeats);
-        seatsToRelease.removeAll(newOrderSeats);
-        Map<String, Integer> standingToReserve = calculateStandingToReserve(currentStanding, newOrderStanding);
+//        List<String> seatsToReserve = new ArrayList<>(newOrderSeats);
+//        seatsToReserve.removeAll(currentSeats);
+        List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(currentSeats, newOrderSeats);
+//        List<String> seatsToRelease = new ArrayList<>(currentSeats);
+//        seatsToRelease.removeAll(newOrderSeats);
+        List<String> seatsToRelease = activeOrderHandler.getSeatsToRelease(currentSeats, newOrderSeats);
+        Map<String, Integer> standingToReserve = activeOrderHandler.calculateStandingToReserve(currentStanding, newOrderStanding);
 
         //try to reserve the seats
         boolean seatsReserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
@@ -300,6 +319,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
 
         boolean standingReserved = true;
+        Map<String, Integer> successfulReserves = new HashMap<>();
         for (Map.Entry<String, Integer> entry : standingToReserve.entrySet()) {
             standingReserved = activeOrderPublisher.publishReserveStandingArea(
                     order.getEventId(), entry.getKey(), entry.getValue()
@@ -307,16 +327,21 @@ public class ActiveOrderService implements IActiveOrderService {
             if (!standingReserved) {
                 break;
             }
+            else{
+                successfulReserves.put(entry.getKey(), entry.getValue());
+            }
         }
         if(!standingReserved){
             logger.error("Update order failed: Could not reserve new standing area tickets for order: " + order.getOrderId());
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, standingToReserve);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, successfulReserves);
             throw new RuntimeException("couldnt reserve the new standing area tickes, didnt release current seats and tickets");
         }
+        ActiveOrderItem updatedOrder = activeOrderHandler.setNewTickets(order, newOrderSeats,newOrderStanding );
+//        order.setSeatIds(newOrderSeats);
+//        order.setStandingAreaQuantities(newOrderStanding);
+//        activeOrderRepo.update(order);
+        activeOrderRepo.update(updatedOrder);
 
-        order.setSeatIds(newOrderSeats);
-        order.setStandingAreaQuantities(newOrderStanding);
-        activeOrderRepo.update(order);
 
         //if we managed to reserve all the seats/tickets and update DB, we release the unneeded ones:
         activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
@@ -336,22 +361,22 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Successfully updated order: " + order.getOrderId());
     }
 
-    private Map<String, Integer> calculateStandingToReserve(Map<String, Integer> currentStanding,
-                                                            Map<String, Integer> newOrderStanding) {
-        Map<String, Integer> standingToReserve = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : newOrderStanding.entrySet()) {
-            String areaId = entry.getKey();
-            int newQuantity = entry.getValue();
-            int currentQuantity = currentStanding.getOrDefault(areaId, 0);
-            int difference = newQuantity - currentQuantity;
-
-            // Only keep the areas where we need to reserve additional tickets
-            if (difference > 0) {
-                standingToReserve.put(areaId, difference);
-            }
-        }
-        return standingToReserve;
-    }
+//    private Map<String, Integer> calculateStandingToReserve(Map<String, Integer> currentStanding,
+//                                                            Map<String, Integer> newOrderStanding) {
+//        Map<String, Integer> standingToReserve = new HashMap<>();
+//        for (Map.Entry<String, Integer> entry : newOrderStanding.entrySet()) {
+//            String areaId = entry.getKey();
+//            int newQuantity = entry.getValue();
+//            int currentQuantity = currentStanding.getOrDefault(areaId, 0);
+//            int difference = newQuantity - currentQuantity;
+//
+//            // Only keep the areas where we need to reserve additional tickets
+//            if (difference > 0) {
+//                standingToReserve.put(areaId, difference);
+//            }
+//        }
+//        return standingToReserve;
+//    }
 
     private void checkIfExpiredAndThrowException(ActiveOrderItem order){
         if(activeOrderHandler.isOrderExpired(order))
@@ -364,7 +389,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     private void checkIfExpiredAndThrowException(ActiveOrderDTO order){
-        if(order.getCreatedAt().getTime() + ActiveOrderItem.EXPIRATION_TIME_MINUTES*60*1000 < System.currentTimeMillis())
+        if(activeOrderHandler.isOrderExpired(order))
         {
             logger.warn("Order DTO " + order.getOrderId() + " has expired. Deleting and rolling back.");
             rollbackOrderReservations(order);
