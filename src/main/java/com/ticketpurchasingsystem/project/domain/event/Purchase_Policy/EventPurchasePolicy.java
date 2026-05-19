@@ -1,7 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.event.Purchase_Policy;
 
-import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
-import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.PurchaseContext;
 import java.util.ArrayList;
 import java.util.List;
 

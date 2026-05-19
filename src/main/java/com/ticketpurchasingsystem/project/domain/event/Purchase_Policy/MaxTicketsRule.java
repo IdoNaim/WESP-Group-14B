@@ -1,14 +1,15 @@
 package com.ticketpurchasingsystem.project.domain.event.Purchase_Policy;
 
-public class MinTicketsRule implements IPurchaseRule {
+
+public class MaxTicketsRule implements IPurchaseRule {
     private final int limit;
 
-    public MinTicketsRule(int limit) {
+    public MaxTicketsRule(int limit) {
         this.limit = limit;
     }
 
     @Override
     public boolean validate(PurchaseContext context) {
-        return context.getRequestedAmount() >= limit;
+        return context.getRequestedAmount() <= limit;
     }
 }

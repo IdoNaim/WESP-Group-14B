@@ -7,8 +7,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*; // Import all your new leaf rules
-import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.MaxTicketsRule; // Import colleague's rule
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class EventService implements IEventService {
