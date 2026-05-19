@@ -13,6 +13,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class ProductionService implements IProductionService {
@@ -209,7 +210,64 @@ public class ProductionService implements IProductionService {
         loggerDef.getInstance().error("modifyManagerPermissions failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
+    @Override
+    public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) {
+            loggerDef.getInstance().error("getRolesTree: invalid session token");
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
 
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("getRolesTree: company not found, id=" + companyId);
+            return null;
+        }
+
+        RolesTreeDTO result = productionHandler.getRolesTree(userId, companyOpt.get());
+        if (result == null) {
+            loggerDef.getInstance().error(
+                    "getRolesTree: user " + userId + " is not authorized or fetch failed for company " + companyId);
+            return null;
+        }
+
+        loggerDef.getInstance().info(
+                "getRolesTree: roles tree fetched successfully for company " + companyId + " by user " + userId);
+        return result;
+    }
+
+    @Override
+    public boolean removeManager(String sessionToken, Integer companyId, String managerId) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String ownerId = authenticationService.getUser(sessionToken);
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("removeManager: company not found, id=" + companyId);
+                return false;
+            }
+            ProductionCompany company = productionHandler.removeManager(ownerId, companyId, managerId, new ProductionCompany(companyOpt.get()));
+            if (company == null) {
+                return false;
+            }
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                loggerDef.getInstance().info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
+                return true;
+            } catch (OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("removeManager failed: " + e.getMessage());
+                return false;
+            }
+        }
+        loggerDef.getInstance().error("removeManager failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
+    }
     @Override
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'createEvent'");

@@ -6,6 +6,7 @@ import java.util.Set;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
 public interface IProductionService {
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId);
@@ -33,4 +34,6 @@ public interface IProductionService {
 
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
             String managerId, Set<ManagerPermission> permissions);
+    public boolean removeManager(String sessionToken, Integer companyId, String managerId);
+    public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId);
 }
