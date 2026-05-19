@@ -7,6 +7,8 @@ import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*; // Import all your new leaf rules
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.MaxTicketsRule; // Import colleague's rule
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class EventService implements IEventService {
@@ -35,13 +37,43 @@ public class EventService implements IEventService {
 
         logger.info("Creating event: " + eventDTO.eventName());
 
-        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(
-                purchasePolicyDTO.minTickets(),
-                purchasePolicyDTO.maxTickets(),
-                purchasePolicyDTO.minAge(),
-                purchasePolicyDTO.maxAge(),
-                purchasePolicyDTO.emnptySeatLeft()
-        );
+        // --- VALIDATION LAYER ---
+        // Retain the logical checks that used to live in your old value object constructor
+        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+                && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
+            logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
+            return false;
+        }
+        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+                && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
+            logger.error("Failed to create event: minAge cannot be greater than maxAge");
+            return false;
+        }
+
+        // --- COMPOSITE RULE CONSTRUCTION ---
+        // Initialize the composite container
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+
+        // Dynamically add your rules if they are specified in the DTO
+        if (purchasePolicyDTO.minTickets() != null) {
+            purchasePolicy.addRule(new MinTicketsRule(purchasePolicyDTO.minTickets()));
+        }
+
+        // REUSE: Use your colleague's production rule right here!
+        if (purchasePolicyDTO.maxTickets() != null) {
+            purchasePolicy.addRule(new MaxTicketsRule(purchasePolicyDTO.maxTickets()));
+        }
+
+        if (purchasePolicyDTO.minAge() != null) {
+            purchasePolicy.addRule(new MinAgeRule(purchasePolicyDTO.minAge()));
+        }
+
+        if (purchasePolicyDTO.maxAge() != null) {
+            purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
+        }
+
+        // Preserve your original typo method name 'emnptySeatLeft()' from your DTO
+        purchasePolicy.addRule(new EmptySeatRule(purchasePolicyDTO.emnptySeatLeft()));
 
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
 

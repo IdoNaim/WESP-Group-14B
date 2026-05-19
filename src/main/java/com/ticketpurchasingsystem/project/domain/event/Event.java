@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
+
 import java.time.LocalDateTime;
 
 public class Event {
