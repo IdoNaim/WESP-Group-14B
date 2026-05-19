@@ -207,13 +207,8 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.error("Complete order failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
         }
-        boolean processing = activeOrderRepo.markAsProcessing(orderId);
-        if(!processing){
-            logger.warn("Complete order failed: Order " + orderId + " is already being processed");
-            throw new IllegalStateException("order is already being processed");
-        }
-        ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
         checkIfExpiredAndThrowException(order);
+        ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
 
         //check purchasePolicy
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
@@ -221,7 +216,11 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.error("Complete order failed: Order " + orderId + " violates purchase policies");
             throw new IllegalStateException("Order violates purchase policies");
         }
-
+        boolean processing = activeOrderRepo.markAsProcessing(orderId);
+        if(!processing){
+            logger.warn("Complete order failed: Order " + orderId + " is already being processed");
+            throw new IllegalStateException("order is already being processed");
+        }
         List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
         if(barcodesIssued == null){
             logger.error("Barcode generation failed for order: " + orderId + ". Rolling back and deleting order.");

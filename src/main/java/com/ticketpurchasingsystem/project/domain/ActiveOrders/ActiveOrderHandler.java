@@ -109,5 +109,4 @@ public class ActiveOrderHandler {
         newOrder.setStandingAreaQuantities(newOrderStanding);
         return newOrder;
     }
-    public int getQuantityToReserve(ActiveOrderItem currOrder, int )
 }
