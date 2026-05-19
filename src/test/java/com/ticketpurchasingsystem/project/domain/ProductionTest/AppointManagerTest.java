@@ -9,6 +9,9 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPubli
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,10 +20,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -337,5 +343,110 @@ public class AppointManagerTest {
         // Assert
         ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
         assertTrue(node.getPermissions().isEmpty());
+    }
+
+    // Concurrency tests
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    private record ConcurrencyStack(AuthenticationService auth, ProdRepo repo, ProductionService service) {
+    }
+
+    private ConcurrencyStack buildRealStack() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo,
+                productionEventPublisher);
+        return new ConcurrencyStack(realAuth, realRepo, svc);
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentAppointDifferentManagers_ThenAllSucceedThroughRetries()
+            throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Managed Co", "desc", "managed@co.com"));
+        int companyId = stack.repo().findByName("Managed Co").get().getCompanyId();
+
+        int threadCount = 3;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().appointManager(token, companyId, "manager-" + idx, PERMISSIONS);
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(threadCount, successCount.get(),
+                "All concurrent appoint-manager operations must succeed through optimistic-locking retries");
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentAppointSameManager_ThenOnlyOneSucceeds() throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Exclusive Co", "desc", "exclusive@co.com"));
+        int companyId = stack.repo().findByName("Exclusive Co").get().getCompanyId();
+
+        int threadCount = 5;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().appointManager(token, companyId, "same-manager", PERMISSIONS);
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(1, successCount.get(),
+                "Only one thread must succeed when all race to appoint the same manager — duplicates must be rejected");
     }
 }
