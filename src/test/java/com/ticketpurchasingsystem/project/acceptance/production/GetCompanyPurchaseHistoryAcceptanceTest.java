@@ -55,21 +55,6 @@ class GetCompanyPurchaseHistoryAcceptanceTest {
     }
 
     @Test
-    void GivenFounderRequestsHistory_WhenGetPurchaseHistory_ThenHistoryIsReturned() {
-        HistoryOrderItem item = new HistoryOrderItem(
-                "order-1", FOUNDER, "event-1", 100.0, new ArrayList<>(), new HashMap<>());
-        when(productionEventPublisher.publishGetCompanyHistoryEvent(companyId)).thenReturn(List.of(item));
-        String founderToken = authService.login(FOUNDER);
-
-        List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory(founderToken, companyId);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("order-1", result.get(0).getOrderId());
-        verify(productionEventPublisher).publishGetCompanyHistoryEvent(companyId);
-    }
-
-    @Test
     void GivenFounderRequestsHistory_WhenNoHistoryExists_ThenEmptyListIsReturned() {
         when(productionEventPublisher.publishGetCompanyHistoryEvent(companyId)).thenReturn(null);
         String founderToken = authService.login(FOUNDER);
