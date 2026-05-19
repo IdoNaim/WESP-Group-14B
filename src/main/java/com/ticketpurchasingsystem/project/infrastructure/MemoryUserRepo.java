@@ -1,13 +1,15 @@
 package com.ticketpurchasingsystem.project.infrastructure;
+
+import org.springframework.stereotype.Repository;
+
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-
+@Repository
 public class MemoryUserRepo implements IUserRepo {
     private final ConcurrentHashMap<String, UserInfo> users = new ConcurrentHashMap<>();
 

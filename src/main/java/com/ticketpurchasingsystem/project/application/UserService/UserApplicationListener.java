@@ -1,7 +1,11 @@
-package com.ticketpurchasingsystem.project.domain.User;
+package com.ticketpurchasingsystem.project.application.UserService;
 
+import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestEvents;
@@ -9,16 +13,15 @@ import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserEven
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogInEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLogOutEvent;
 import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserRegistrationEvent;
+import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 
 @Component
-public class UserListener {
+public class UserApplicationListener {
 
-    IUserRepo userRepo;
-    UserHandler userHandler;
+    private final UserService userService;
 
-    public UserListener(IUserRepo userRepo, UserHandler userHandler) {
-        this.userRepo = userRepo;
-        this.userHandler = userHandler;
+    public UserApplicationListener(UserService userService) {
+        this.userService = userService;
     }
 
     @EventListener
@@ -51,10 +54,19 @@ public class UserListener {
         System.out.println("User exited platform: " + event.getSessionToken());
     }
 
+    @EventListener
+    public void onAddProductionRole(AssignOwnerEvent event) {
+        userService.assignProductionRole(event.getAppointeeId(), event.getCompany().getCompanyId(), UserProduction.RoleInProduction.OWNER);
+    }
+
+    @EventListener
+    public void onNewProduction(NewProdEvent event) {
+        userService.assignProductionRole(event.getCompany().getFounderId(), event.getCompany().getCompanyId(), UserProduction.RoleInProduction.FOUNDER);
+    }
     // Cross-aggregate: Production asks whether a user is registered
     @EventListener
     public void onIsUserRegistered(IsUserRegisteredEvent event) {
-        UserInfo user = userRepo.findByID(event.getUserId());
-        event.setRegistered(user != null);
+        boolean isRegistered = userService.isUserRegistered(event.getUserId());
+        event.setRegistered(isRegistered);
     }
 }

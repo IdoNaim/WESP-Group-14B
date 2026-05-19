@@ -68,7 +68,7 @@ public class GetCompanyPurchaseHistoryTest {
         HashMap<String,Integer> standing = new HashMap<>();
         standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", FOUNDER_ID, "e1", 10.0, seats, standing));
+                new HistoryOrderItem("o1", FOUNDER_ID, "e1", COMPANY_ID, 10.0, seats, standing));
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
@@ -90,7 +90,7 @@ public class GetCompanyPurchaseHistoryTest {
         HashMap<String,Integer> standing = new HashMap<>();
         standing.put("area1", 2);
         List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o2", OWNER_ID, "e2", 10.0, seats, standing));
+                new HistoryOrderItem("o2", OWNER_ID, "e2", COMPANY_ID, 10.0, seats, standing));
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(OWNER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));

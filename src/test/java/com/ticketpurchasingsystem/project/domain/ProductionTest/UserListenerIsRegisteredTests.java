@@ -3,6 +3,12 @@ package com.ticketpurchasingsystem.project.domain.ProductionTest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
+import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
+import com.ticketpurchasingsystem.project.application.UserService.UserService;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,7 +19,6 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsU
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.User.UserListener;
 
 @ExtendWith(MockitoExtension.class)
 class UserListenerIsRegisteredTests {
@@ -24,15 +29,20 @@ class UserListenerIsRegisteredTests {
     private UserHandler userHandler;
     @Mock
     private UserInfo existingUser;
-
-    private UserListener listener;
+    @Mock
+    private UserPublisher userPublisher;
+    @Mock
+    private DomainAuthService domainAuthService;
+    @Mock
+    private ISessionRepo sessionRepo;
+    private UserApplicationListener listener;
 
     private static final String EXISTING_USER_ID = "user-1";
     private static final String UNKNOWN_USER_ID = "ghost-99";
 
     @BeforeEach
     void setUp() {
-        listener = new UserListener(userRepo, userHandler);
+        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo),userPublisher ));
     }
 
     @Test

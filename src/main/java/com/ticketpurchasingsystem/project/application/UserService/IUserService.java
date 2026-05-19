@@ -6,10 +6,10 @@ import java.util.List;
 
 public interface IUserService {
 
-    public String guestEntry() ;
+    public void guestEntry() ;
     public void Exit(String sessionTokenStr) ;
 
-    public void registerUser(String userId, String password, String email, String name, UserGroupDiscount userGroupDiscount, String sessionTokenStr) ;
+    public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) ;
     public String loginUser(String userId, String password, String sessionTokenStr) ;
     public void logoutUser(String userId, String sessionTokenStr) ;
 

@@ -6,24 +6,20 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
-import com.ticketpurchasingsystem.project.domain.event.EventListener;
-import com.ticketpurchasingsystem.project.domain.event.EventPublisher;
-import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.*;
 
 
 public class EventService implements IEventService {
 
     private final IEventRepo eventRepo;
 
-    EventPublisher eventPublisher = EventPublisher.getInstance();
-    EventListener eventListener = EventListener.getInstance();
+    EventAggregatePublisher eventPublisher;
+    EventAggregateListener eventListener;
 
-    public EventService(IEventRepo eventRepo) {
+    public EventService(IEventRepo eventRepo, EventAggregatePublisher eventPublisher, EventAggregateListener eventListener) {
         this.eventRepo = eventRepo;
+        this.eventPublisher = eventPublisher;
+        this.eventListener = eventListener;
     }
 
     public boolean createEvent(EventDTO eventDTO,
@@ -142,8 +138,32 @@ public class EventService implements IEventService {
         }
 
     }
+
+    @Override
+    public boolean editEventSeatingMap(String EventId, SeatingMap seatingMap) {
+        try{
+            Event event = eventRepo.findById(EventId);
+            if (event == null) {
+                return false;
+            }
+            event.setSeatingMap(seatingMap);
+        }
+        catch(Exception e){
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public SeatingMap configureSeatingMap(List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas) {
+        SeatingMap seatingMap = new SeatingMap();
+        for(SeatingAreaConfig seatingConfig : seatingAreas) {
+            seatingMap.addSeatingArea(seatingConfig.getRows(), seatingConfig.getseatsPerRow(), seatingConfig.getPrice());
+        }
+        for(StandingAreaConfig standingAreaConfig : standingAreas) {
+            seatingMap.addStandingArea(standingAreaConfig.getCapacity(), standingAreaConfig.getPrice());
+        }
+
+        return seatingMap;
+    }
 }
-//    @Override
-//    public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO) {
-//        return true;
-//    }

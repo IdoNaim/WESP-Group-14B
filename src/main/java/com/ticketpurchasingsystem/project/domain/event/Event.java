@@ -97,5 +97,9 @@ public class Event {
         this.eventDate = eventDate;
     }
 
+    public void setSeatingMap(SeatingMap seatingMap) {
+        this.seatingMap = seatingMap;
+    }
+
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 }

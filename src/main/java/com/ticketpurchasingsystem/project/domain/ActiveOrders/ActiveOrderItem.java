@@ -1,24 +1,48 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 
 import java.sql.Timestamp;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class ActiveOrderItem {
     private String orderId;
     private String userId;
     private String eventId;
-    private int quantity;
-    private String status;
     private Timestamp createdAt;
+    private List<String> seatIds;
+    private HashMap<String, Integer> StandingAreaQuantities;
+    private boolean processing;
+    
+
+    public final static int EXPIRATION_TIME_MINUTES = 15;
 
 
-    public ActiveOrderItem(String orderId, String userId, String eventId, int quantity) {
+    public ActiveOrderItem(String orderId, String userId, String eventId) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
-        this.quantity = quantity;
-        this.status = "active";
         this.createdAt = new Timestamp(System.currentTimeMillis());
+        this.seatIds = new ArrayList<>();
+        this.StandingAreaQuantities = new HashMap<>();
+        this.processing = false;
     }
+    public ActiveOrderItem(ActiveOrderItem other) {
+        this.orderId = other.getOrderId();
+        this.userId = other.getUserId();
+        this.eventId = other.getEventId();
+        this.createdAt = new Timestamp(other.getCreatedAt().getTime());
+        this.seatIds = new ArrayList<>(other.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
+        this.processing = false;
+    }
+
+    public boolean markAsProcessing() {
+        if (processing) return false;
+        processing = true;
+        return true;
+    }
+
 
     public String getOrderId() {
         return orderId;
@@ -48,26 +72,45 @@ public class ActiveOrderItem {
         this.eventId = eventId;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public void addSeatIds(List<String> seatIds) {
+        for (String id : seatIds) {
+            this.seatIds.add(id);
+        }
+    }
+    public void addStandingAreaQuantity(String areaId, int quantity) {
+        this.StandingAreaQuantities.put(areaId, quantity);
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    public List<String> getSeatIds() {
+        return new ArrayList<>(seatIds);
+    }
+    public HashMap<String, Integer> getStandingAreaQuantities() {
+        return new HashMap<>(StandingAreaQuantities);
     }
 
-    public String getStatus() {
-        return status;
+    public boolean isExpired() {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        long minutesElapsed = (now.getTime() - createdAt.getTime()) / (60 * 1000);
+        return minutesElapsed >= EXPIRATION_TIME_MINUTES;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
     public void editOrder(ActiveOrderItem order) {
-        if(order.getOrderId() != this.orderId) {
+        if (!order.getOrderId().equals(this.orderId)) {
             throw new IllegalArgumentException("Order ID cannot be changed");
         }
-        this.quantity = order.getQuantity();
-        this.status = order.getStatus();
+        this.seatIds = new ArrayList<>(order.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(order.getStandingAreaQuantities());
+    }
+
+    public void setSeatIds(List<String> seatIds) {
+        this.seatIds = seatIds;
+    }
+
+    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) {
+        StandingAreaQuantities = standingAreaQuantities;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
     }
 }
