@@ -146,6 +146,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         ActiveOrderItem newOrder = activeOrderHandler.addSeatsToActiveOrder(order, seatsToReserve);
         if(newOrder == null){
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
             logger.error("failed to add seats to order : " + orderId);
             throw new RuntimeException("failed to add seats");
         }
@@ -180,6 +181,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         ActiveOrderItem newOrder = activeOrderHandler.addStandingAreaToActiveOrder(order, areaId, quantity);
         if(newOrder == null){
+            activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantity);
             logger.error("failed to add standing area tickets to order : " + orderId);
             throw new RuntimeException("failed to add standing area tickets");
         }
