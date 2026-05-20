@@ -864,8 +864,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
-        when()
-
+        when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
         ActiveOrderItem order = service.createPendingOrder(VALID_SESSION, "userA", EVENT_ID);
         String liveOrderId = order.getOrderId();
 
@@ -911,8 +910,8 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
         lenient().when(paymentGatewayMock.pay()).thenReturn(true);
-        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
-        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
+        lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
+        lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
         ActiveOrderItem order = service.createPendingOrder(VALID_SESSION, "userB", EVENT_ID);
         String liveOrderId = order.getOrderId();

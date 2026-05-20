@@ -412,7 +412,8 @@ public class ActiveOrderService implements IActiveOrderService {
                 throw new IllegalArgumentException("bad order ID or event ID");
             }
             logger.info("Saving order: " + order.getOrderId());
-            return activeOrderRepo.save(order);
+            activeOrderRepo.save(order);
+            return true;
         }catch(Exception e){
             logger.error("Exception occurred while saving order: " + (order != null ? order.getOrderId() : "null") + ". Error: " + e.getMessage());
             return false;
