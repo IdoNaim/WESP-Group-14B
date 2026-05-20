@@ -68,7 +68,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     // --- invalid session ---
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenInvalidSession_ThenReturnEmptyList() {
+    void GivenInvalidSession_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
@@ -77,7 +77,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenInvalidSession_ThenRepoNeverCalled() {
+    void GivenInvalidSession_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
         historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
@@ -86,7 +86,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenInvalidSession_ThenUserServiceNeverCalled() {
+    void GivenInvalidSession_WhenGetAllHistoryOrdersByUser_ThenUserServiceNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
         historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
@@ -97,7 +97,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     // --- user not in system ---
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenUserNotInSystem_ThenReturnEmptyList() {
+    void GivenUserNotInSystem_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(userService.getAllUsers()).thenReturn(List.of());
 
@@ -107,7 +107,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenUserNotInSystem_ThenRepoNeverCalled() {
+    void GivenUserNotInSystem_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(userService.getAllUsers()).thenReturn(List.of());
 
@@ -119,7 +119,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     // --- user in system but not admin ---
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenUserNotAdmin_ThenReturnEmptyList() {
+    void GivenUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(userService.getAllUsers()).thenReturn(
             List.of(new UserDTO(USER_ID, "name", "user@test.com", UserGroupDiscount.NONE)));
@@ -131,7 +131,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenUserNotAdmin_ThenRepoNeverCalled() {
+    void GivenUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(userService.getAllUsers()).thenReturn(
             List.of(new UserDTO(USER_ID, "name", "user@test.com", UserGroupDiscount.NONE)));
@@ -145,7 +145,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     // --- valid user and admin ---
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenValidUserAndAdmin_ThenReturnOrders() {
+    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnOrders() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         stubValidUserAndAdmin();
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item));
@@ -156,7 +156,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenValidUserAndAdmin_ThenReturnCorrectDTOs() {
+    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnCorrectDTOs() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         stubValidUserAndAdmin();
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item));
@@ -169,7 +169,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenValidUserAndAdmin_ThenRepoCalledWithCorrectUserId() {
+    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoCalledWithCorrectUserId() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         stubValidUserAndAdmin();
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
@@ -180,7 +180,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenValidUserAndAdminNoOrders_ThenReturnEmptyList() {
+    void GivenValidUserAndAdminNoOrders_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         stubValidUserAndAdmin();
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
@@ -192,7 +192,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrdersByUserGivenValidUserAndAdminMultipleOrders_ThenReturnAllDTOs() {
+    void GivenValidUserAndAdminMultipleOrders_WhenGetAllHistoryOrdersByUser_ThenReturnAllDTOs() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         stubValidUserAndAdmin();
         HistoryOrderItem item2 = new HistoryOrderItem("order-002", USER_ID, "event-002", COMPANY_ID, 49.99,

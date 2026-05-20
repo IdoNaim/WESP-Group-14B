@@ -38,8 +38,7 @@ class HistoryOrderListenerCompanyHistoryTests {
     }
 
     @Test
-    void WhenOnGetCompanyHistoryGivenOrders_ThenEventResultIsSet() {
-        // Arrange
+    void GivenOrdersExistInRepo_WhenOnGetCompanyHistory_ThenEventResultIsSet() {
         List<String> seats = List.of("seat1");
         HashMap<String,Integer> standing = new HashMap<>();
         standing.put("area1", 2);
@@ -48,62 +47,48 @@ class HistoryOrderListenerCompanyHistoryTests {
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(mockHistory);
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
-        // Act
         listener.onGetCompanyHistory(event);
 
-        // Assert
         assertEquals(mockHistory, event.getResult());
     }
 
     @Test
-    void WhenOnGetCompanyHistoryGivenEmptyRepo_ThenEventResultIsEmpty() {
-        // Arrange
+    void GivenEmptyRepo_WhenOnGetCompanyHistory_ThenEventResultIsEmpty() {
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(Collections.emptyList());
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
-        // Act
         listener.onGetCompanyHistory(event);
 
-        // Assert
         assertTrue(event.getResult().isEmpty());
     }
 
     @Test
-    void WhenOnGetCompanyHistoryGivenCompanyId_ThenRepoCalledOnceWithCorrectId() {
-        // Arrange
+    void GivenValidCompanyId_WhenOnGetCompanyHistory_ThenRepoCalledOnceWithCorrectId() {
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(Collections.emptyList());
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
-        // Act
         listener.onGetCompanyHistory(event);
 
-        // Assert
         verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 
     @Test
-    void WhenOnGetCompanyHistoryGivenCompanyId_ThenFindAllIsNeverCalled() {
-        // Arrange
+    void GivenValidCompanyId_WhenOnGetCompanyHistory_ThenFindAllIsNeverCalled() {
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(Collections.emptyList());
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
-        // Act
         listener.onGetCompanyHistory(event);
 
-        // Assert
         verify(historyOrderRepo, never()).findAll();
     }
 
     @Test
-    void WhenOnGetCompanyHistoryGivenCompanyId_ThenEventPreservesCompanyId() {
-        // Arrange
+    void GivenValidCompanyId_WhenOnGetCompanyHistory_ThenEventPreservesCompanyId() {
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(Collections.emptyList());
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
-        // Act
         listener.onGetCompanyHistory(event);
 
-        // Assert
         assertEquals(COMPANY_ID, event.getCompanyId());
     }
 }
