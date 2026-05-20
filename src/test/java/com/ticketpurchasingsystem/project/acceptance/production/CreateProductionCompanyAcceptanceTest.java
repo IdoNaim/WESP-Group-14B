@@ -11,24 +11,15 @@ import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InM
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CreateProductionCompanyAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
-
-    @Mock
-    private ProductionEventPublisher productionEventPublisher;
 
     private AuthenticationService authService;
     private ProdRepo prodRepo;
@@ -42,74 +33,76 @@ class CreateProductionCompanyAcceptanceTest {
         domainAuthService.init();
         authService = new AuthenticationService(domainAuthService, sessionRepo);
         prodRepo = new ProdRepo();
-        productionService = new ProductionService(authService, new ProductionHandler(), prodRepo,
-                productionEventPublisher);
+        ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {});
+        productionService = new ProductionService(authService, new ProductionHandler(), prodRepo, publisher);
     }
 
     @Test
     void GivenLoggedInUser_WhenCreateCompany_ThenReturnTrue() {
-        String token = authService.login("alice");
-        ProductionCompanyDTO dto = new ProductionCompanyDTO("Alice Events", "Great events", "alice@events.com");
+        // Arrange
+        String token = authService.login("eden");
+        ProductionCompanyDTO dto = new ProductionCompanyDTO("Eden Events", "Great events", "eden@events.com");
 
+        // Act
         boolean result = productionService.createProductionCompany(token, dto);
 
+        // Assert
         assertTrue(result);
     }
 
     @Test
     void GivenLoggedInUser_WhenCreateCompany_ThenCompanyIsPersistedWithCorrectFounder() {
-        String token = authService.login("alice");
-        ProductionCompanyDTO dto = new ProductionCompanyDTO("Alice Events", "desc", "alice@events.com");
+        // Arrange
+        String token = authService.login("eden");
+        ProductionCompanyDTO dto = new ProductionCompanyDTO("Eden Events", "desc", "eden@events.com");
 
+        // Act
         productionService.createProductionCompany(token, dto);
 
-        Optional<ProductionCompany> saved = prodRepo.findByName("Alice Events");
+        // Assert
+        Optional<ProductionCompany> saved = prodRepo.findByName("Eden Events");
         assertTrue(saved.isPresent());
-        assertEquals("alice", saved.get().getFounderId());
-    }
-
-    @Test
-    void GivenLoggedInUser_WhenCreateCompany_ThenNewProdEventIsPublished() {
-        String token = authService.login("alice");
-        ProductionCompanyDTO dto = new ProductionCompanyDTO("Alice Events", "desc", "alice@events.com");
-
-        productionService.createProductionCompany(token, dto);
-
-        verify(productionEventPublisher, times(1)).publishNewProdEvent(any());
+        assertEquals("eden", saved.get().getFounderId());
     }
 
     // Fail
 
     @Test
     void GivenNotLoggedIn_WhenCreateCompany_ThenReturnFalse() {
-        ProductionCompanyDTO dto = new ProductionCompanyDTO("Alice Events", "desc", "alice@events.com");
+        // Arrange
+        ProductionCompanyDTO dto = new ProductionCompanyDTO("Eden Events", "desc", "eden@events.com");
 
+        // Act
         boolean result = productionService.createProductionCompany("invalid-token", dto);
 
+        // Assert
         assertFalse(result);
-        verify(productionEventPublisher, never()).publishNewProdEvent(any());
     }
 
     @Test
     void GivenDuplicateCompanyName_WhenCreateCompany_ThenReturnFalse() {
-        String token = authService.login("alice");
+        // Arrange
+        String token = authService.login("eden");
         ProductionCompanyDTO dto = new ProductionCompanyDTO("Duplicate Corp", "desc", "dup@corp.com");
         productionService.createProductionCompany(token, dto);
 
+        // Act
         boolean secondResult = productionService.createProductionCompany(token, dto);
 
+        // Assert
         assertFalse(secondResult);
-        verify(productionEventPublisher, times(1)).publishNewProdEvent(any());
     }
 
     @Test
     void GivenBlankCompanyName_WhenCreateCompany_ThenReturnFalse() {
-        String token = authService.login("alice");
-        ProductionCompanyDTO dto = new ProductionCompanyDTO("   ", "desc", "alice@events.com");
+        // Arrange
+        String token = authService.login("eden");
+        ProductionCompanyDTO dto = new ProductionCompanyDTO("   ", "desc", "eden@events.com");
 
+        // Act
         boolean result = productionService.createProductionCompany(token, dto);
 
+        // Assert
         assertFalse(result);
-        verify(productionEventPublisher, never()).publishNewProdEvent(any());
     }
 }

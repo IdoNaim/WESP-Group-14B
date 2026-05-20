@@ -27,21 +27,21 @@ class ValidateTokenAcceptanceTest {
 
     @Test
     void GivenFreshToken_WhenValidate_ThenReturnTrue() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
 
         assertTrue(authService.validate(token));
     }
 
     @Test
     void GivenValidToken_WhenGetUser_ThenReturnCorrectUsername() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
 
-        assertEquals("alice", authService.getUser(token));
+        assertEquals("eden", authService.getUser(token));
     }
 
     @Test
     void GivenMultipleUsers_WhenValidateEachToken_ThenAllReturnTrue() {
-        String[] users = { "user1", "user2", "user3" };
+        String[] users = { "eden", "tomer", "itay" };
 
         for (String user : users) {
             String token = authService.login(user);
@@ -60,7 +60,7 @@ class ValidateTokenAcceptanceTest {
 
     @Test
     void GivenTokenManuallyRemovedFromRepo_WhenValidate_ThenReturnFalse() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
         authService.removeSessionManually(token);
 
         boolean result = authService.validate(token);
@@ -70,7 +70,7 @@ class ValidateTokenAcceptanceTest {
 
     @Test
     void GivenLoggedOutToken_WhenValidate_ThenReturnFalse() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
         authService.logout(token);
 
         boolean result = authService.validate(token);

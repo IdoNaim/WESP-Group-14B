@@ -26,7 +26,7 @@ class LogoutAcceptanceTest {
 
     @Test
     void GivenLoggedInUser_WhenLogout_ThenTokenIsInvalidated() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
 
         authService.logout(token);
 
@@ -35,7 +35,7 @@ class LogoutAcceptanceTest {
 
     @Test
     void GivenLoggedInUser_WhenLogoutThenValidate_ThenFalseIsReturned() {
-        String token = authService.login("bob");
+        String token = authService.login("tomer");
         assertTrue(authService.validate(token), "Token must be valid before logout");
 
         authService.logout(token);
@@ -45,8 +45,8 @@ class LogoutAcceptanceTest {
 
     @Test
     void GivenTwoDifferentUsers_WhenOneLogsOut_ThenOtherSessionIsUnaffected() {
-        String tokenA = authService.login("alice");
-        String tokenB = authService.login("bob");
+        String tokenA = authService.login("eden");
+        String tokenB = authService.login("tomer");
 
         authService.logout(tokenA);
 
@@ -58,7 +58,7 @@ class LogoutAcceptanceTest {
 
     @Test
     void GivenAlreadyLoggedOut_WhenLogoutAgain_ThenNoExceptionIsThrown() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
         authService.logout(token);
 
         assertDoesNotThrow(() -> authService.logout(token));
@@ -67,7 +67,7 @@ class LogoutAcceptanceTest {
 
     @Test
     void GivenLoggedOut_WhenValidate_ThenReturnFalse() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
         authService.logout(token);
 
         boolean result = authService.validate(token);

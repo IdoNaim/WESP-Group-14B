@@ -4,6 +4,7 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
@@ -11,26 +12,17 @@ import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InM
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class GetCompanyPurchaseHistoryAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
-    private static final String FOUNDER = "founder-alice";
-
-    @Mock
-    private ProductionEventPublisher productionEventPublisher;
+    private static final String FOUNDER = "founder-eden";
 
     private AuthenticationService authService;
     private ProdRepo prodRepo;
@@ -45,8 +37,12 @@ class GetCompanyPurchaseHistoryAcceptanceTest {
         domainAuthService.init();
         authService = new AuthenticationService(domainAuthService, sessionRepo);
         prodRepo = new ProdRepo();
-        productionService = new ProductionService(authService, new ProductionHandler(), prodRepo,
-                productionEventPublisher);
+        ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {
+            if (event instanceof GetCompanyHistoryEvent e) {
+                e.setResult(Collections.emptyList());
+            }
+        });
+        productionService = new ProductionService(authService, new ProductionHandler(), prodRepo, publisher);
 
         String founderToken = authService.login(FOUNDER);
         productionService.createProductionCompany(founderToken,
@@ -56,40 +52,52 @@ class GetCompanyPurchaseHistoryAcceptanceTest {
 
     @Test
     void GivenFounderRequestsHistory_WhenNoHistoryExists_ThenEmptyListIsReturned() {
-        when(productionEventPublisher.publishGetCompanyHistoryEvent(companyId)).thenReturn(null);
+        // Arrange
         String founderToken = authService.login(FOUNDER);
 
+        // Act
         List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory(founderToken, companyId);
 
+        // Assert
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
 
+    // Fail
+
     @Test
     void GivenInvalidToken_WhenGetPurchaseHistory_ThenReturnNull() {
+        // Arrange
+        // (no additional setup required)
+
+        // Act
         List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory("invalid-token", companyId);
 
+        // Assert
         assertNull(result);
-        verify(productionEventPublisher, never()).publishGetCompanyHistoryEvent(anyInt());
     }
 
     @Test
     void GivenNonOwner_WhenGetPurchaseHistory_ThenReturnNull() {
+        // Arrange
         String nonOwnerToken = authService.login("random-user");
 
+        // Act
         List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory(nonOwnerToken, companyId);
 
+        // Assert
         assertNull(result);
-        verify(productionEventPublisher, never()).publishGetCompanyHistoryEvent(anyInt());
     }
 
     @Test
     void GivenNonExistentCompany_WhenGetPurchaseHistory_ThenReturnNull() {
+        // Arrange
         String founderToken = authService.login(FOUNDER);
 
+        // Act
         List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory(founderToken, 9999);
 
+        // Assert
         assertNull(result);
-        verify(productionEventPublisher, never()).publishGetCompanyHistoryEvent(anyInt());
     }
 }

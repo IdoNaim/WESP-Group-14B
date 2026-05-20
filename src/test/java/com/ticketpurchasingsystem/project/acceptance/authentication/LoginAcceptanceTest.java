@@ -26,7 +26,7 @@ class LoginAcceptanceTest {
 
     @Test
     void GivenValidUsername_WhenLogin_ThenNonNullTokenIsReturned() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
 
         assertNotNull(token);
         assertFalse(token.isBlank());
@@ -34,22 +34,22 @@ class LoginAcceptanceTest {
 
     @Test
     void GivenValidUsername_WhenLogin_ThenTokenIsImmediatelyValid() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
 
         assertTrue(authService.validate(token));
     }
 
     @Test
     void GivenValidUsername_WhenLogin_ThenUsernameIsRecoverableFromToken() {
-        String token = authService.login("charlie");
+        String token = authService.login("itay");
 
-        assertEquals("charlie", authService.getUser(token));
+        assertEquals("itay", authService.getUser(token));
     }
 
     @Test
     void GivenTwoDifferentUsers_WhenBothLogin_ThenEachGetsDistinctToken() {
-        String tokenA = authService.login("alice");
-        String tokenB = authService.login("bob");
+        String tokenA = authService.login("eden");
+        String tokenB = authService.login("tomer");
 
         assertNotEquals(tokenA, tokenB);
         assertTrue(authService.validate(tokenA));
@@ -58,8 +58,8 @@ class LoginAcceptanceTest {
 
     @Test
     void GivenSameUser_WhenLoginTwice_ThenBothSessionsAreValid() {
-        String first = authService.login("alice");
-        String second = authService.login("alice");
+        String first = authService.login("eden");
+        String second = authService.login("eden");
 
         assertTrue(authService.validate(first));
         assertTrue(authService.validate(second));
@@ -76,7 +76,7 @@ class LoginAcceptanceTest {
 
     @Test
     void GivenTamperedToken_WhenValidate_ThenReturnFalse() {
-        String token = authService.login("alice");
+        String token = authService.login("eden");
         String tampered = token.substring(0, token.length() - 4) + "XXXX";
 
         boolean result = authService.validate(tampered);
