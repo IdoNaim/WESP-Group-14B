@@ -38,7 +38,7 @@ class AdminPublisherTests {
     // --- publishGetAllActiveOrders ---
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenListenerResponds_ThenReturnOrders() {
+    void GivenListenerResponds_WhenPublishGetAllActiveOrders_ThenReturnOrders() {
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1"));
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
@@ -53,7 +53,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenNoListener_ThenReturnNull() {
+    void GivenNoListener_WhenPublishGetAllActiveOrders_ThenReturnNull() {
         List<ActiveOrderItem> result = adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
         assertNull(result);
@@ -61,7 +61,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenAdminId_ThenEventCarriesAdminId() {
+    void GivenAdminId_WhenPublishGetAllActiveOrders_ThenEventCarriesAdminId() {
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
             assertEquals(ADMIN_ID, event.getReqId());
@@ -74,7 +74,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenEmptyList_ThenReturnEmptyList() {
+    void GivenEmptyList_WhenPublishGetAllActiveOrders_ThenReturnEmptyList() {
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
             event.setResult(Collections.emptyList());
@@ -91,7 +91,7 @@ class AdminPublisherTests {
     // --- publishGetAllOrdersHistory ---
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenListenerResponds_ThenReturnHistory() {
+    void GivenListenerResponds_WhenPublishGetAllOrdersHistory_ThenReturnHistory() {
         List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event", 15,10.0, new ArrayList<>(), new HashMap<>()));
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
@@ -106,7 +106,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenNoListener_ThenReturnNull() {
+    void GivenNoListener_WhenPublishGetAllOrdersHistory_ThenReturnNull() {
         List<HistoryOrderItem> result = adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
         assertNull(result);
@@ -114,7 +114,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenAdminId_ThenEventCarriesAdminId() {
+    void GivenAdminId_WhenPublishGetAllOrdersHistory_ThenEventCarriesAdminId() {
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             assertEquals(ADMIN_ID, event.getReqId());
@@ -127,7 +127,7 @@ class AdminPublisherTests {
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenEmptyList_ThenReturnEmptyList() {
+    void GivenEmptyList_WhenPublishGetAllOrdersHistory_ThenReturnEmptyList() {
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             event.setResult(Collections.emptyList());

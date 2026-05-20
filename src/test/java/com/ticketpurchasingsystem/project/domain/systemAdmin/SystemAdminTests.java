@@ -34,7 +34,7 @@ class SystemAdminTests {
     // --- getAllActiveOrders ---
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsOrders_ThenReturnOrders() {
+    void GivenPublisherReturnsOrders_WhenGetAllActiveOrders_ThenReturnOrders() {
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1"));
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(mockOrders);
 
@@ -45,7 +45,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsNull_ThenReturnNull() {
+    void GivenPublisherReturnsNull_WhenGetAllActiveOrders_ThenReturnNull() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(null);
 
         List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
@@ -55,7 +55,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsEmpty_ThenReturnEmpty() {
+    void GivenPublisherReturnsEmpty_WhenGetAllActiveOrders_ThenReturnEmpty() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(Collections.emptyList());
 
         List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
@@ -65,7 +65,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllActiveOrdersGiven_ThenPublisherCalledWithAdminId() {
+    void GivenAdminIsInitialized_WhenGetAllActiveOrders_ThenPublisherCalledWithAdminId() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(Collections.emptyList());
 
         systemAdmin.getAllActiveOrders();
@@ -76,7 +76,7 @@ class SystemAdminTests {
     // --- getAllHistoryOrderItems ---
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsHistory_ThenReturnHistory() {
+    void GivenPublisherReturnsHistory_WhenGetAllHistoryOrderItems_ThenReturnHistory() {
         List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event", 15,10.0, new ArrayList<>(), new HashMap<>()));
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(mockHistory);
 
@@ -87,7 +87,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsNull_ThenReturnNull() {
+    void GivenPublisherReturnsNull_WhenGetAllHistoryOrderItems_ThenReturnNull() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(null);
 
         List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();
@@ -97,7 +97,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsEmpty_ThenReturnEmpty() {
+    void GivenPublisherReturnsEmpty_WhenGetAllHistoryOrderItems_ThenReturnEmpty() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(Collections.emptyList());
 
         List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();
@@ -107,7 +107,7 @@ class SystemAdminTests {
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGiven_ThenPublisherCalledWithAdminId() {
+    void GivenAdminIsInitialized_WhenGetAllHistoryOrderItems_ThenPublisherCalledWithAdminId() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(Collections.emptyList());
 
         systemAdmin.getAllHistoryOrderItems();
