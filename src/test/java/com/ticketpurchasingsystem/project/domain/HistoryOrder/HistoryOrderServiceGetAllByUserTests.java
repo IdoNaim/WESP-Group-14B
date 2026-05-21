@@ -14,12 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
-import com.ticketpurchasingsystem.project.application.ISystemAdminService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.UserService.IUserService;
-import com.ticketpurchasingsystem.project.domain.User.UserDTO;
-import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
@@ -29,15 +24,14 @@ public class HistoryOrderServiceGetAllByUserTests {
     @Mock private IHistoryOrderRepo historyOrderRepo;
     @Mock private HistoryOrderHandler historyOrderHandler;
     @Mock private AuthenticationService authenticationService;
-    @Mock private ISystemAdminService systemAdminService;
     @Mock private ProductionService productionService;
-    @Mock private IUserService userService;
 
     private HistoryOrderService historyOrderService;
 
     private static final String VALID_TOKEN   = "valid-token";
     private static final String INVALID_TOKEN = "invalid-token";
     private static final String USER_ID       = "user-001";
+    private static final String OTHER_USER_ID = "user-002";
     private static final String EVENT_ID      = "event-001";
     private static final String ORDER_ID      = "order-001";
     private static final int    COMPANY_ID    = 42;
@@ -51,18 +45,16 @@ public class HistoryOrderServiceGetAllByUserTests {
     @BeforeEach
     void setUp() {
         historyOrderService = new HistoryOrderService(
-            historyOrderRepo, historyOrderHandler, authenticationService,
-            systemAdminService, productionService, userService
+            historyOrderRepo, historyOrderHandler, authenticationService, productionService
         );
         item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE,
             List.of("seat-1"), new HashMap<>());
     }
 
-    private void stubValidUserAndAdmin() {
-        when(userService.getAllUsers()).thenReturn(
-            List.of(new UserDTO(USER_ID, "name", "user@test.com", UserGroupDiscount.NONE)));
-        when(systemAdminService.getAllUsers()).thenReturn(
-            List.of(new UserInfo(USER_ID, "name", "user@test.com", "pass", UserGroupDiscount.NONE)));
+    private void stubValidSession(String tokenOwner, boolean isAdmin) {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(tokenOwner);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(isAdmin);
     }
 
     // --- invalid session ---
@@ -85,21 +77,11 @@ public class HistoryOrderServiceGetAllByUserTests {
         verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
-    @Test
-    void GivenInvalidSession_WhenGetAllHistoryOrdersByUser_ThenUserServiceNeverCalled() {
-        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
-
-        historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
-
-        verify(userService, never()).getAllUsers();
-    }
-
-    // --- user not in system ---
+    // --- valid session, not owner, not admin ---
 
     @Test
-    void GivenUserNotInSystem_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(userService.getAllUsers()).thenReturn(List.of());
+    void GivenOtherUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
+        stubValidSession(OTHER_USER_ID, false);
 
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
@@ -107,47 +89,19 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void GivenUserNotInSystem_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(userService.getAllUsers()).thenReturn(List.of());
+    void GivenOtherUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
+        stubValidSession(OTHER_USER_ID, false);
 
         historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
-    // --- user in system but not admin ---
+    // --- owner (not admin) ---
 
     @Test
-    void GivenUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(userService.getAllUsers()).thenReturn(
-            List.of(new UserDTO(USER_ID, "name", "user@test.com", UserGroupDiscount.NONE)));
-        when(systemAdminService.getAllUsers()).thenReturn(List.of());
-
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
-
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void GivenUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(userService.getAllUsers()).thenReturn(
-            List.of(new UserDTO(USER_ID, "name", "user@test.com", UserGroupDiscount.NONE)));
-        when(systemAdminService.getAllUsers()).thenReturn(List.of());
-
-        historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
-
-        verify(historyOrderRepo, never()).findAllByUserId(any());
-    }
-
-    // --- valid user and admin ---
-
-    @Test
-    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnOrders() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        stubValidUserAndAdmin();
+    void GivenOwner_WhenGetAllHistoryOrdersByUser_ThenReturnOrders() {
+        stubValidSession(USER_ID, false);
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item));
 
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
@@ -156,9 +110,42 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnCorrectDTOs() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        stubValidUserAndAdmin();
+    void GivenOwnerNoOrders_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
+        stubValidSession(USER_ID, false);
+        when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
+
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void GivenOwnerMultipleOrders_WhenGetAllHistoryOrdersByUser_ThenReturnAllDTOs() {
+        stubValidSession(USER_ID, false);
+        HistoryOrderItem item2 = new HistoryOrderItem("order-002", USER_ID, "event-002", COMPANY_ID, 49.99,
+            List.of("seat-2"), new HashMap<>());
+        when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item, item2));
+
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
+
+        assertEquals(2, result.size());
+    }
+
+    // --- admin (not owner) ---
+
+    @Test
+    void GivenAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnOrders() {
+        stubValidSession(OTHER_USER_ID, true);
+        when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item));
+
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void GivenAdmin_WhenGetAllHistoryOrdersByUser_ThenReturnCorrectDTOs() {
+        stubValidSession(OTHER_USER_ID, true);
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item));
 
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
@@ -169,38 +156,12 @@ public class HistoryOrderServiceGetAllByUserTests {
     }
 
     @Test
-    void GivenValidUserAndAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoCalledWithCorrectUserId() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        stubValidUserAndAdmin();
+    void GivenAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoCalledWithCorrectUserId() {
+        stubValidSession(OTHER_USER_ID, true);
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
 
         historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
-    }
-
-    @Test
-    void GivenValidUserAndAdminNoOrders_WhenGetAllHistoryOrdersByUser_ThenReturnEmptyList() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        stubValidUserAndAdmin();
-        when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
-
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void GivenValidUserAndAdminMultipleOrders_WhenGetAllHistoryOrdersByUser_ThenReturnAllDTOs() {
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        stubValidUserAndAdmin();
-        HistoryOrderItem item2 = new HistoryOrderItem("order-002", USER_ID, "event-002", COMPANY_ID, 49.99,
-            List.of("seat-2"), new HashMap<>());
-        when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of(item, item2));
-
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
-
-        assertEquals(2, result.size());
     }
 }

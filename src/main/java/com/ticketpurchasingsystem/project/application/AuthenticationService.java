@@ -1,9 +1,9 @@
 package com.ticketpurchasingsystem.project.application;
 
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-
-import org.springframework.stereotype.Service;
 
 @Service
 public class AuthenticationService {
@@ -34,5 +34,10 @@ public class AuthenticationService {
 
     public void removeSessionManually(String token) {
         sessionRepo.deleteByToken(token);
+    }
+
+    public boolean isAdmin(String token) {
+        // TODO Auto-generated method stub
+        return true;
     }
 }
