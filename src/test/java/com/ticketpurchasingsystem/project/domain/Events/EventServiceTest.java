@@ -31,10 +31,8 @@ public class EventServiceTest {
     }
 
     // ================= CREATE EVENT =================
-
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
-
         EventDTO dto = new EventDTO(1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
@@ -52,8 +50,43 @@ public class EventServiceTest {
     }
 
     @Test
-    void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
+    void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
+        EventDTO dto = new EventDTO(1, "Concert", 100,
+                LocalDateTime.now().plusDays(1), true);
 
+        PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
+        when(policyDTO.minTickets()).thenReturn(15); // Invalid condition
+        when(policyDTO.maxTickets()).thenReturn(5);
+        when(policyDTO.minAge()).thenReturn(18);
+        when(policyDTO.maxAge()).thenReturn(60);
+        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+
+        boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
+
+        assertFalse(result);
+        verify(mockRepo, never()).save(any(Event.class)); // Verifies it fails fast
+    }
+
+    @Test
+    void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnFalse() {
+        EventDTO dto = new EventDTO(1, "Concert", 100,
+                LocalDateTime.now().plusDays(1), true);
+
+        PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
+        when(policyDTO.minTickets()).thenReturn(1);
+        when(policyDTO.maxTickets()).thenReturn(10);
+        when(policyDTO.minAge()).thenReturn(65); // Invalid condition
+        when(policyDTO.maxAge()).thenReturn(18);
+        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+
+        boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
+
+        assertFalse(result);
+        verify(mockRepo, never()).save(any(Event.class));
+    }
+
+    @Test
+    void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 

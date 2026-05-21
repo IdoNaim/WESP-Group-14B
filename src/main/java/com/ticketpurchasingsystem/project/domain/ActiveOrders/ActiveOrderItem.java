@@ -78,7 +78,13 @@ public class ActiveOrderItem {
         }
     }
     public void addStandingAreaQuantity(String areaId, int quantity) {
-        this.StandingAreaQuantities.put(areaId, quantity);
+        if(StandingAreaQuantities.containsKey(areaId)){
+            int currQuantity = StandingAreaQuantities.get(areaId);
+            StandingAreaQuantities.put(areaId, quantity + currQuantity);
+        }
+        else {
+            this.StandingAreaQuantities.put(areaId, quantity);
+        }
     }
 
     public List<String> getSeatIds() {

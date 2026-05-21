@@ -3,6 +3,9 @@ package com.ticketpurchasingsystem.project.domain.authTest;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -150,6 +153,120 @@ class DomainAuthServiceTest {
 
         // Assert
         assertEquals(inputUsername, extractedUsername, "Username extracted from the token must match the original");
+    }
+
+    // ── Concurrency tests ─────────────────────────────────────────────────────
+
+    private DomainAuthService buildRealDomainAuthService() {
+        InMemorySessionRepo realRepo = new InMemorySessionRepo();
+        DomainAuthService svc = new DomainAuthService(realRepo);
+        ReflectionTestUtils.setField(svc, "secret", SECRET);
+        svc.init();
+        return svc;
+    }
+
+    @Test
+    void GivenMultipleUsers_WhenConcurrentCreateSession_ThenAllTokensStoredInRepo() throws Exception {
+        // Arrange
+        DomainAuthService svc = buildRealDomainAuthService();
+        int threadCount = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CopyOnWriteArrayList<String> tokens = new CopyOnWriteArrayList<>();
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    tokens.add(svc.authenticateAndCreateSession("user-" + idx));
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(0, errorCount.get(), "No exceptions should occur during concurrent session creation");
+        assertEquals(threadCount, tokens.size(), "Every thread must produce a token");
+        for (String token : tokens) {
+            assertTrue(svc.isSessionValid(token), "Every token must be valid immediately after creation");
+        }
+    }
+
+    @Test
+    void GivenSameUser_WhenConcurrentCreateSession_ThenNoExceptionsOccur() throws Exception {
+        // Arrange
+        DomainAuthService svc = buildRealDomainAuthService();
+        int threadCount = 15;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    svc.authenticateAndCreateSession("shared-user");
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(0, errorCount.get(), "Concurrent logins for the same user must not throw exceptions");
+    }
+
+    @Test
+    void GivenConcurrentInvalidations_WhenSameTokenDeletedByMultipleThreads_ThenNoExceptionAndTokenInvalid() throws Exception {
+        // Arrange
+        DomainAuthService svc = buildRealDomainAuthService();
+        String token = svc.authenticateAndCreateSession(USERNAME);
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    svc.invalidateSession(token);
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(0, errorCount.get(), "Concurrent invalidations of the same token must not throw exceptions");
+        assertFalse(svc.isSessionValid(token), "Token must be invalid after concurrent invalidations");
     }
 
     @Test
