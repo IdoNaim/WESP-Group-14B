@@ -84,7 +84,7 @@ public class EventAggregateListener {
     }
     @EventListener
     public void onSeatReleaseEvent(SeatReleaseEvent event){
-        eventService.releaseSeats(event.getOrderID(), event.getEventID(), event.getSeatIds());
+        eventService.releaseSeats(event.getSessionToken(), event.getOrderID(), event.getEventID(), event.getSeatIds());
     }
     @EventListener
     public void onStandingAreaReleaseEvent(StandingAreaReleaseEvent event){

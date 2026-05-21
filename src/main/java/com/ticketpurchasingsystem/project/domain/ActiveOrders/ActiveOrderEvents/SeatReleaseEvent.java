@@ -8,11 +8,13 @@ public class SeatReleaseEvent extends ApplicationEvent {
     private String eventID;
     private List<String> seatsIds;
     private String orderID;
-    public SeatReleaseEvent(Object source, String eventID, List<String> seatIds, String orderId){
+    private String sessionToken;
+    public SeatReleaseEvent(Object source,String sessionToken, String eventID, List<String> seatIds, String orderId){
         super(source);
         this.eventID= eventID;
         this.seatsIds = seatIds;
         this.orderID = orderId;
+        this.sessionToken = sessionToken;
     }
 
     public String getEventID() {
@@ -24,5 +26,9 @@ public class SeatReleaseEvent extends ApplicationEvent {
     }
     public String getOrderID() {
         return orderID;
+    }
+
+    public String getSessionToken() {
+        return sessionToken;
     }
 }

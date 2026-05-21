@@ -25,8 +25,8 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishReleaseSeats(String orderId, String eventId, List<String> seatIds){
-        SeatReleaseEvent event = new SeatReleaseEvent(this, eventId, seatIds, orderId);
+    public void publishReleaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
+        SeatReleaseEvent event = new SeatReleaseEvent(this, sessionToken, eventId, seatIds, orderId);
         eventPublisher.publishEvent(event);
     }
 
