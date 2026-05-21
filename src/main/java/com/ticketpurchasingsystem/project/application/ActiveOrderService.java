@@ -238,8 +238,8 @@ public class ActiveOrderService implements IActiveOrderService {
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
-
-        activeOrderPublisher.publishCompletedOrder(orderDTO, amount);
+        int companyId = activeOrderPublisher.publishGetCompanyId(order.getEventId());
+        activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId);
         activeOrderRepo.delete(orderId);
         logger.info("Successfully completed order: " + orderId);
         return barcodesIssued;
