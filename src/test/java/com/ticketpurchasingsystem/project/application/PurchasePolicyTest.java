@@ -6,7 +6,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
-import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.tickets.*;
 import com.ticketpurchasingsystem.project.infrastructure.PurchasePolicyController;
@@ -257,7 +257,7 @@ class PurchasePolicyTest {
     // ─── Helper Methods ──────────────────────────────────────────────────────────────────────
 
     private Event createMockEvent() {
-        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy(1, 10, 0, 120, false);
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(new ArrayList<>());
         Event event = new Event(
                 1,
@@ -265,7 +265,8 @@ class PurchasePolicyTest {
                 100,
                 LocalDateTime.now().plusDays(2),
                 purchasePolicy,
-                discountPolicy
+                discountPolicy,
+                0
         );
         event.setEventId("123");
         return event;

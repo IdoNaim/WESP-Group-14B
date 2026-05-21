@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
+
 import java.time.LocalDateTime;
 
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
@@ -25,6 +27,8 @@ public class Event {
 
     private ITicketPurchaseRule ticketPurchasePolicy;
 
+    private int version = 0;
+
 
     public Event(
             int companyId,
@@ -32,7 +36,8 @@ public class Event {
             int eventCapacity,
             LocalDateTime eventDate,
             EventPurchasePolicy purchasePolicy,
-            EventDiscountPolicy discountPolicy
+            EventDiscountPolicy discountPolicy,
+            int version
     ) {
 
         if (eventName == null || eventName.trim().isEmpty()) {
@@ -54,6 +59,22 @@ public class Event {
         this.purchasePolicy = purchasePolicy;
         this.discountPolicy = discountPolicy;
         this.isActive = true;
+        this.version = version;
+    }
+
+    // COPY CONSTRUCTOR: Required for Event::new to work in your Streams
+    public Event(Event other) {
+        this.eventId = other.eventId;
+        this.companyId = other.companyId;
+        this.eventName = other.eventName;
+        this.eventCapacity = other.eventCapacity;
+        this.isActive = other.isActive;
+        this.eventDate = other.eventDate;
+        this.seatingMap = other.seatingMap;
+        this.discountPolicy = other.discountPolicy;
+        this.purchasePolicy = other.purchasePolicy;
+        this.version = other.version;
+        this.ticketPurchasePolicy = other.ticketPurchasePolicy;
     }
 
 
@@ -76,6 +97,10 @@ public class Event {
 
     public int getEventCapacity() {
         return eventCapacity;
+    }
+
+    public int getVersion(){
+        return version;
     }
 
 
@@ -103,6 +128,10 @@ public class Event {
 
     public void setSeatingMap(SeatingMap seatingMap) {
         this.seatingMap = seatingMap;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }

@@ -32,8 +32,7 @@ class HistoryOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllHistoryOrdersEventGivenOrders_ThenEventResultIsSet() {
-
+    void GivenOrdersExistInRepo_WhenHandleGetAllHistoryOrdersEvent_ThenEventResultIsSet() {
         List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user", "event", 1, 10.0, new ArrayList<>(), new HashMap<>()));
         when(historyOrderRepo.findAll()).thenReturn(mockHistory);
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
@@ -44,7 +43,7 @@ class HistoryOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllHistoryOrdersEventGivenEmptyRepo_ThenEventResultIsEmpty() {
+    void GivenEmptyRepo_WhenHandleGetAllHistoryOrdersEvent_ThenEventResultIsEmpty() {
         when(historyOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
 
@@ -54,7 +53,7 @@ class HistoryOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllHistoryOrdersEventGiven_ThenRepoCalledOnce() {
+    void GivenValidEvent_WhenHandleGetAllHistoryOrdersEvent_ThenRepoCalledOnce() {
         when(historyOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
 
@@ -64,7 +63,7 @@ class HistoryOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllHistoryOrdersEventGivenReqId_ThenEventPreservesReqId() {
+    void GivenReqId_WhenHandleGetAllHistoryOrdersEvent_ThenEventPreservesReqId() {
         when(historyOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
 

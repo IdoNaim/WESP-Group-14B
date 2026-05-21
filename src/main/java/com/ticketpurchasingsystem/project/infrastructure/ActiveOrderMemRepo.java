@@ -15,17 +15,16 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public boolean save(ActiveOrderItem order) {
+    public void save(ActiveOrderItem order) {
         if(order == null){
-            return false;
+            throw new IllegalArgumentException("tried to save null active order");
         }
         String existing = userToOrder.putIfAbsent(order.getUserId(), order.getOrderId());
         if (existing != null) {
-            return false;
+            throw new IllegalArgumentException("the user "+ order.getUserId()+ " already has an active order");
         }
         activeOrders.put(order.getOrderId(), order);
         getLockFor(order.getOrderId());
-        return true;
     }
 
     @Override
