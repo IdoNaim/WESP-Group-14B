@@ -58,7 +58,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenValidArgs_ThenReturnTrue() {
+    void GivenValidArgs_WhenCreateHistoryOrder_ThenReturnTrue() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
         boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -67,7 +67,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenValidArgs_ThenSaveCalledOnce() {
+    void GivenValidArgs_WhenCreateHistoryOrder_ThenSaveCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
         historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -76,7 +76,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenValidArgs_ThenHandlerCalledOnce() {
+    void GivenValidArgs_WhenCreateHistoryOrder_ThenHandlerCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
         historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -85,7 +85,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenValidArgs_ThenHandlerCalledWithCorrectDTO() {
+    void GivenValidArgs_WhenCreateHistoryOrder_ThenHandlerCalledWithCorrectDTO() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
         historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -100,7 +100,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenHandlerReturnsNull_ThenReturnFalse() {
+    void GivenHandlerReturnsNull_WhenCreateHistoryOrder_ThenReturnFalse() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
         boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -109,7 +109,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenHandlerReturnsNull_ThenSaveNeverCalled() {
+    void GivenHandlerReturnsNull_WhenCreateHistoryOrder_ThenSaveNeverCalled() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
         historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
@@ -118,7 +118,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenEmptySeatIds_ThenReturnTrue() {
+    void GivenEmptySeatIds_WhenCreateHistoryOrder_ThenReturnTrue() {
         List<String> emptySeats = List.of();
         HistoryOrderItem item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE, emptySeats, standingAreaQuantities);
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(item);
@@ -129,7 +129,7 @@ public class HistoryOrderServiceTests {
     }
 
     @Test
-    void WhenCreateHistoryOrderGivenEmptyStandingAreas_ThenReturnTrue() {
+    void GivenEmptyStandingAreas_WhenCreateHistoryOrder_ThenReturnTrue() {
         HashMap<String, Integer> emptyStanding = new HashMap<>();
         HistoryOrderItem item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE, seatIds, emptyStanding);
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(item);
