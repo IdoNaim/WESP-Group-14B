@@ -1,9 +1,10 @@
 package com.ticketpurchasingsystem.project.domain.systemAdmin;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface IAdminRepo {
-    Optional<SystemAdmin> findById(String id);
-    void save(SystemAdmin admin);
-    
+    void save(AdminInfo adminInfo);
+    AdminInfo findById(String adminId);
+    boolean isAdmin(String adminId);
+    List<AdminInfo> findAll();
 }
