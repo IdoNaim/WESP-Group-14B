@@ -50,6 +50,7 @@ public class ActiveOrderServiceUnitTest {
     private static final String ORDER_ID = "order-001";
     private static final String EVENT_ID = "event-001";
     private static final String AREA_ID = "standing-zone-A";
+    public static final int COMPANY_ID = 789;
     private static final int QUANTITY = 3;
     private static final double AMOUNT = 100.0;
 
@@ -493,7 +494,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         // Publisher fails to reserve the seats on the bus/broker
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, requestedSeats)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID,EVENT_ID, requestedSeats)).thenReturn(false);
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () ->
@@ -511,7 +512,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         // Handler returns null meaning adding seats failed business rules
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(null);
         when(activeOrderHandlerMock.canReleaseSeats(requestedSeats)).thenReturn(true);
@@ -520,7 +521,7 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(RuntimeException.class, () ->
                 activeOrderService.addSeatsToActiveOrder(VALID_SESSION, ORDER_ID, requestedSeats)
         );
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(validOrder.getEventId(), requestedSeats);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, validOrder.getEventId(), requestedSeats);
         verify(activeOrderRepoMock, never()).update(any());
     }
 
@@ -534,7 +535,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
         when(activeOrderHandlerMock.canReleaseSeats(requestedSeats)).thenReturn(true);
         // Force the database to crash on update
@@ -545,7 +546,7 @@ public class ActiveOrderServiceUnitTest {
         assertDoesNotThrow(() ->
                 activeOrderService.addSeatsToActiveOrder(VALID_SESSION, ORDER_ID, requestedSeats)
         );
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(validOrder.getEventId(), requestedSeats);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, validOrder.getEventId(), requestedSeats);
     }
 
     @Test
@@ -558,7 +559,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
 
         // Act & Assert
@@ -568,7 +569,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Verify that repo update ran smoothly with the modified order object
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
-        verify(activeOrderPublisherMock, times(1)).publishReserveSeats(validOrder.getEventId(), requestedSeats);
+        verify(activeOrderPublisherMock, times(1)).publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -702,8 +703,8 @@ public class ActiveOrderServiceUnitTest {
         // Assert
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(), eq(AMOUNT));
-    }
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
+        }
 
     @Test
     void GivenValidOrderAndPayment_WhenCompleteOrder_ThenOrderIsRemovedAndPublished() {
@@ -725,7 +726,7 @@ public class ActiveOrderServiceUnitTest {
         assertNotNull(result);
 
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
     }
 
     @Test
@@ -782,7 +783,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         // Verify Rollback
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, List.of("A-1", "A-2"));
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, List.of("A-1", "A-2"));
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "GA-1", 3);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
@@ -814,10 +815,10 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
         );
 
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, List.of("B-10", "B-11"));
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "VIP-1", 2);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble());
+        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
     }
 
     @Test
@@ -842,9 +843,9 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
         );
 
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, List.of("C-1"));
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, List.of("C-1"));
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble());
+        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
         verifyNoInteractions(paymentGatewayMock);
     }
 
@@ -1027,7 +1028,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToRelease(any(), any())).thenReturn(standingToRelease);
 
         // Network/Publisher Success Stubbing
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
         when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
         when(activeOrderHandlerMock.setNewTickets(any(), any(), any())).thenReturn(updatedOrder);
 
@@ -1038,7 +1039,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Verify state transitions occurred cleanly
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToRelease);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, seatsToRelease);
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-B", 1);
     }
 
@@ -1108,7 +1109,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(Map.of());
 
         // Seat allocation fails
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(false);
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
 
         // Act & Assert
@@ -1117,7 +1118,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         // Confirm system executed isolated rollback without deleting core layout
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToReserve);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, seatsToReserve);
         verify(activeOrderRepoMock, never()).update(any());
     }
 
@@ -1144,7 +1145,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(standingToReserve);
 
         // Seats succeed, Zone-A succeeds, Zone-B crashes
-        when(activeOrderPublisherMock.publishReserveSeats(EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
         when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
         when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-B", 4)).thenReturn(false);
 
@@ -1157,7 +1158,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         // Verify successful reserves up to crash point are systematically reversed
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(EVENT_ID, seatsToReserve);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(ORDER_ID, EVENT_ID, seatsToReserve);
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-A", 2);
         verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(EVENT_ID, "Zone-B", 4);
         verify(activeOrderRepoMock, never()).update(any());

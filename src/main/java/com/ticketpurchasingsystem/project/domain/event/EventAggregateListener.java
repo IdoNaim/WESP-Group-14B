@@ -1,6 +1,14 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.GetCompanyIdEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsUpToPolicyEvent;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -9,12 +17,18 @@ import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCreatedEvent;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCapacityChangedEvent;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
+
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.PurchaseContext;
+
 @Component
 public class EventAggregateListener {
     IEventRepo eventRepo;
+    IEventService eventService;
     // You can inject repositories or handlers here if needed, just like in UserListener
-    public EventAggregateListener(IEventRepo eventRepo) {
+    public EventAggregateListener(IEventRepo eventRepo, IEventService eventService) {
         this.eventRepo = eventRepo;
+        this.eventService = eventService;
     }
 
     @EventListener
@@ -36,6 +50,72 @@ public class EventAggregateListener {
     }
     @EventListener
     public void onGetCompanyIdEvent(GetCompanyIdEvent event){
+        Event e = eventRepo.findById(event.getEventId());
+        if(e == null){
+            event.setResult(null);
+            return;
+        }
+        event.setResult(e.getCompanyId());
+    }
 
+    @EventListener
+    public void onIsUpToPolicyEvent(IsUpToPolicyEvent event){
+        Event e = eventRepo.findById(event.getEventID());
+        if(e == null){
+            event.setResult(false);
+            return;
+        }
+        EventPurchasePolicy policy = e.getPurchasePolicy();
+        if(policy == null){
+            event.setResult(true); // No policy means no restrictions
+            return;
+        }
+        PurchaseContext context = new PurchaseContext(  
+                event.getTotalTickets(),
+                event.getAge(),
+                event.isSeatEmpty()
+        );
+        boolean isValid = policy.validate(context);
+        event.setResult(isValid);
+    }
+    @EventListener
+    public void onIsValidEventIDEvent(IsValidEventIDEvent event){
+        event.setResult(eventRepo.findById(event.getEventId()) != null);
+    }
+    @EventListener
+    public void onSeatReleaseEvent(SeatReleaseEvent event){
+        eventService.releaseSeats(event.getOrderID(), event.getEventID(), event.getSeatIds());
+    }
+    @EventListener
+    public void onStandingAreaReleaseEvent(StandingAreaReleaseEvent event){
+        eventService.releaseStandingArea(event.getEventID(), event.getAreaID(), event.getQuantity());
+    }
+    @EventListener
+    public void onSeatReservationEvent(SeatReservationEvent event){
+        try{
+            boolean success = eventService.reserveSeats(event.getOrderID(), event.getEventID(), event.getSeatIds());
+            if(success){
+                event.setResult(true);
+            }
+            else{
+                event.setResult(false);
+            }
+        }catch(Exception e){
+            event.setResult(false);
+        }
+    }
+    @EventListener
+    public void onStandingAreaReservationEvent(StandingAreaReservationEvent event){
+        try{
+            boolean success = eventService.reserveStandingArea(event.getEventId(), event.getAreaId(), event.getQuantity());
+            if(success){
+                event.setResult(true);
+            }
+            else{
+                event.setResult(false);
+            }
+        }catch(Exception e){
+            event.setResult(false);
+        }
     }
 }

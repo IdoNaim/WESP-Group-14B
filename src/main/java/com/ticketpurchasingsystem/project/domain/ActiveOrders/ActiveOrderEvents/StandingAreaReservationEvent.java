@@ -25,7 +25,7 @@ public class StandingAreaReservationEvent extends ApplicationEvent {
         return areaId;
     }
 
-    public int getAmount() {
+    public int getQuantity() {
         return quantity;
     }
 

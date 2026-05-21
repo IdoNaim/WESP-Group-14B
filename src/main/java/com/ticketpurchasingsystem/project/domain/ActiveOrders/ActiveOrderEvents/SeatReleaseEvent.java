@@ -7,17 +7,22 @@ import java.util.List;
 public class SeatReleaseEvent extends ApplicationEvent {
     private String eventID;
     private List<String> seatsIds;
-    public SeatReleaseEvent(Object source, String eventID, List<String> seatIds){
+    private String orderID;
+    public SeatReleaseEvent(Object source, String eventID, List<String> seatIds, String orderId){
         super(source);
         this.eventID= eventID;
         this.seatsIds = seatIds;
+        this.orderID = orderId;
     }
 
     public String getEventID() {
         return eventID;
     }
 
-    public List<String> getSeatsIds() {
+    public List<String> getSeatIds() {
         return seatsIds;
+    }
+    public String getOrderID() {
+        return orderID;
     }
 }

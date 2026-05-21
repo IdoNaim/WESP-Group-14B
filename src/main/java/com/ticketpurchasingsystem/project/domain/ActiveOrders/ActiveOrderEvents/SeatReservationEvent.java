@@ -7,13 +7,15 @@ import java.util.List;
 public class SeatReservationEvent extends ApplicationEvent{
     List<String> seatIds;
     String eventID;
+    String orderID;
     Boolean result;
 
-    public SeatReservationEvent(Object source, String eventID , List<String> seatIds) {
+    public SeatReservationEvent(Object source, String eventID , List<String> seatIds, String orderId) {
         super(source);
         this.seatIds = seatIds;
         this.eventID = eventID;
         result = null;
+        this.orderID = orderId;
     }
 
     public List<String> getSeatIds() {
@@ -31,6 +33,9 @@ public class SeatReservationEvent extends ApplicationEvent{
     //returns null if not set yet
     public Boolean getResult() {
         return result;
+    }
+    public String getOrderID() {
+        return orderID;
     }
 
     

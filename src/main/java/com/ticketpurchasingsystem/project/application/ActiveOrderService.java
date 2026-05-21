@@ -139,14 +139,14 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         checkIfExpiredAndThrowException(order);
         List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(order.getSeatIds(), seatIds);
-        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
+        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getOrderId(), order.getEventId(), seatsToReserve);
         if (!reserved) {
             logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
             throw new IllegalStateException("cant reserve these seats");
         }
         ActiveOrderItem newOrder = activeOrderHandler.addSeatsToActiveOrder(order, seatsToReserve);
         if(newOrder == null){
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null, order.getOrderId());
             logger.error("failed to add seats to order : " + orderId);
             throw new RuntimeException("failed to add seats");
         }
@@ -156,7 +156,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //        saveOrder(order);
             logger.info("Successfully added seats to order: " + orderId);
         }catch (Exception e){
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null, order.getOrderId());
             logger.error("got DB error when trying to update order: " + orderId +
                     " with seats");
         }
@@ -211,6 +211,11 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         checkIfExpiredAndThrowException(order);
         ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
+        Integer companyId = activeOrderPublisher.publishGetCompanyId(order.getEventId());
+        if(companyId == null){
+            logger.error("Complete order failed: Could not retrieve company ID for event: " + order.getEventId());
+            throw new RuntimeException("couldn't retrieve company information for this event");
+        }
 
         //check purchasePolicy
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
@@ -238,19 +243,18 @@ public class ActiveOrderService implements IActiveOrderService {
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
-        int companyId = activeOrderPublisher.publishGetCompanyId(order.getEventId());
         activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId);
         activeOrderRepo.delete(orderId);
         logger.info("Successfully completed order: " + orderId);
         return barcodesIssued;
     }
 
-    private void rollbackOrderReservations(String eventID, List<String> seatsToRollback, Map<String, Integer> standingToRollback) {
+    private void rollbackOrderReservations(String eventID, List<String> seatsToRollback, Map<String, Integer> standingToRollback, String orderId) {
         logger.info("Rolling back reservations for eventID: " + eventID);
         boolean canReleaseSeats = activeOrderHandler.canReleaseSeats(seatsToRollback);
         boolean canReleaseStanding = activeOrderHandler.canReleaseStanding(standingToRollback);
         if (canReleaseSeats) {
-            activeOrderPublisher.publishReleaseSeats(eventID, seatsToRollback);
+            activeOrderPublisher.publishReleaseSeats(orderId, eventID, seatsToRollback);
         }
         if (canReleaseStanding) {
             for (Map.Entry<String, Integer> entry : standingToRollback.entrySet()) {
@@ -266,7 +270,7 @@ public class ActiveOrderService implements IActiveOrderService {
         // Unreserve specific seats
         if (canReleaseSeats) {
             List<String> seatsArray = order.getSeatIds();
-            activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsArray);
+            activeOrderPublisher.publishReleaseSeats(order.getOrderId(), order.getEventId(), seatsArray);
         }
         // Unreserve standing area quantities
         if (canReleaseStanding) {
@@ -312,10 +316,10 @@ public class ActiveOrderService implements IActiveOrderService {
         Map<String, Integer> standingToReserve = activeOrderHandler.calculateStandingToReserve(currentStanding, newOrderStanding);
 
         //try to reserve the seats
-        boolean seatsReserved = activeOrderPublisher.publishReserveSeats(order.getEventId(), seatsToReserve);
+        boolean seatsReserved = activeOrderPublisher.publishReserveSeats(order.getOrderId(), order.getEventId(), seatsToReserve);
         if(!seatsReserved){
             logger.error("Update order failed: Could not reserve new seats for order: " + order.getOrderId());
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, null);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, null, order.getOrderId());
             throw new RuntimeException("couldnt reserve the new seats, didnt release current seats and tickets");
         }
 
@@ -334,7 +338,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         if(!standingReserved){
             logger.error("Update order failed: Could not reserve new standing area tickets for order: " + order.getOrderId());
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, successfulReserves);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, successfulReserves, order.getOrderId());
             throw new RuntimeException("couldnt reserve the new standing area tickes, didnt release current seats and tickets");
         }
         ActiveOrderItem updatedOrder = activeOrderHandler.setNewTickets(order, newOrderSeats,newOrderStanding );
@@ -345,9 +349,9 @@ public class ActiveOrderService implements IActiveOrderService {
             activeOrderRepo.update(updatedOrder);
 
             //if we managed to reserve all the seats/tickets and update DB, we release the unneeded ones:
-            activeOrderPublisher.publishReleaseSeats(order.getEventId(), seatsToRelease);
+            activeOrderPublisher.publishReleaseSeats(order.getOrderId(), order.getEventId(), seatsToRelease);
         }catch (Exception e){
-            rollbackOrderReservations(order.getEventId(), seatsToReserve, standingToReserve);
+            rollbackOrderReservations(order.getEventId(), seatsToReserve, standingToReserve, order.getOrderId());
         }
             // Calculate the exact standing area quantities that need to be released
             Map<String, Integer> standingAreaTicketsToRelease = activeOrderHandler.calculateStandingToRelease(currentStanding, newOrderStanding);

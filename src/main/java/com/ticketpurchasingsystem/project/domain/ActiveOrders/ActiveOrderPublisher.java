@@ -20,13 +20,13 @@ public class ActiveOrderPublisher {
     }
 
 
-    public boolean publishReserveSeats(String eventId, List<String> seatIds) {
-        SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds);
+    public boolean publishReserveSeats(String orderId, String eventId, List<String> seatIds) {
+        SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds, orderId);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishReleaseSeats(String eventID, List<String> seatIds){
-        SeatReleaseEvent event = new SeatReleaseEvent(this, eventID, seatIds);
+    public void publishReleaseSeats(String orderId, String eventId, List<String> seatIds){
+        SeatReleaseEvent event = new SeatReleaseEvent(this, eventId, seatIds, orderId);
         eventPublisher.publishEvent(event);
     }
 
@@ -44,10 +44,10 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishUnreserveTickets(String eventID, int quantity){
-        TicketUnreservationEvent event = new TicketUnreservationEvent(this, eventID, quantity);
-        eventPublisher.publishEvent(event);
-    }
+    // public void publishUnreserveTickets(String eventID, int quantity){
+    //     TicketUnreservationEvent event = new TicketUnreservationEvent(this, eventID, quantity);
+    //     eventPublisher.publishEvent(event);
+    // }
 
     public boolean publishIsUpToPolicy(ActiveOrderDTO order){
         IsUpToPolicyEvent event = new IsUpToPolicyEvent(this,order);
@@ -58,7 +58,7 @@ public class ActiveOrderPublisher {
         CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid, companyId);
         eventPublisher.publishEvent(event);
     }
-    public int publishGetCompanyId(String eventId){
+    public Integer publishGetCompanyId(String eventId){
         GetCompanyIdEvent event = new GetCompanyIdEvent(this, eventId);
         eventPublisher.publishEvent(event);
         return event.getResult();

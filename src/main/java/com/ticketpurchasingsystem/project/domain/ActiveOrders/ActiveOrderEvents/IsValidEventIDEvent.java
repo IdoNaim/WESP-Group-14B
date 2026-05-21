@@ -15,5 +15,5 @@ public class IsValidEventIDEvent extends ApplicationEvent {
     
     public boolean isValid() { return isValid; }
     
-    public void setValid(boolean valid) { this.isValid = valid; }
+    public void setResult(boolean valid) { this.isValid = valid; }
 }

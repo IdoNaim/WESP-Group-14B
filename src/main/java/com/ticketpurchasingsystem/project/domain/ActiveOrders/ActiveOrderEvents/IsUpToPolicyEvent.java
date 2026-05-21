@@ -39,4 +39,26 @@ public class IsUpToPolicyEvent extends ApplicationEvent {
         return order.getStandingAreaQuantities();
     }
 
+    public int getTotalTickets(){
+        int total = order.getSeatIds().size();
+        for (Integer quantity : order.getStandingAreaQuantities().values()) {
+            total += quantity;
+        }
+        return total;
+    }
+
+    public int getAge()
+    {
+        // This is a placeholder. In a real implementation, you would retrieve the user's age from the database or another service.
+        return 30; // Example age
+    }
+
+    public boolean isSeatEmpty(){
+        for (String seatId : order.getSeatIds()) {
+            if (seatId != null && !seatId.isEmpty()) {
+                return false; // Found a non-empty seat ID
+            }
+        }
+        return true; // All seat IDs are empty
+    }
 }
