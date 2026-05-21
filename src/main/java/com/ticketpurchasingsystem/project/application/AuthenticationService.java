@@ -35,4 +35,9 @@ public class AuthenticationService {
     public void removeSessionManually(String token) {
         sessionRepo.deleteByToken(token);
     }
+
+    public boolean isAdmin(String token) {
+        // TODO Auto-generated method stub
+        return true;
+    }
 }

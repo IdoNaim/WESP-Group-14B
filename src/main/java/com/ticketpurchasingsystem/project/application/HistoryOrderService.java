@@ -9,7 +9,6 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class HistoryOrderService implements IHistoryOrderService {
 
@@ -17,7 +16,8 @@ public class HistoryOrderService implements IHistoryOrderService {
     private final HistoryOrderHandler historyOrderHandler;
     private final AuthenticationService authenticationService;
 
-    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler, AuthenticationService authenticationService) {
+    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler,
+                               AuthenticationService authenticationService) {
         this.historyOrderRepo = historyOrderRepo;
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
@@ -41,14 +41,14 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
-    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken st,String userASk) {
+    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken st, String userASk) {
         List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
-        if(!isSessionTokenValid(st)) return historyOrders;
-        String  userId = authenticationService.getUser(st.getToken()); // This will throw an exception if the user does not exist
-        if(!authenticationService.isAdmin(st.getToken()) || !userId.equals(userASk)) {
-            return historyOrders; // Return empty list if the user is not an admin and is trying to access another user's history orders
-        }
-        for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userId)) {
+        if (!isSessionTokenValid(st)) return historyOrders;
+        String tokenOwner = authenticationService.getUser(st.getToken());
+        boolean isOwner = userASk.equals(tokenOwner);
+        boolean isAdmin = authenticationService.isAdmin(st.getToken());
+        if (!isOwner && !isAdmin) return historyOrders;
+        for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userASk)) {
             historyOrders.add(item.makeDTO());
         }
         return historyOrders;

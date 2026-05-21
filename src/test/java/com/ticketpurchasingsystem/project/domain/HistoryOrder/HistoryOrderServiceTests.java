@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
+import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +25,7 @@ public class HistoryOrderServiceTests {
     @Mock private IHistoryOrderRepo historyOrderRepo;
     @Mock private HistoryOrderHandler historyOrderHandler;
     @Mock private AuthenticationService authenticationService;
+    @Mock private ProductionService productionService;
 
     private HistoryOrderService historyOrderService;
 
@@ -41,7 +43,7 @@ public class HistoryOrderServiceTests {
     @BeforeEach
     void setUp() {
         historyOrderService = new HistoryOrderService(
-            historyOrderRepo, historyOrderHandler, authenticationService
+            historyOrderRepo, historyOrderHandler, authenticationService, productionService
         );
         seatIds = List.of("seat-1", "seat-2");
         standingAreaQuantities = new HashMap<>();
