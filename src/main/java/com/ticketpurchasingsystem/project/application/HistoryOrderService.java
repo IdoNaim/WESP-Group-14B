@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
-import com.ticketpurchasingsystem.project.application.UserService.IUserService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
@@ -16,17 +15,11 @@ public class HistoryOrderService implements IHistoryOrderService {
     private final IHistoryOrderRepo historyOrderRepo;
     private final HistoryOrderHandler historyOrderHandler;
     private final AuthenticationService authenticationService;
-    private final ISystemAdminService systemAdminService;
-    private final ProductionService productionService;
-    private final IUserService userService;
 
-    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler, AuthenticationService authenticationService, ISystemAdminService systemAdminService, ProductionService productionService, IUserService userService) {
+    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler, AuthenticationService authenticationService) {
         this.historyOrderRepo = historyOrderRepo;
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
-        this.systemAdminService = systemAdminService;
-        this.productionService = productionService;
-        this.userService = userService;
     }
 
 
