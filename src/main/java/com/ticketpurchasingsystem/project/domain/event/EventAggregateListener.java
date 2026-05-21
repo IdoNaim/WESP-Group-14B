@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.GetCompanyIdEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -10,9 +11,10 @@ import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCapaci
 
 @Component
 public class EventAggregateListener {
-
+    IEventRepo eventRepo;
     // You can inject repositories or handlers here if needed, just like in UserListener
-    public EventAggregateListener() {
+    public EventAggregateListener(IEventRepo eventRepo) {
+        this.eventRepo = eventRepo;
     }
 
     @EventListener
@@ -31,5 +33,9 @@ public class EventAggregateListener {
                         ", New Capacity=" + event.getNewCapacity()
         );
         // Handle logic
+    }
+    @EventListener
+    public void onGetCompanyIdEvent(GetCompanyIdEvent event){
+
     }
 }
