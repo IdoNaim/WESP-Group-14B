@@ -38,9 +38,15 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
-    public HistoryOrderDTO getHistoryOrder(SessionToken sessionToken, String orderId) {
-        // TODO Auto-generated method stub
-        return null;
+    public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
+        HistoryOrderDTO historyOrder = null;
+        if (isSessionTokenValid(st) && authenticationService.isAdmin(st.getToken())) {
+            HistoryOrderItem item = historyOrderRepo.findByOrderId(orderId);
+            if (item != null) {
+                historyOrder = item.makeDTO();
+            }
+        }
+        return historyOrder;
     }
 
     @Override
@@ -65,9 +71,15 @@ public class HistoryOrderService implements IHistoryOrderService {
     
     @Override
     // This method is intended for system administrators to retrieve all historical orders in the system. It should only be accessible to users with admin privileges, and it will return a list of HistoryOrderDTO objects representing all historical orders.
-    public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken sessionToken) {
-        return null;
-         // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken st) {
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if (isSessionTokenValid(st) && authenticationService.isAdmin(st.getToken())) {
+            for (HistoryOrderItem item : historyOrderRepo.findAll()) {
+                historyOrders.add(item.makeDTO());
+            }
+        }
+        return historyOrders;
+
     }
 
     private boolean isSessionTokenValid(SessionToken sessionToken) {
