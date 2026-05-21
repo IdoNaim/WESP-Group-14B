@@ -15,12 +15,15 @@ public class HistoryOrderService implements IHistoryOrderService {
     private final IHistoryOrderRepo historyOrderRepo;
     private final HistoryOrderHandler historyOrderHandler;
     private final AuthenticationService authenticationService;
+    private final ProductionService productionService;
 
     public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler,
-                               AuthenticationService authenticationService) {
+                               AuthenticationService authenticationService,
+                               ProductionService productionService) {
         this.historyOrderRepo = historyOrderRepo;
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
+        this.productionService = productionService;
     }
 
 
