@@ -9,6 +9,7 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 public class HistoryOrderService implements IHistoryOrderService {
 
@@ -40,10 +41,13 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
-    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken sessionToken, String userId) {
+    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken st,String userASk) {
         List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
-        if(!isSessionTokenValid(sessionToken)) return historyOrders;
-        if(!isUserInSystem(userId) || !isAdminInSystem(userId)) return historyOrders;
+        if(!isSessionTokenValid(st)) return historyOrders;
+        String  userId = authenticationService.getUser(st.getToken()); // This will throw an exception if the user does not exist
+        if(!authenticationService.isAdmin(st.getToken()) || !userId.equals(userASk)) {
+            return historyOrders; // Return empty list if the user is not an admin and is trying to access another user's history orders
+        }
         for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userId)) {
             historyOrders.add(item.makeDTO());
         }
@@ -55,8 +59,9 @@ public class HistoryOrderService implements IHistoryOrderService {
         return null;
          // TODO Auto-generated method stub
     }
-
+    
     @Override
+    // This method is intended for system administrators to retrieve all historical orders in the system. It should only be accessible to users with admin privileges, and it will return a list of HistoryOrderDTO objects representing all historical orders.
     public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken sessionToken) {
         return null;
          // TODO Auto-generated method stub
@@ -64,14 +69,6 @@ public class HistoryOrderService implements IHistoryOrderService {
 
     private boolean isSessionTokenValid(SessionToken sessionToken) {
         return authenticationService.validate(sessionToken.getToken());
-    }
-
-    private boolean isUserInSystem(String userId) {
-        return userService.getAllUsers().stream().anyMatch(user -> user.getUserId().equals(userId));
-    }
-
-    private boolean isAdminInSystem(String userId) {
-        return systemAdminService.getAllUsers().stream().anyMatch(admin -> admin.getId().equals(String.valueOf(userId)));
     }
 
     private boolean isCompanyInSystem(int companyId) {
