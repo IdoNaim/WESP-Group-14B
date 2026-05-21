@@ -2,6 +2,8 @@ package com.ticketpurchasingsystem.project.domain.event;
 
 import java.time.LocalDateTime;
 
+import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
+
 public class Event {
 
     private String eventId;
@@ -20,6 +22,8 @@ public class Event {
     private EventDiscountPolicy discountPolicy;
 
     private EventPurchasePolicy purchasePolicy;
+
+    private ITicketPurchaseRule ticketPurchasePolicy;
 
 
     public Event(
@@ -102,4 +106,12 @@ public class Event {
     }
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
+
+    public ITicketPurchaseRule getTicketPurchasePolicy() {
+        return ticketPurchasePolicy;
+    }
+
+    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
+        this.ticketPurchasePolicy = ticketPurchasePolicy;
+    }
 }

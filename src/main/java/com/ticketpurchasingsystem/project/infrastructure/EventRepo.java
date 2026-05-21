@@ -7,9 +7,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Repository;
+
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 
+@Repository
 public class EventRepo implements IEventRepo {
 
     private final Map<String, Event> storage = new HashMap<>();
