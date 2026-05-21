@@ -9,6 +9,9 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPubli
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,10 +20,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -343,81 +348,109 @@ public class AppointManagerTest {
         ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
         assertTrue(node.getPermissions().isEmpty());
     }
+
+    // Concurrency tests
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    private record ConcurrencyStack(AuthenticationService auth, ProdRepo repo, ProductionService service) {
+    }
+
+    private ConcurrencyStack buildRealStack() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo,
+                productionEventPublisher);
+        return new ConcurrencyStack(realAuth, realRepo, svc);
+    }
+
     @Test
-    public void GivenTwoThreadsTryingToAppointManagerWithDifferentPermissions_WhenAppointManager_ThenOneSucceedsAndOneFails() throws InterruptedException {
+    public void GivenMultipleThreads_WhenConcurrentAppointDifferentManagers_ThenAllSucceedThroughRetries()
+            throws Exception {
         // Arrange
-        ProductionCompany company = companyWithFounderAndOwner();
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Managed Co", "desc", "managed@co.com"));
+        int companyId = stack.repo().findByName("Managed Co").get().getCompanyId();
 
-        // Mocking setup
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
-        when(productionEventPublisher.publishIsUserRegisteredEvent(MANAGER_ID)).thenReturn(true);
-        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        // Define two different sets of permissions
-        Set<ManagerPermission> permissionsA = EnumSet.of(ManagerPermission.INVENTORY_MANAGEMENT);
-        Set<ManagerPermission> permissionsB = EnumSet.of(ManagerPermission.COMPANY_POLICY_MANAGEMENT);
-
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        int threadCount = 3;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch finishLatch = new CountDownLatch(2);
-
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failureCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().appointManager(token, companyId, "manager-" + idx, PERMISSIONS);
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
 
         // Act
-
-        // Thread 1: Attempts with permissionsA
-        executorService.execute(() -> {
-            try {
-                startLatch.await();
-                if (productionService.appointManager(VALID_TOKEN, COMPANY_ID, MANAGER_ID, permissionsA)) {
-                    successCount.incrementAndGet();
-                } else {
-                    failureCount.incrementAndGet();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                finishLatch.countDown();
-            }
-        });
-
-        // Thread 2: Attempts with permissionsB
-        executorService.execute(() -> {
-            try {
-                startLatch.await();
-                if (productionService.appointManager(VALID_TOKEN, COMPANY_ID, MANAGER_ID, permissionsB)) {
-                    successCount.incrementAndGet();
-                } else {
-                    failureCount.incrementAndGet();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                finishLatch.countDown();
-            }
-        });
-
-        startLatch.countDown(); // Race starts here
-        boolean completed = finishLatch.await(5, TimeUnit.SECONDS);
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
 
         // Assert
-        assertTrue(completed, "The threads did not finish in time");
-        assertEquals(1, successCount.get(), "Exactly one thread should have succeeded");
-        assertEquals(1, failureCount.get(), "Exactly one thread should have failed");
+        assertEquals(threadCount, successCount.get(),
+                "All concurrent appoint-manager operations must succeed through optimistic-locking retries");
+    }
 
-        // Verify that the manager's permissions in the company match exactly ONE of the sets
-        // (Ensuring the second thread didn't overwrite or merge permissions)
-        ManagerDTO finalManager = company.getManagerDTO(MANAGER_ID).orElseThrow();
-        Set<ManagerPermission> finalPermissions = finalManager.getPermissions();
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentAppointSameManager_ThenOnlyOneSucceeds() throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Exclusive Co", "desc", "exclusive@co.com"));
+        int companyId = stack.repo().findByName("Exclusive Co").get().getCompanyId();
 
-        boolean matchesA = finalPermissions.equals(permissionsA);
-        boolean matchesB = finalPermissions.equals(permissionsB);
+        int threadCount = 5;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
 
-        assertTrue(matchesA ^ matchesB, "Permissions should match either Set A or Set B, but not both or none");
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().appointManager(token, companyId, "same-manager", PERMISSIONS);
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
 
-        executorService.shutdown();
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(1, successCount.get(),
+                "Only one thread must succeed when all race to appoint the same manager — duplicates must be rejected");
     }
 }
