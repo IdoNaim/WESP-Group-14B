@@ -9,10 +9,12 @@ import java.util.List;
 public class IsUpToPolicyEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
     private Boolean result;
-    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order){
+    private int age;
+    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order, int age){
         super(source);
         this.order = order;
         this.result = null;
+        this.age = age;
     }
 
     public boolean getResult() {
@@ -49,8 +51,7 @@ public class IsUpToPolicyEvent extends ApplicationEvent {
 
     public int getAge()
     {
-        // This is a placeholder. In a real implementation, you would retrieve the user's age from the database or another service.
-        return 30; // Example age
+       return age;
     }
 
     public boolean isSeatEmpty(){

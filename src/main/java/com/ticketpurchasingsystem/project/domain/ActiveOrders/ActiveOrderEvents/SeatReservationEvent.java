@@ -5,17 +5,20 @@ import org.springframework.context.ApplicationEvent;
 import java.util.List;
 
 public class SeatReservationEvent extends ApplicationEvent{
-    List<String> seatIds;
-    String eventID;
-    String orderID;
-    Boolean result;
+    private final List<String> seatIds;
+    private final String eventID;
+    private final String orderID;
+    private Boolean result;
+    private String sessionToken;
 
-    public SeatReservationEvent(Object source, String eventID , List<String> seatIds, String orderId) {
+
+    public SeatReservationEvent(Object source, String sessionToken, String eventID , List<String> seatIds, String orderId) {
         super(source);
         this.seatIds = seatIds;
         this.eventID = eventID;
         result = null;
         this.orderID = orderId;
+        this.sessionToken = sessionToken;
     }
 
     public List<String> getSeatIds() {
@@ -36,6 +39,9 @@ public class SeatReservationEvent extends ApplicationEvent{
     }
     public String getOrderID() {
         return orderID;
+    }
+    public String getSessionToken() {
+        return sessionToken;
     }
 
     

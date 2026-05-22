@@ -2,7 +2,6 @@ package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
 
 import java.util.List;
 
@@ -20,8 +19,8 @@ public class ActiveOrderPublisher {
     }
 
 
-    public boolean publishReserveSeats(String orderId, String eventId, List<String> seatIds) {
-        SeatReservationEvent event = new SeatReservationEvent(this, eventId, seatIds, orderId);
+    public boolean publishReserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
+        SeatReservationEvent event = new SeatReservationEvent(this, sessionToken, eventId, seatIds, orderId);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
@@ -30,13 +29,13 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
     }
 
-    public boolean publishReserveStandingArea(String eventId, String areaId, int quantity) {
-        StandingAreaReservationEvent event = new StandingAreaReservationEvent(this, eventId, areaId, quantity);
+    public boolean publishReserveStandingArea(String sessionToken, String eventId, String areaId, int quantity) {
+        StandingAreaReservationEvent event = new StandingAreaReservationEvent(this, sessionToken, eventId, areaId, quantity);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishReleaseStandingArea(String eventId, String areaID, int quantity){
-        StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(this, eventId, areaID, quantity);
+    public void publishReleaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
+        StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(this, sessionToken, eventId, areaID, quantity);
         eventPublisher.publishEvent(event);
     }
     public boolean publishIsMember(String userId){

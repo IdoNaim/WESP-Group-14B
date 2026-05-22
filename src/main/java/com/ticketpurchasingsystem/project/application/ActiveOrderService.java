@@ -139,7 +139,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
         List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(order.getSeatIds(), seatIds);
-        boolean reserved = activeOrderPublisher.publishReserveSeats(order.getOrderId(), order.getEventId(), seatsToReserve);
+        boolean reserved = activeOrderPublisher.publishReserveSeats(sessionToken.getToken(), order.getOrderId(), order.getEventId(), seatsToReserve);
         if (!reserved) {
             logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
             throw new IllegalStateException("cant reserve these seats");
@@ -174,14 +174,14 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalArgumentException("Order not found");
         }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
-        boolean reserved = activeOrderPublisher.publishReserveStandingArea(order.getEventId(), areaId, quantity);
+        boolean reserved = activeOrderPublisher.publishReserveStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantity);
         if (!reserved) {
             logger.error("Add standing area failed: Could not reserve area " + areaId + " for event: " + order.getEventId());
             throw new IllegalStateException("cant reserve these standing area tickets");
         }
         ActiveOrderItem newOrder = activeOrderHandler.addStandingAreaToActiveOrder(order, areaId, quantity);
         if(newOrder == null){
-            activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantity);
+            activeOrderPublisher.publishReleaseStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantity);
             logger.error("failed to add standing area tickets to order : " + orderId);
             throw new RuntimeException("failed to add standing area tickets");
         }
@@ -191,7 +191,7 @@ public class ActiveOrderService implements IActiveOrderService {
 //        saveOrder(order);
             logger.info("Successfully added standing area to order: " + orderId);
         }catch (Exception e){
-            activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantity);
+            activeOrderPublisher.publishReleaseStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantity);
             logger.error("got DB error when trying to update order: " + orderId +
                     " with "+ quantity +" tickets for area "+ areaId + " of event "+ order.getEventId());
         }
@@ -218,7 +218,8 @@ public class ActiveOrderService implements IActiveOrderService {
         }
 
         //check purchasePolicy
-        boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO);
+        int age = getUserAge(sessionToken);
+        boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO, age);
         if(!upToPolicy){
             logger.error("Complete order failed: Order " + orderId + " violates purchase policies");
             throw new IllegalStateException("Order violates purchase policies");
@@ -258,7 +259,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         if (canReleaseStanding) {
             for (Map.Entry<String, Integer> entry : standingToRollback.entrySet()) {
-                activeOrderPublisher.publishReleaseStandingArea(eventID, entry.getKey(), entry.getValue());
+                activeOrderPublisher.publishReleaseStandingArea(sessionToken, eventID, entry.getKey(), entry.getValue());
             }
         }
     }
@@ -275,7 +276,7 @@ public class ActiveOrderService implements IActiveOrderService {
         // Unreserve standing area quantities
         if (canReleaseStanding) {
             for (HashMap.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
-                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), entry.getKey(), entry.getValue());
+                activeOrderPublisher.publishReleaseStandingArea(sessionToken, order.getEventId(), entry.getKey(), entry.getValue());
             }
         }
     }
@@ -316,7 +317,7 @@ public class ActiveOrderService implements IActiveOrderService {
         Map<String, Integer> standingToReserve = activeOrderHandler.calculateStandingToReserve(currentStanding, newOrderStanding);
 
         //try to reserve the seats
-        boolean seatsReserved = activeOrderPublisher.publishReserveSeats(order.getOrderId(), order.getEventId(), seatsToReserve);
+        boolean seatsReserved = activeOrderPublisher.publishReserveSeats(sessionToken.getToken(), order.getOrderId(), order.getEventId(), seatsToReserve);
         if(!seatsReserved){
             logger.error("Update order failed: Could not reserve new seats for order: " + order.getOrderId());
             rollbackOrderReservations(sessionToken.getToken(), order.getEventId(), seatsToReserve, null, order.getOrderId());
@@ -327,7 +328,7 @@ public class ActiveOrderService implements IActiveOrderService {
         Map<String, Integer> successfulReserves = new HashMap<>();
         for (Map.Entry<String, Integer> entry : standingToReserve.entrySet()) {
             standingReserved = activeOrderPublisher.publishReserveStandingArea(
-                    order.getEventId(), entry.getKey(), entry.getValue()
+                    sessionToken.getToken(), order.getEventId(), entry.getKey(), entry.getValue()
             );
             if (!standingReserved) {
                 break;
@@ -360,7 +361,7 @@ public class ActiveOrderService implements IActiveOrderService {
             for (Map.Entry<String, Integer> entry : standingAreaTicketsToRelease.entrySet()) {
                 String areaId = entry.getKey();
                 int quantityToRelease = entry.getValue();
-                activeOrderPublisher.publishReleaseStandingArea(order.getEventId(), areaId, quantityToRelease);
+                activeOrderPublisher.publishReleaseStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantityToRelease);
             }
             logger.info("Successfully updated order: " + order.getOrderId());
     }
@@ -432,5 +433,10 @@ public class ActiveOrderService implements IActiveOrderService {
         //TODO: implement this or delete this
         // Implement your logic to validate the order ID here
         return true; // Placeholder return value
+    }
+    private int getUserAge(SessionToken sessionToken) {
+        //TODO: implement this
+        return 1;
+
     }
 }

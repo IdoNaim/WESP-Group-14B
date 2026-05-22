@@ -494,7 +494,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         // Publisher fails to reserve the seats on the bus/broker
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID,EVENT_ID, requestedSeats)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID,EVENT_ID, requestedSeats)).thenReturn(false);
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () ->
@@ -512,7 +512,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         // Handler returns null meaning adding seats failed business rules
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(null);
         when(activeOrderHandlerMock.canReleaseSeats(requestedSeats)).thenReturn(true);
@@ -535,7 +535,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
         when(activeOrderHandlerMock.canReleaseSeats(requestedSeats)).thenReturn(true);
         // Force the database to crash on update
@@ -559,7 +559,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
 
         // Act & Assert
@@ -569,7 +569,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Verify that repo update ran smoothly with the modified order object
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
-        verify(activeOrderPublisherMock, times(1)).publishReserveSeats(ORDER_ID, EVENT_ID, requestedSeats);
+        verify(activeOrderPublisherMock, times(1)).publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -608,7 +608,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         // Publisher fails to block the inventory allotment
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, AREA_ID, QUANTITY)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(false);
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () ->
@@ -624,7 +624,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         // Business logic handler rejects the modification layout
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(null);
 
@@ -632,7 +632,7 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(RuntimeException.class, () ->
                 activeOrderService.addStandingAreaToActiveOrder(VALID_SESSION, ORDER_ID, AREA_ID, QUANTITY)
         );
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(validOrder.getEventId(), AREA_ID, QUANTITY);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, validOrder.getEventId(), AREA_ID, QUANTITY);
         verify(activeOrderRepoMock, never()).update(any());
     }
 
@@ -644,7 +644,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(updatedOrder);
 
         // Force database execution layer exception
@@ -657,7 +657,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         // Verify the rollback matches the correct Event ID parameter matching code execution path
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, AREA_ID, QUANTITY);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY);
     }
 
     @Test
@@ -668,7 +668,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(updatedOrder);
 
         // Act & Assert
@@ -690,7 +690,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
 
@@ -714,7 +714,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay()).thenReturn(true);
@@ -784,7 +784,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Verify Rollback
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("A-1", "A-2"));
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "GA-1", 3);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "GA-1", 3);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
 
@@ -801,7 +801,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay()).thenReturn(false);
@@ -816,7 +816,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN,ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "VIP-1", 2);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
     }
@@ -830,7 +830,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
@@ -862,7 +862,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
@@ -909,7 +909,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         lenient().when(paymentGatewayMock.pay()).thenReturn(true);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
@@ -961,7 +961,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
@@ -1028,8 +1028,8 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToRelease(any(), any())).thenReturn(standingToRelease);
 
         // Network/Publisher Success Stubbing
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, "Zone-A", 2)).thenReturn(true);
         when(activeOrderHandlerMock.setNewTickets(any(), any(), any())).thenReturn(updatedOrder);
 
         // Act & Assert
@@ -1040,7 +1040,7 @@ public class ActiveOrderServiceUnitTest {
         // Verify state transitions occurred cleanly
         verify(activeOrderRepoMock, times(1)).update(updatedOrder);
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, seatsToRelease);
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-B", 1);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "Zone-B", 1);
     }
 
     @Test
@@ -1109,7 +1109,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(Map.of());
 
         // Seat allocation fails
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(false);
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
 
         // Act & Assert
@@ -1145,9 +1145,9 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.calculateStandingToReserve(any(), any())).thenReturn(standingToReserve);
 
         // Seats succeed, Zone-A succeeds, Zone-B crashes
-        when(activeOrderPublisherMock.publishReserveSeats(ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-A", 2)).thenReturn(true);
-        when(activeOrderPublisherMock.publishReserveStandingArea(EVENT_ID, "Zone-B", 4)).thenReturn(false);
+        when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, seatsToReserve)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, "Zone-A", 2)).thenReturn(true);
+        when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, "Zone-B", 4)).thenReturn(false);
 
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
         when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
@@ -1159,8 +1159,8 @@ public class ActiveOrderServiceUnitTest {
 
         // Verify successful reserves up to crash point are systematically reversed
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, seatsToReserve);
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(EVENT_ID, "Zone-A", 2);
-        verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(EVENT_ID, "Zone-B", 4);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "Zone-A", 2);
+        verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "Zone-B", 4);
         verify(activeOrderRepoMock, never()).update(any());
     }
 }

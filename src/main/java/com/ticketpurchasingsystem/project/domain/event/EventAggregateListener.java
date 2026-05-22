@@ -88,12 +88,12 @@ public class EventAggregateListener {
     }
     @EventListener
     public void onStandingAreaReleaseEvent(StandingAreaReleaseEvent event){
-        eventService.releaseStandingArea(event.getEventID(), event.getAreaID(), event.getQuantity());
+        eventService.releaseStandingArea(event.getSessionToken(), event.getEventID(), event.getAreaID(), event.getQuantity());
     }
     @EventListener
     public void onSeatReservationEvent(SeatReservationEvent event){
         try{
-            boolean success = eventService.reserveSeats(event.getOrderID(), event.getEventID(), event.getSeatIds());
+            boolean success = eventService.reserveSeats(event.getSessionToken(), event.getOrderID(), event.getEventID(), event.getSeatIds());
             if(success){
                 event.setResult(true);
             }
@@ -107,7 +107,7 @@ public class EventAggregateListener {
     @EventListener
     public void onStandingAreaReservationEvent(StandingAreaReservationEvent event){
         try{
-            boolean success = eventService.reserveStandingArea(event.getEventId(), event.getAreaId(), event.getQuantity());
+            boolean success = eventService.reserveStandingArea(event.getSessionToken(), event.getEventId(), event.getAreaId(), event.getQuantity());
             if(success){
                 event.setResult(true);
             }
