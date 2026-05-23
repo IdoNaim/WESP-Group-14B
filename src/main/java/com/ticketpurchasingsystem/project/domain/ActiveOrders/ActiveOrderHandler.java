@@ -130,4 +130,12 @@ public class ActiveOrderHandler {
         newOrder.setStandingAreaQuantities(newOrderStanding);
         return newOrder;
     }
+    public ActiveOrderItem removeSeatsFromActiveOrder(ActiveOrderItem order, List<String> seatIdsToRemove) {
+        if (order == null || seatIdsToRemove == null) {
+            return null;
+        }
+        ActiveOrderItem newOrder = new ActiveOrderItem(order);
+        newOrder.removeSeatIds(seatIdsToRemove);
+        return newOrder;
+    }
 }

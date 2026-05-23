@@ -1171,5 +1171,61 @@ public class ActiveOrderServiceUnitTest {
         verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "Zone-B", 4);
         verify(activeOrderRepoMock, never()).update(any());
     }
-    //saa
+    
+    
+    @Test
+    public void GivenOrderBelongingToAnotherUser_WhenCompleteOrder_ThenThrowException() {
+        SessionToken sessionTokenUserA = mock(SessionToken.class);
+        when(sessionTokenUserA.getToken()).thenReturn("token_user_a");
+        when(authenticationServiceMock.getUser("token_user_a")).thenReturn("user_a"); 
+        when(authenticationServiceMock.validate("token_user_a")).thenReturn(true);
+
+        ActiveOrderItem orderBelongingToUserB = new ActiveOrderItem("order1", "user_b", "event1");
+        orderBelongingToUserB.setCreatedAt(new Timestamp(System.currentTimeMillis())); 
+        orderBelongingToUserB.setSeatIds(List.of("VIP-1", "VIP-2")); 
+        
+        when(activeOrderRepoMock.findById("order1")).thenReturn(orderBelongingToUserB);
+        when(activeOrderHandlerMock.isUsersOrder("user_a",orderBelongingToUserB)).thenReturn(false); 
+
+        IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            activeOrderService.completeOrder(paymentGateway, sessionTokenUserA, 100.0, "order1");
+        });
+
+        assertEquals("Unauthorized: Order does not belong to the current user", exception.getMessage());
+        
+        verify(paymentGateway, never()).pay();
+        
+        verify(activeOrderRepoMock, never()).delete(anyString());
+    }
+    @Test
+    public void GivenOrderWithUnreservedSeatingTickets_WhenCompleteOrder_ThenThrowExceptionAndOrderIsUpdated() {
+    // Arrange
+        ActiveOrderItem order = orderWithSeats(USER_ID);
+        List<String> unreservedSeats = List.of("seat-1"); 
+        ActiveOrderItem updatedOrderMock = mock(ActiveOrderItem.class);
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(order);
+        when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(activeOrderHandlerMock.isUsersOrder(USER_ID, order)).thenReturn(true);
+        when(activeOrderPublisherMock.publishCheckSeatsReserved(
+                eq(VALID_TOKEN), eq(ORDER_ID), eq(EVENT_ID), eq(order.getSeatIds())
+        )).thenReturn(unreservedSeats);
+
+        when(activeOrderHandlerMock.removeSeatsFromActiveOrder(order, unreservedSeats)).thenReturn(updatedOrderMock);
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () ->
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
+        );
+
+
+        verify(activeOrderHandlerMock, times(1)).removeSeatsFromActiveOrder(order, unreservedSeats);
+        verify(activeOrderRepoMock, times(1)).update(updatedOrderMock);
+        verify(activeOrderPublisherMock, never()).publishIsUpToPolicy(any(), anyInt());
+        verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
+        verify(barcodeGatewayMock, never()).issueBarcodes(any());
+        verifyNoInteractions(paymentGatewayMock);
+    }
 }

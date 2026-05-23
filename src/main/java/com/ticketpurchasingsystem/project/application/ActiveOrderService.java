@@ -209,7 +209,22 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.error("Complete order failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
         }
+
+        if (!activeOrderHandler.isUsersOrder(authenticationService.getUser(sessionToken.getToken()), order)) {
+            logger.error("Complete order failed: user " + authenticationService.getUser(sessionToken.getToken()) + " attempted to complete order " + orderId + " belonging to " + order.getUserId());
+            throw new IllegalArgumentException("Unauthorized: Order does not belong to the current user");
+        }
+
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
+        //check that the seats reserved for this order still reserved for this order (in case they were released by the user in another session, or by the system due to inactivity):
+        List<String> seatsNotReserved = activeOrderPublisher.publishCheckSeatsReserved(sessionToken.getToken(), order.getOrderId(), order.getEventId(), order.getSeatIds());
+        if(!(seatsNotReserved == null || seatsNotReserved.isEmpty() )){
+            logger.error("Complete order failed: One or more seats for order " + orderId + " are no longer reserved");
+            ActiveOrderItem updatedOrder = activeOrderHandler.removeSeatsFromActiveOrder(order, seatsNotReserved);
+            activeOrderRepo.update(updatedOrder);
+            throw new IllegalStateException("One or more seats are no longer reserved");
+            
+        }
         ActiveOrderDTO orderDTO = new ActiveOrderDTO(order);
         Integer companyId = activeOrderPublisher.publishGetCompanyId(order.getEventId());
         if(companyId == null){

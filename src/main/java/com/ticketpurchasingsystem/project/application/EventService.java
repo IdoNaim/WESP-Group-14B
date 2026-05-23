@@ -301,4 +301,9 @@ public class EventService implements IEventService {
         //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
             return false;
      }
+     //checks for each seatId if its reserved to orderId, and returns a list of seatIds, that arent reserved for this specific orderId.
+     public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
+        //TODO: Implement the logic to check if seats are reserved based on the orderId, eventId, and seatIds
+            return List.of();
+     }
 }
