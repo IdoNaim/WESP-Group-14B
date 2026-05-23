@@ -15,12 +15,16 @@ public class MemoryUserRepo implements IUserRepo {
 
     @Override
     public void store(UserInfo userInfo) {
-        users.put(userInfo.getId(), userInfo);
+        if (userInfo != null) {
+            users.put(userInfo.getId(), userInfo);
+        }
     }
 
     @Override
     public void delete(String userId) {
-        users.remove(userId);
+        if (userId != null && users.containsKey(userId)) {
+            users.remove(userId);
+        }
     }
 
     @Override

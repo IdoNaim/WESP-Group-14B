@@ -1,6 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.User.Events.UserEvents;
 
-public class UserLeavedPlatformEvent {
+public class UserLeavedPlatformEvent extends UserEvents {
     private String userId;
     private String sessionTokenStr;
 

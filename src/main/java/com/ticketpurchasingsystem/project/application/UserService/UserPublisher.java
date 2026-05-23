@@ -47,5 +47,9 @@ public class UserPublisher {
         eventPublisher.publishEvent(new UserNotFoundEvent(userId));
     }
 
-    
+    public void publishEvent(Object event) {
+        if (event != null) {
+            eventPublisher.publishEvent(event);
+        }
+    }
 }

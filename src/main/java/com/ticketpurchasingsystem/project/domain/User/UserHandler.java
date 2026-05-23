@@ -4,6 +4,9 @@ import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.domain.Utils.PasswordEncoderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestLeavedPlatformEvent;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLeavedPlatformEvent;
+
 @Component
 public class UserHandler {
 
@@ -26,12 +29,24 @@ public class UserHandler {
         return new UserInfo(guestId, sessionTokenStr);
     }
 
-    public void handleUserExit(UserInfo userInfo) {
+    public ExitProcessData handleUserExit(UserInfo userInfo) {
         if (userInfo == null) {
-            throw new RuntimeException("User not found.");
+            return new ExitProcessData(null, null);
         }
-        userInfo.LoggedIn = false;
-        userInfo.setSessionTokenStr(null);
+
+        if (userInfo.isGuest()) {
+            return new ExitProcessData(
+                null,
+                new GuestLeavedPlatformEvent(userInfo.getId(), userInfo.getSessionTokenStr())
+            );
+        } else {
+            userInfo.LoggedIn = false;
+            userInfo.setSessionTokenStr(null);
+            return new ExitProcessData(
+                userInfo,
+                new UserLeavedPlatformEvent(userInfo.getId(), userInfo.getSessionTokenStr())
+            );
+        }
     }
 
     public void loginUser(UserInfo userInfo, String password, String newSessionTokenStr) {
@@ -105,5 +120,27 @@ public class UserHandler {
             userInfo.setUserProduction(new UserProduction());
         }
         userInfo.getUserProduction().addProduction(companyId, role);
+    }
+
+    public void validateGuest(UserInfo userInfo) {
+        if (userInfo == null) {
+            throw new RuntimeException("Invalid guest info.");
+        }
+        if (!userInfo.isGuest()) {
+            throw new RuntimeException("User is not a guest.");
+        }
+    }
+
+    public void validateUserDoesNotExist(UserInfo userInfo) {
+        if (userInfo == null) {
+            return;
+        }
+        throw new RuntimeException("User with the same ID already exists.");
+    }
+
+    public void validateUserFound(UserInfo userInfo) {
+        if (userInfo == null) {
+            throw new RuntimeException("User not found.");
+        }
     }
 }
