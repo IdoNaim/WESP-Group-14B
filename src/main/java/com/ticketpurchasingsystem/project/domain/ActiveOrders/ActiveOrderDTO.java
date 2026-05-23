@@ -3,6 +3,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ActiveOrderDTO {
     private String orderId;
@@ -65,6 +66,25 @@ public class ActiveOrderDTO {
     }
     public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities){
         this.StandingAreaQuantities = standingAreaQuantities;
+    }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true; // Step 1
+        if (obj == null || getClass() != obj.getClass()) return false; // Step 2 & 3
+        ActiveOrderDTO other = (ActiveOrderDTO) obj;
+        boolean answer = java.util.Objects.equals(orderId, other.getOrderId()) &&
+                java.util.Objects.equals(userId, other.getUserId()) &&
+                java.util.Objects.equals(eventId, other.getEventId()) &&
+                java.util.Objects.equals(createdAt, other.getCreatedAt()) &&
+                java.util.Objects.equals(seatIds, other.getSeatIds());
+        if (!answer) {
+            return false;
+        }
+        Map<String, Integer> map1 = this.getStandingAreaQuantities();
+        Map<String, Integer> map2 = other.getStandingAreaQuantities();
+        return java.util.Objects.equals(map1, map2);
     }
 
 }

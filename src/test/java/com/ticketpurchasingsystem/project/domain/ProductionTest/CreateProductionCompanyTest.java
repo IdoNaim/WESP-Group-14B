@@ -7,13 +7,19 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -197,5 +203,58 @@ public class CreateProductionCompanyTest {
         assertTrue(company.getOwnerIds().contains("founder-eden"), "Founder must still be in ownerIds");
         assertTrue(company.getOwnerIds().contains("owner-itay"), "New owner must be in ownerIds");
         assertEquals(2, company.getOwnerIds().size());
+    }
+
+    // Concurrency tests
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentCreateDifferentCompanies_ThenAllSucceed() throws Exception {
+        // Arrange
+        com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo sessionRepo = new com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo();
+        com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService domainAuth = new com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService(
+                sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        com.ticketpurchasingsystem.project.application.AuthenticationService realAuth = new com.ticketpurchasingsystem.project.application.AuthenticationService(
+                domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService realService = new ProductionService(realAuth, new ProductionHandler(), realRepo,
+                productionEventPublisher);
+
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = realAuth.login("founder-" + idx);
+                    boolean result = realService.createProductionCompany(token,
+                            new ProductionCompanyDTO("Company-" + idx, "desc", "c" + idx + "@co.com"));
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(0, errorCount.get(), "No exceptions should occur during concurrent company creation");
+        assertEquals(threadCount, successCount.get(), "Each thread must create its own company successfully");
     }
 }
