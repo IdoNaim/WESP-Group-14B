@@ -1,11 +1,13 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+import com.ticketpurchasingsystem.project.domain.Utils.ResettableRepo;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class ActiveOrderMemRepo implements IActiveOrderRepo {
+public class ActiveOrderMemRepo implements IActiveOrderRepo, ResettableRepo {
 
     private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ReentrantLock> orderLocks = new ConcurrentHashMap<>();
@@ -124,5 +126,11 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             lock.unlock();
         }
     }
+    public void clear(){
+        this.activeOrders.clear();
+        this.userToOrder.clear();
+        this.orderLocks.clear();
+    }
+
 }
 
