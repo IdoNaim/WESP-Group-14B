@@ -33,3 +33,7 @@ build/
 .vscode/
 .claude/
 
+### macOS ###
+.DS_Store
+._*
+**/._*
