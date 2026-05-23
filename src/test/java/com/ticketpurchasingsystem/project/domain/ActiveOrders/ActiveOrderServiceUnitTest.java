@@ -20,6 +20,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class) // Added this to initialize the mocks!
@@ -690,9 +695,11 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
+    
 
 
         when(paymentGatewayMock.pay()).thenReturn(true);
@@ -714,7 +721,8 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay()).thenReturn(true);
@@ -801,7 +809,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay()).thenReturn(false);
@@ -830,7 +838,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
@@ -861,8 +869,8 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
@@ -908,11 +916,11 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         lenient().when(paymentGatewayMock.pay()).thenReturn(true);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
-        lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.isUsersOrder(anyString(), any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
         ActiveOrderItem order = service.createPendingOrder(VALID_SESSION, "userB", EVENT_ID);
         String liveOrderId = order.getOrderId();
@@ -960,8 +968,8 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
