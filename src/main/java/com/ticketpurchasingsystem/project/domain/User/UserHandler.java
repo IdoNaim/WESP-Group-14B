@@ -33,18 +33,18 @@ public class UserHandler {
         if (userInfo == null) {
             return new ExitProcessData(null, null);
         }
-
+        String sessionTokenStr = userInfo.getSessionTokenStr();
         if (userInfo.isGuest()) {
             return new ExitProcessData(
                 null,
-                new GuestLeavedPlatformEvent(userInfo.getId(), userInfo.getSessionTokenStr())
+                new GuestLeavedPlatformEvent(userInfo.getId(), sessionTokenStr)
             );
         } else {
             userInfo.LoggedIn = false;
             userInfo.setSessionTokenStr(null);
             return new ExitProcessData(
                 userInfo,
-                new UserLeavedPlatformEvent(userInfo.getId(), userInfo.getSessionTokenStr())
+                new UserLeavedPlatformEvent(userInfo.getId(), sessionTokenStr)
             );
         }
     }

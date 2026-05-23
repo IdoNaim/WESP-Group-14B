@@ -77,8 +77,8 @@ public class UserService implements IUserService {
             if (!authenticationService.validate(sessionTokenStr)) {
                 throw new RuntimeException("Invalid session token.");
             }
+            userHandler.validateUserDoesNotExist(userRepo.findByID(userId));
             UserInfo newUser = userHandler.registerUser(userId, name, email, password, userGroupDiscount);
-            userHandler.validateUserDoesNotExist(newUser);
             userRepo.store(newUser);
             userPublisher.publishUserCreated(userId);
             loggerDef.getInstance().info("User registered successfully: " + userId);
@@ -93,8 +93,11 @@ public class UserService implements IUserService {
             if (!authenticationService.validate(sessionTokenStr)) {
                 throw new RuntimeException("Invalid session token.");
             }
+            String guestId = authenticationService.getUser(sessionTokenStr);
+            UserInfo guestInfo = userRepo.findByID(guestId);
+            userHandler.validateGuest(guestInfo);
             UserInfo userInfo = userRepo.findByID(userId);
-            userHandler.validateGuest(userInfo);
+            userHandler.validateUserFound(userInfo);
             
             // Generate a fresh session token via auth service
             String newSessionTokenStr = authenticationService.login(userId);
@@ -103,7 +106,6 @@ public class UserService implements IUserService {
             userHandler.loginUser(userInfo, password, newSessionTokenStr);
             
             // Delete guest matching the OLD session token before saving the user
-            String guestId = authenticationService.getUser(sessionTokenStr);
 
             
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token

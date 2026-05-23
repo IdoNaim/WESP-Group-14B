@@ -22,7 +22,7 @@ public class MemoryUserRepo implements IUserRepo {
 
     @Override
     public void delete(String userId) {
-        if (userId != null && users.containsKey(userId)) {
+        if (userId != null) {
             users.remove(userId);
         }
     }
