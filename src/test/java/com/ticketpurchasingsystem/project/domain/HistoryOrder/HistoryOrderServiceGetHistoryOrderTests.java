@@ -28,13 +28,14 @@ public class HistoryOrderServiceGetHistoryOrderTests {
 
     private HistoryOrderService historyOrderService;
 
-    private static final String VALID_TOKEN   = "valid-token";
-    private static final String INVALID_TOKEN = "invalid-token";
-    private static final String ORDER_ID      = "order-001";
-    private static final String USER_ID       = "user-001";
-    private static final String EVENT_ID      = "event-001";
-    private static final int    COMPANY_ID    = 42;
-    private static final double PRICE         = 99.99;
+    private static final String VALID_TOKEN    = "valid-token";
+    private static final String INVALID_TOKEN  = "invalid-token";
+    private static final String ORDER_ID       = "order-001";
+    private static final String USER_ID        = "user-001";
+    private static final String OTHER_USER_ID  = "user-002";
+    private static final String EVENT_ID       = "event-001";
+    private static final int    COMPANY_ID     = 42;
+    private static final double PRICE          = 99.99;
 
     private static final SessionToken VALID_SESSION   = new SessionToken(VALID_TOKEN, 9999999999L);
     private static final SessionToken INVALID_SESSION = new SessionToken(INVALID_TOKEN, 9999999999L);
@@ -55,9 +56,16 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(true);
     }
 
-    private void stubNonAdminSession() {
+    private void stubOwnerSession() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(false);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+    }
+
+    private void stubNonOwnerSession() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(false);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(OTHER_USER_ID);
     }
 
     // --- invalid session ---
@@ -78,38 +86,30 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         verify(historyOrderRepo, never()).findByOrderId(any());
     }
 
-    // --- valid session, not admin ---
+    // --- valid session, order not found ---
 
     @Test
-    void GivenValidSessionNotAdmin_WhenGetHistoryOrder_ThenReturnNull() {
-        stubNonAdminSession();
-
-        assertNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
-    }
-
-    @Test
-    void GivenValidSessionNotAdmin_WhenGetHistoryOrder_ThenRepoNeverCalled() {
-        stubNonAdminSession();
-
-        historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
-
-        verify(historyOrderRepo, never()).findByOrderId(any());
-    }
-
-    // --- admin, order not found ---
-
-    @Test
-    void GivenAdminAndOrderNotFound_WhenGetHistoryOrder_ThenReturnNull() {
-        stubAdminSession();
+    void GivenValidSessionAndOrderNotFound_WhenGetHistoryOrder_ThenReturnNull() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(null);
 
         assertNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
     }
 
+    @Test
+    void GivenValidSessionAndOrderNotFound_WhenGetHistoryOrder_ThenRepoCalledOnce() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(null);
+
+        historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
+    }
+
     // --- admin, order found ---
 
     @Test
-    void GivenAdminAndOrderExists_WhenGetHistoryOrder_ThenReturnDTO() {
+    void GivenAdminAndOrderFound_WhenGetHistoryOrder_ThenReturnDTO() {
         stubAdminSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
@@ -117,7 +117,7 @@ public class HistoryOrderServiceGetHistoryOrderTests {
     }
 
     @Test
-    void GivenAdminAndOrderExists_WhenGetHistoryOrder_ThenReturnCorrectDTO() {
+    void GivenAdminAndOrderFound_WhenGetHistoryOrder_ThenReturnCorrectDTO() {
         stubAdminSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
@@ -129,12 +129,44 @@ public class HistoryOrderServiceGetHistoryOrderTests {
     }
 
     @Test
-    void GivenAdmin_WhenGetHistoryOrder_ThenRepoCalledWithCorrectOrderId() {
+    void GivenAdminAndOrderFound_WhenGetHistoryOrder_ThenRepoCalledWithCorrectOrderId() {
         stubAdminSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
         historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
 
         verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
+    }
+
+    // --- owner (non-admin), order found ---
+
+    @Test
+    void GivenOwnerAndOrderFound_WhenGetHistoryOrder_ThenReturnDTO() {
+        stubOwnerSession();
+        when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
+
+        assertNotNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
+    }
+
+    @Test
+    void GivenOwnerAndOrderFound_WhenGetHistoryOrder_ThenReturnCorrectDTO() {
+        stubOwnerSession();
+        when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
+
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        assertEquals(ORDER_ID, result.getOrderId());
+        assertEquals(USER_ID, result.getUserId());
+        assertEquals(EVENT_ID, result.getEventId());
+    }
+
+    // --- non-owner, non-admin, order found ---
+
+    @Test
+    void GivenNonOwnerNonAdminAndOrderFound_WhenGetHistoryOrder_ThenReturnNull() {
+        stubNonOwnerSession();
+        when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
+
+        assertNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
     }
 }

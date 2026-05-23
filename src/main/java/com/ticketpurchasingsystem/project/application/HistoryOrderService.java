@@ -40,10 +40,12 @@ public class HistoryOrderService implements IHistoryOrderService {
     @Override
     public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
         HistoryOrderDTO historyOrder = null;
-        if (isSessionTokenValid(st) && authenticationService.isAdmin(st.getToken())) {
+        if (isSessionTokenValid(st)){
             HistoryOrderItem item = historyOrderRepo.findByOrderId(orderId);
             if (item != null) {
-                historyOrder = item.makeDTO();
+                if (authenticationService.isAdmin(st.getToken()) || item.getUserId().equals(authenticationService.getUser(st.getToken()))) {
+                    historyOrder = item.makeDTO();
+                }
             }
         }
         return historyOrder;
