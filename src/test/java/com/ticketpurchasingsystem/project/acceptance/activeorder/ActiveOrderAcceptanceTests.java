@@ -19,6 +19,7 @@ import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -32,35 +33,21 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-@SpringBootTest(classes = {
-        ActiveOrderService.class,
-        ActiveOrderPublisher.class,
-        ActiveOrderListener.class,
-        ActiveOrderMemRepo.class,
-        InMemorySessionRepo.class,
-        AuthenticationService.class,
-        DomainAuthService.class,
-        ActiveOrderHandler.class,
-        EventService.class,
-        EventRepo.class,
-        EventAggregatePublisher.class,
-        EventAggregateListener.class
-})
+
 public class ActiveOrderAcceptanceTests {
-    @Autowired
     private IActiveOrderService activeOrderService;
-    @Autowired
+
     private IActiveOrderRepo activeOrderRepo;
-    @Autowired
+
     private ISessionRepo sessionRepo;
-    @Autowired
+
     private AuthenticationService authenticationService;
-    @Autowired
+
     private IEventService eventService;
     //external systems
-    @MockBean
+    @Mock
     private IPaymentGateway paymentGatewayMock;
-    @MockBean
+    @Mock
     private IBarCodeGateway barcodeGatewayMock;
 
     private static final String VALID_TOKEN = "accept-token";
@@ -80,9 +67,11 @@ public class ActiveOrderAcceptanceTests {
     @BeforeEach
     public void setup() {
         registeredUsers.clear();
+        activeOrderRepo = new ActiveOrderMemRepo();
+        barcodeGatewayMock = new BarCodeGateway();
+        sessionRepo = new InMemorySessionRepo();
+        AuthenticationDomainService
 
-        // Cast or use the explicit bean to wipe out state cleanly
-        ((ActiveOrderMemRepo) activeOrderRepo).clear();
     }
     @Test
     public void checkSetup(){
