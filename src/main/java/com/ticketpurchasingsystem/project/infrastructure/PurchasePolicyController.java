@@ -2,6 +2,8 @@ package com.ticketpurchasingsystem.project.infrastructure;
 
 import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
 import com.ticketpurchasingsystem.project.domain.tickets.*;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -76,35 +78,57 @@ public class PurchasePolicyController {
         }
         switch (req.getType().toUpperCase()) {
             case "AGE":
-                return new AgePurchasePolicy(req.getMinAge(), req.getMaxAge());
+                IPurchaseRule ageRule;
+                if (req.getMinAge() != null && req.getMaxAge() != null) {
+                    ageRule = new AndRule(new MinAgeRule(req.getMinAge()), new MaxAgeRule(req.getMaxAge()));
+                } else if (req.getMinAge() != null) {
+                    ageRule = new MinAgeRule(req.getMinAge());
+                } else if (req.getMaxAge() != null) {
+                    ageRule = new MaxAgeRule(req.getMaxAge());
+                } else {
+                    throw new IllegalArgumentException("At least one of minAge or maxAge is required for AGE policy");
+                }
+                return new PurchaseRuleAdapter(ageRule, "AGE", req.getMinAge(), req.getMaxAge(), null, null, null);
             case "MIN_TICKETS":
                 if (req.getMinTickets() == null) {
                     throw new IllegalArgumentException("minTickets is required for MIN_TICKETS policy");
                 }
-                return new MinTicketsPurchasePolicy(req.getMinTickets());
+                return new PurchaseRuleAdapter(new MinTicketsRule(req.getMinTickets()), "MIN_TICKETS", null, null, req.getMinTickets(), null, null);
             case "MAX_TICKETS":
                 if (req.getMaxTickets() == null) {
                     throw new IllegalArgumentException("maxTickets is required for MAX_TICKETS policy");
                 }
-                return new MaxTicketsPurchasePolicy(req.getMaxTickets());
+                return new PurchaseRuleAdapter(new MaxTicketsRule(req.getMaxTickets()), "MAX_TICKETS", null, null, null, req.getMaxTickets(), null);
             case "AND":
                 if (req.getSubPolicies() == null) {
                     throw new IllegalArgumentException("subPolicies are required for AND composition");
                 }
-                List<ITicketPurchaseRule> andRules = new ArrayList<>();
+                List<ITicketPurchaseRule> andAdapters = new ArrayList<>();
+                List<IPurchaseRule> andTeammateRules = new ArrayList<>();
                 for (PolicyRequest sub : req.getSubPolicies()) {
-                    andRules.add(buildRule(sub));
+                    ITicketPurchaseRule subAdapter = buildRule(sub);
+                    if (subAdapter instanceof PurchaseRuleAdapter) {
+                        andAdapters.add(subAdapter);
+                        andTeammateRules.add(((PurchaseRuleAdapter) subAdapter).getTargetRule());
+                    }
                 }
-                return new AndPolicyComposition(andRules);
+                IPurchaseRule andRule = new AndRule(andTeammateRules.toArray(new IPurchaseRule[0]));
+                return new PurchaseRuleAdapter(andRule, "AND", null, null, null, null, andAdapters);
             case "OR":
                 if (req.getSubPolicies() == null) {
                     throw new IllegalArgumentException("subPolicies are required for OR composition");
                 }
-                List<ITicketPurchaseRule> orRules = new ArrayList<>();
+                List<ITicketPurchaseRule> orAdapters = new ArrayList<>();
+                List<IPurchaseRule> orTeammateRules = new ArrayList<>();
                 for (PolicyRequest sub : req.getSubPolicies()) {
-                    orRules.add(buildRule(sub));
+                    ITicketPurchaseRule subAdapter = buildRule(sub);
+                    if (subAdapter instanceof PurchaseRuleAdapter) {
+                        orAdapters.add(subAdapter);
+                        orTeammateRules.add(((PurchaseRuleAdapter) subAdapter).getTargetRule());
+                    }
                 }
-                return new OrPolicyComposition(orRules);
+                IPurchaseRule orRule = new OrRule(orTeammateRules.toArray(new IPurchaseRule[0]));
+                return new PurchaseRuleAdapter(orRule, "OR", null, null, null, null, orAdapters);
             default:
                 throw new IllegalArgumentException("Unknown policy type: " + req.getType());
         }
@@ -114,29 +138,28 @@ public class PurchasePolicyController {
         if (rule == null) {
             return "No policy";
         }
-        if (rule instanceof AgePurchasePolicy) {
-            AgePurchasePolicy age = (AgePurchasePolicy) rule;
-            return "Age limit: Min=" + age.getMinAge() + ", Max=" + age.getMaxAge();
-        } else if (rule instanceof MinTicketsPurchasePolicy) {
-            MinTicketsPurchasePolicy min = (MinTicketsPurchasePolicy) rule;
-            return "Min tickets: " + min.getMinTickets();
-        } else if (rule instanceof MaxTicketsPurchasePolicy) {
-            MaxTicketsPurchasePolicy max = (MaxTicketsPurchasePolicy) rule;
-            return "Max tickets: " + max.getMaxTickets();
-        } else if (rule instanceof AndPolicyComposition) {
-            AndPolicyComposition and = (AndPolicyComposition) rule;
-            List<String> subDescriptions = new ArrayList<>();
-            for (ITicketPurchaseRule sub : and.getRules()) {
-                subDescriptions.add(describeRule(sub));
+        if (rule instanceof PurchaseRuleAdapter) {
+            PurchaseRuleAdapter adapter = (PurchaseRuleAdapter) rule;
+            switch (adapter.getType().toUpperCase()) {
+                case "AGE":
+                    return "Age limit: Min=" + adapter.getMinAge() + ", Max=" + adapter.getMaxAge();
+                case "MIN_TICKETS":
+                    return "Min tickets: " + adapter.getMinTickets();
+                case "MAX_TICKETS":
+                    return "Max tickets: " + adapter.getMaxTickets();
+                case "AND":
+                    List<String> andDescriptions = new ArrayList<>();
+                    for (ITicketPurchaseRule sub : adapter.getSubRules()) {
+                        andDescriptions.add(describeRule(sub));
+                    }
+                    return "AND(" + String.join(", ", andDescriptions) + ")";
+                case "OR":
+                    List<String> orDescriptions = new ArrayList<>();
+                    for (ITicketPurchaseRule sub : adapter.getSubRules()) {
+                        orDescriptions.add(describeRule(sub));
+                    }
+                    return "OR(" + String.join(", ", orDescriptions) + ")";
             }
-            return "AND(" + String.join(", ", subDescriptions) + ")";
-        } else if (rule instanceof OrPolicyComposition) {
-            OrPolicyComposition or = (OrPolicyComposition) rule;
-            List<String> subDescriptions = new ArrayList<>();
-            for (ITicketPurchaseRule sub : or.getRules()) {
-                subDescriptions.add(describeRule(sub));
-            }
-            return "OR(" + String.join(", ", subDescriptions) + ")";
         }
         return rule.getClass().getSimpleName();
     }

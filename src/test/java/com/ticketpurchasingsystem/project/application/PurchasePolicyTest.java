@@ -9,6 +9,8 @@ import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.tickets.*;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.*;
 import com.ticketpurchasingsystem.project.infrastructure.PurchasePolicyController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +61,10 @@ class PurchasePolicyTest {
     @Test
     void testAgePurchasePolicy() {
         // Age policy: min 18, max 60
-        ITicketPurchaseRule rule = new AgePurchasePolicy(18, 60);
+        ITicketPurchaseRule rule = new PurchaseRuleAdapter(
+                new AndRule(new MinAgeRule(18), new MaxAgeRule(60)),
+                "AGE", 18, 60, null, null, null
+        );
 
         assertTrue(rule.validate(new TicketPurchaseContext(25, 2)).isValid());
         assertTrue(rule.validate(new TicketPurchaseContext(18, 2)).isValid());
@@ -74,18 +79,27 @@ class PurchasePolicyTest {
         assertTrue(tooOld.getRejectionMessage().contains("exceeds the maximum allowed age"));
 
         // Age policy with null bounds
-        ITicketPurchaseRule onlyMinAge = new AgePurchasePolicy(18, null);
+        ITicketPurchaseRule onlyMinAge = new PurchaseRuleAdapter(
+                new MinAgeRule(18),
+                "AGE", 18, null, null, null, null
+        );
         assertTrue(onlyMinAge.validate(new TicketPurchaseContext(100, 2)).isValid());
         assertFalse(onlyMinAge.validate(new TicketPurchaseContext(16, 2)).isValid());
 
-        ITicketPurchaseRule onlyMaxAge = new AgePurchasePolicy(null, 50);
+        ITicketPurchaseRule onlyMaxAge = new PurchaseRuleAdapter(
+                new MaxAgeRule(50),
+                "AGE", null, 50, null, null, null
+        );
         assertTrue(onlyMaxAge.validate(new TicketPurchaseContext(5, 2)).isValid());
         assertFalse(onlyMaxAge.validate(new TicketPurchaseContext(55, 2)).isValid());
     }
 
     @Test
     void testMinTicketsPurchasePolicy() {
-        ITicketPurchaseRule rule = new MinTicketsPurchasePolicy(3);
+        ITicketPurchaseRule rule = new PurchaseRuleAdapter(
+                new MinTicketsRule(3),
+                "MIN_TICKETS", null, null, 3, null, null
+        );
 
         assertTrue(rule.validate(new TicketPurchaseContext(20, 3)).isValid());
         assertTrue(rule.validate(new TicketPurchaseContext(20, 5)).isValid());
@@ -97,7 +111,10 @@ class PurchasePolicyTest {
 
     @Test
     void testMaxTicketsPurchasePolicy() {
-        ITicketPurchaseRule rule = new MaxTicketsPurchasePolicy(6);
+        ITicketPurchaseRule rule = new PurchaseRuleAdapter(
+                new MaxTicketsRule(6),
+                "MAX_TICKETS", null, null, null, 6, null
+        );
 
         assertTrue(rule.validate(new TicketPurchaseContext(20, 6)).isValid());
         assertTrue(rule.validate(new TicketPurchaseContext(20, 4)).isValid());
@@ -109,9 +126,18 @@ class PurchasePolicyTest {
 
     @Test
     void testAndPolicyComposition() {
-        ITicketPurchaseRule rule1 = new AgePurchasePolicy(18, null);
-        ITicketPurchaseRule rule2 = new MaxTicketsPurchasePolicy(4);
-        ITicketPurchaseRule andRule = new AndPolicyComposition(Arrays.asList(rule1, rule2));
+        ITicketPurchaseRule rule1 = new PurchaseRuleAdapter(
+                new MinAgeRule(18),
+                "AGE", 18, null, null, null, null
+        );
+        ITicketPurchaseRule rule2 = new PurchaseRuleAdapter(
+                new MaxTicketsRule(4),
+                "MAX_TICKETS", null, null, null, 4, null
+        );
+        ITicketPurchaseRule andRule = new PurchaseRuleAdapter(
+                new AndRule(((PurchaseRuleAdapter) rule1).getTargetRule(), ((PurchaseRuleAdapter) rule2).getTargetRule()),
+                "AND", null, null, null, null, Arrays.asList(rule1, rule2)
+        );
 
         // Both pass
         assertTrue(andRule.validate(new TicketPurchaseContext(20, 3)).isValid());
@@ -129,9 +155,18 @@ class PurchasePolicyTest {
 
     @Test
     void testOrPolicyComposition() {
-        ITicketPurchaseRule rule1 = new AgePurchasePolicy(18, null);
-        ITicketPurchaseRule rule2 = new MaxTicketsPurchasePolicy(2);
-        ITicketPurchaseRule orRule = new OrPolicyComposition(Arrays.asList(rule1, rule2));
+        ITicketPurchaseRule rule1 = new PurchaseRuleAdapter(
+                new MinAgeRule(18),
+                "AGE", 18, null, null, null, null
+        );
+        ITicketPurchaseRule rule2 = new PurchaseRuleAdapter(
+                new MaxTicketsRule(2),
+                "MAX_TICKETS", null, null, null, 2, null
+        );
+        ITicketPurchaseRule orRule = new PurchaseRuleAdapter(
+                new OrRule(((PurchaseRuleAdapter) rule1).getTargetRule(), ((PurchaseRuleAdapter) rule2).getTargetRule()),
+                "OR", null, null, null, null, Arrays.asList(rule1, rule2)
+        );
 
         // Both pass
         assertTrue(orRule.validate(new TicketPurchaseContext(20, 1)).isValid());
@@ -165,7 +200,10 @@ class PurchasePolicyTest {
     @Test
     void testValidatePurchaseFailsOnEventPolicy() {
         Event event = createMockEvent();
-        event.setTicketPurchasePolicy(new AgePurchasePolicy(18, null));
+        event.setTicketPurchasePolicy(new PurchaseRuleAdapter(
+                new MinAgeRule(18),
+                "AGE", 18, null, null, null, null
+        ));
         when(eventRepo.findById("123")).thenReturn(event);
 
         PolicyValidationResult result = purchasePolicyService.validatePurchase("123", 16, 2);
@@ -179,7 +217,10 @@ class PurchasePolicyTest {
         event.setTicketPurchasePolicy(null); // Event policy passes
 
         ProductionCompany company = createMockCompany();
-        company.setTicketPurchasePolicy(new MaxTicketsPurchasePolicy(3)); // Company policy fails for 4 tickets
+        company.setTicketPurchasePolicy(new PurchaseRuleAdapter(
+                new MaxTicketsRule(3),
+                "MAX_TICKETS", null, null, null, 3, null
+        )); // Company policy fails for 4 tickets
 
         when(eventRepo.findById("123")).thenReturn(event);
         when(prodRepo.findById(1)).thenReturn(Optional.of(company));
@@ -194,7 +235,10 @@ class PurchasePolicyTest {
         Event event = createMockEvent();
         when(eventRepo.findById("123")).thenReturn(event);
 
-        ITicketPurchaseRule rule = new MinTicketsPurchasePolicy(2);
+        ITicketPurchaseRule rule = new PurchaseRuleAdapter(
+                new MinTicketsRule(2),
+                "MIN_TICKETS", null, null, 2, null, null
+        );
         purchasePolicyService.assignPolicyToEvent("123", rule);
 
         verify(eventRepo, times(1)).save(event);
@@ -213,7 +257,10 @@ class PurchasePolicyTest {
     @Test
     void testControllerValidatePurchaseEndpoint() throws Exception {
         Event event = createMockEvent();
-        event.setTicketPurchasePolicy(new MinTicketsPurchasePolicy(3));
+        event.setTicketPurchasePolicy(new PurchaseRuleAdapter(
+                new MinTicketsRule(3),
+                "MIN_TICKETS", null, null, 3, null, null
+        ));
         when(eventRepo.findById("123")).thenReturn(event);
 
         PurchasePolicyController.ValidationRequest request = new PurchasePolicyController.ValidationRequest();
@@ -246,7 +293,8 @@ class PurchasePolicyTest {
 
         // Verify rule is assigned
         assertNotNull(event.getTicketPurchasePolicy());
-        assertTrue(event.getTicketPurchasePolicy() instanceof AgePurchasePolicy);
+        assertTrue(event.getTicketPurchasePolicy() instanceof PurchaseRuleAdapter);
+        assertEquals("AGE", ((PurchaseRuleAdapter) event.getTicketPurchasePolicy()).getType());
 
         // Retrieve assigned policy via GET
         mockMvc.perform(get("/api/policies/event/123"))
