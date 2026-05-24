@@ -6,4 +6,5 @@ public interface Bookable {
     public double getPriceForTicket();
     public boolean unbook(int numberOfTickets);
     public boolean setPriceForTicket(double newPrice);
+    public boolean isbooked(String orderId);
 }

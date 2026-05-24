@@ -6,6 +6,7 @@ public class SeatingMap {
     private HashMap<String, Bookable> PurchaseAreas;
     private final AtomicLong areaIDGenerator = new AtomicLong(0);
 
+//add new seating area where holds all the bookable for seats
     public SeatingMap() {
         this.PurchaseAreas = new HashMap<>();
     }
@@ -64,7 +65,7 @@ public class SeatingMap {
         }
         return true;
     }
-    
+
     public boolean unbookStandingArea(String areaID, int numberOfTickets){
         if(!PurchaseAreas.containsKey(areaID)){
             return false;
@@ -114,7 +115,13 @@ public class SeatingMap {
         Bookable area = PurchaseAreas.get(areaID);
         return area.getPriceForTicket();
     }
-    
+    public Bookable getSeat(String seatID){
+        if(!PurchaseAreas.containsKey(seatID)){
+            return null;
+        }
+        return PurchaseAreas.get(seatID);
+    }
+
     public Bookable getArea(String areaID){
         return PurchaseAreas.get(areaID);
     }
@@ -122,7 +129,7 @@ public class SeatingMap {
     public HashMap<String, Bookable> getPurchaseAreas() {
         return PurchaseAreas;
     }
-    
+
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){
     //     if(row <= 0 || number <= 0 || priceForTicket <= 0){
     //         return false;

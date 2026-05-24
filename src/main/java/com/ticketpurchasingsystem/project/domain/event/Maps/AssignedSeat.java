@@ -14,6 +14,12 @@ public class AssignedSeat implements Bookable {
     }
 
     @Override
+    public boolean isbooked(String orderId) {
+        return this.orderId.equals(orderId);
+    }
+
+
+    @Override
     public String getId() {
         return id;
     }
