@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
@@ -34,6 +35,8 @@ class UserListenerIsRegisteredTests {
     @Mock
     private DomainAuthService domainAuthService;
     @Mock
+    private SystemAdminService systemAdminService;
+    @Mock
     private ISessionRepo sessionRepo;
     private UserApplicationListener listener;
 
@@ -42,7 +45,7 @@ class UserListenerIsRegisteredTests {
 
     @BeforeEach
     void setUp() {
-        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo),userPublisher ));
+        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, systemAdminService, sessionRepo),userPublisher ));
     }
 
     @Test
