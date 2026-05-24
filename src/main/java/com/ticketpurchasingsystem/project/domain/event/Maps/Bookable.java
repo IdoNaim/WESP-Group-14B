@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Maps;
 
 public interface Bookable {
     public String getId();

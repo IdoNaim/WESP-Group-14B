@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Maps;
 
 public class AssignedSeat implements Bookable {
     private String id;              //includes zone, row and number

@@ -1,4 +1,5 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Maps;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
