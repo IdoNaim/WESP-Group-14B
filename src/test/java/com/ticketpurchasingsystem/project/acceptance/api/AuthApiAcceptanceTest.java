@@ -54,7 +54,7 @@ class AuthApiAcceptanceTest {
 
                 MemoryUserRepo userRepo = new MemoryUserRepo();
                 UserHandler userHandler = new UserHandler();
-                ApplicationEventPublisher noopPublisher = mock(ApplicationEventPublisher.class);
+                ApplicationEventPublisher noopPublisher = mock();
                 UserPublisher userPublisher = new UserPublisher(noopPublisher);
                 userService = new UserService(userRepo, userHandler, authService, userPublisher);
 

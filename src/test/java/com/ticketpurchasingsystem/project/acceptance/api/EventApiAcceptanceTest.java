@@ -49,9 +49,9 @@ class EventApiAcceptanceTest {
     @BeforeEach
     void setUp() {
         EventRepo eventRepo = new EventRepo();
-        ApplicationEventPublisher noopPublisher = mock(ApplicationEventPublisher.class);
+        ApplicationEventPublisher noopPublisher = mock();
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(noopPublisher);
-        EventAggregateListener eventListener = new EventAggregateListener();
+        EventAggregateListener eventListener = mock();
         eventService = new EventService(eventRepo, eventPublisher, eventListener);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
