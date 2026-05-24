@@ -12,6 +12,7 @@ import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFai
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -297,5 +298,33 @@ public class ProductionService implements IProductionService {
     @Override
     public String getEventAsCustomer(String eventId) {
         throw new UnsupportedOperationException("Unimplemented method 'getEventAsCustomer'");
+    }
+
+    @Override
+    public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) {
+            loggerDef.getInstance().error("addPurchasePolicyRule: company not found, id=" + companyId);
+            return false;
+        }
+
+        ProductionCompany company = productionHandler.addPurchasePolicyRule(userId, companyId, rule, companyOpt.get());
+        if (company == null) {
+            return false;
+        }
+
+        try {
+            prodRepo.save(company);
+            loggerDef.getInstance().info("addPurchasePolicyRule: rule added to company " + companyId + " by " + userId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("addPurchasePolicyRule failed: " + e.getMessage());
+            return false;
+        }
     }
 }
