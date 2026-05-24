@@ -74,15 +74,19 @@ public class HistoryOrderServiceGetHistoryOrderTests {
     void GivenInvalidSession_WhenGetHistoryOrder_ThenReturnNull() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        assertNull(historyOrderService.getHistoryOrder(INVALID_SESSION, ORDER_ID));
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(INVALID_SESSION, ORDER_ID);
+
+        assertNull(result);
+        verify(historyOrderRepo, never()).findByOrderId(any());
     }
 
     @Test
     void GivenInvalidSession_WhenGetHistoryOrder_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        historyOrderService.getHistoryOrder(INVALID_SESSION, ORDER_ID);
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(INVALID_SESSION, ORDER_ID);
 
+        assertNull(result);
         verify(historyOrderRepo, never()).findByOrderId(any());
     }
 
@@ -93,7 +97,10 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(null);
 
-        assertNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        assertNull(result);
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
     @Test
@@ -101,8 +108,9 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(null);
 
-        historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
 
+        assertNull(result);
         verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
@@ -113,7 +121,10 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         stubAdminSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
-        assertNotNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        assertNotNull(result);
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
     @Test
@@ -126,6 +137,7 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         assertEquals(ORDER_ID, result.getOrderId());
         assertEquals(USER_ID, result.getUserId());
         assertEquals(EVENT_ID, result.getEventId());
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
     @Test
@@ -133,8 +145,9 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         stubAdminSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
-        historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
 
+        assertNotNull(result);
         verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
@@ -145,7 +158,10 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         stubOwnerSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
-        assertNotNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        assertNotNull(result);
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
     @Test
@@ -158,6 +174,7 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         assertEquals(ORDER_ID, result.getOrderId());
         assertEquals(USER_ID, result.getUserId());
         assertEquals(EVENT_ID, result.getEventId());
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 
     // --- non-owner, non-admin, order found ---
@@ -167,6 +184,9 @@ public class HistoryOrderServiceGetHistoryOrderTests {
         stubNonOwnerSession();
         when(historyOrderRepo.findByOrderId(ORDER_ID)).thenReturn(item);
 
-        assertNull(historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID));
+        HistoryOrderDTO result = historyOrderService.getHistoryOrder(VALID_SESSION, ORDER_ID);
+
+        assertNull(result);
+        verify(historyOrderRepo, times(1)).findByOrderId(ORDER_ID);
     }
 }

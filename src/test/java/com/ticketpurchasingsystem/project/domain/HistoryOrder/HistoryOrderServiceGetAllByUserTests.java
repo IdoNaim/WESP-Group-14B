@@ -66,14 +66,16 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
 
         assertTrue(result.isEmpty());
+        verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
     @Test
     void GivenInvalidSession_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(INVALID_SESSION, USER_ID);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
@@ -86,14 +88,16 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         assertTrue(result.isEmpty());
+        verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
     @Test
     void GivenOtherUserNotAdmin_WhenGetAllHistoryOrdersByUser_ThenRepoNeverCalled() {
         stubValidSession(OTHER_USER_ID, false);
 
-        historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, never()).findAllByUserId(any());
     }
 
@@ -107,6 +111,7 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         assertEquals(1, result.size());
+        verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 
     @Test
@@ -117,6 +122,7 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         assertTrue(result.isEmpty());
+        verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 
     @Test
@@ -129,6 +135,7 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         assertEquals(2, result.size());
+        verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 
     // --- admin (not owner) ---
@@ -141,6 +148,7 @@ public class HistoryOrderServiceGetAllByUserTests {
         List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
         assertEquals(1, result.size());
+        verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 
     @Test
@@ -153,6 +161,7 @@ public class HistoryOrderServiceGetAllByUserTests {
         assertEquals(ORDER_ID, result.get(0).getOrderId());
         assertEquals(USER_ID, result.get(0).getUserId());
         assertEquals(EVENT_ID, result.get(0).getEventId());
+        verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 
     @Test
@@ -160,8 +169,9 @@ public class HistoryOrderServiceGetAllByUserTests {
         stubValidSession(OTHER_USER_ID, true);
         when(historyOrderRepo.findAllByUserId(USER_ID)).thenReturn(List.of());
 
-        historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByUser(VALID_SESSION, USER_ID);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, times(1)).findAllByUserId(USER_ID);
     }
 }
