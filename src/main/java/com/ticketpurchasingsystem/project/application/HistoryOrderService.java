@@ -4,12 +4,15 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
+@Service
 public class HistoryOrderService implements IHistoryOrderService {
 
     private final IHistoryOrderRepo historyOrderRepo;
