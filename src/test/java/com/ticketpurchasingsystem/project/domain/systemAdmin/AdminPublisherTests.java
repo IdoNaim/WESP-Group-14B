@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -37,8 +38,7 @@ class AdminPublisherTests {
     // --- publishGetAllActiveOrders ---
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenListenerResponds_ThenReturnOrders() {
-        ActiveOrderItem order = mock(ActiveOrderItem.class);
+    void GivenListenerResponds_WhenPublishGetAllActiveOrders_ThenReturnOrders() {
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1"));
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
@@ -49,17 +49,19 @@ class AdminPublisherTests {
         List<ActiveOrderItem> result = adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
         assertEquals(mockOrders, result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenNoListener_ThenReturnNull() {
+    void GivenNoListener_WhenPublishGetAllActiveOrders_ThenReturnNull() {
         List<ActiveOrderItem> result = adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
         assertNull(result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenAdminId_ThenEventCarriesAdminId() {
+    void GivenAdminId_WhenPublishGetAllActiveOrders_ThenEventCarriesAdminId() {
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
             assertEquals(ADMIN_ID, event.getReqId());
@@ -68,11 +70,11 @@ class AdminPublisherTests {
 
         adminPublisher.publishGetAllActiveOrders(ADMIN_ID);
 
-        verify(springPublisher).publishEvent(any(GetAllActiveOrdersEvent.class));
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllActiveOrdersGivenEmptyList_ThenReturnEmptyList() {
+    void GivenEmptyList_WhenPublishGetAllActiveOrders_ThenReturnEmptyList() {
         doAnswer(invocation -> {
             GetAllActiveOrdersEvent event = invocation.getArgument(0, GetAllActiveOrdersEvent.class);
             event.setResult(Collections.emptyList());
@@ -83,12 +85,13 @@ class AdminPublisherTests {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+        verify(springPublisher, times(1)).publishEvent(any(GetAllActiveOrdersEvent.class));
     }
 
     // --- publishGetAllOrdersHistory ---
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenListenerResponds_ThenReturnHistory() {
+    void GivenListenerResponds_WhenPublishGetAllOrdersHistory_ThenReturnHistory() {
         List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event", 15,10.0, new ArrayList<>(), new HashMap<>()));
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
@@ -99,17 +102,19 @@ class AdminPublisherTests {
         List<HistoryOrderItem> result = adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
         assertEquals(mockHistory, result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenNoListener_ThenReturnNull() {
+    void GivenNoListener_WhenPublishGetAllOrdersHistory_ThenReturnNull() {
         List<HistoryOrderItem> result = adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
         assertNull(result);
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenAdminId_ThenEventCarriesAdminId() {
+    void GivenAdminId_WhenPublishGetAllOrdersHistory_ThenEventCarriesAdminId() {
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             assertEquals(ADMIN_ID, event.getReqId());
@@ -118,11 +123,11 @@ class AdminPublisherTests {
 
         adminPublisher.publishGetAllOrdersHistory(ADMIN_ID);
 
-        verify(springPublisher).publishEvent(any(GetAllHistoryOrdersEvent.class));
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 
     @Test
-    void WhenPublishGetAllOrdersHistoryGivenEmptyList_ThenReturnEmptyList() {
+    void GivenEmptyList_WhenPublishGetAllOrdersHistory_ThenReturnEmptyList() {
         doAnswer(invocation -> {
             GetAllHistoryOrdersEvent event = invocation.getArgument(0, GetAllHistoryOrdersEvent.class);
             event.setResult(Collections.emptyList());
@@ -133,5 +138,6 @@ class AdminPublisherTests {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+        verify(springPublisher, times(1)).publishEvent(any(GetAllHistoryOrdersEvent.class));
     }
 }

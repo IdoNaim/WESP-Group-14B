@@ -17,13 +17,11 @@ import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.G
 @ExtendWith(MockitoExtension.class)
 class HistoryOrderListenerTests {
 
-    @Mock
-    private IHistoryOrderRepo historyOrderRepo;
-
-    @Mock
-    private IHistoryOrderService historyOrderService;
+    @Mock private IHistoryOrderRepo historyOrderRepo;
+    @Mock private IHistoryOrderService historyOrderService;
 
     private HistoryOrderListener listener;
+
     private static final String REQ_ID = "admin-test";
 
     @BeforeEach
@@ -33,7 +31,8 @@ class HistoryOrderListenerTests {
 
     @Test
     void GivenOrdersExistInRepo_WhenHandleGetAllHistoryOrdersEvent_ThenEventResultIsSet() {
-        List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user", "event", 1, 10.0, new ArrayList<>(), new HashMap<>()));
+        List<HistoryOrderItem> mockHistory = List.of(
+            new HistoryOrderItem("1", "user", "event", 1, 10.0, new ArrayList<>(), new HashMap<>()));
         when(historyOrderRepo.findAll()).thenReturn(mockHistory);
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(REQ_ID);
 

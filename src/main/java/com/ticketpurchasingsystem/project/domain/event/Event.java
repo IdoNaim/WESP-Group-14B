@@ -130,4 +130,8 @@ public class Event {
     }
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
+
+    public EventPurchasePolicy getPurchasePolicy() {
+        return purchasePolicy;
+    }
 }

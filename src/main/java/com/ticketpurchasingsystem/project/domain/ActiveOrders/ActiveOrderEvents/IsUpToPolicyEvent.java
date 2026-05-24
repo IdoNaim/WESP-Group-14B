@@ -9,10 +9,12 @@ import java.util.List;
 public class IsUpToPolicyEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
     private Boolean result;
-    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order){
+    private int age;
+    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order, int age){
         super(source);
         this.order = order;
         this.result = null;
+        this.age = age;
     }
 
     public boolean getResult() {
@@ -39,4 +41,25 @@ public class IsUpToPolicyEvent extends ApplicationEvent {
         return order.getStandingAreaQuantities();
     }
 
+    public int getTotalTickets(){
+        int total = order.getSeatIds().size();
+        for (Integer quantity : order.getStandingAreaQuantities().values()) {
+            total += quantity;
+        }
+        return total;
+    }
+
+    public int getAge()
+    {
+       return age;
+    }
+
+    public boolean isSeatEmpty(){
+        for (String seatId : order.getSeatIds()) {
+            if (seatId != null && !seatId.isEmpty()) {
+                return false; // Found a non-empty seat ID
+            }
+        }
+        return true; // All seat IDs are empty
+    }
 }

@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.application.UserService.IUserService;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,20 +53,26 @@ public class HistoryOrderServiceTests {
         historyOrderItem = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE, seatIds, standingAreaQuantities);
     }
 
+    private boolean callCreate() {
+        return historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
+    }
+
+    private boolean callCreate(List<String> seats, HashMap<String, Integer> standing) {
+        return historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seats, standing);
+    }
+
     @Test
     void GivenValidArgs_WhenCreateHistoryOrder_ThenReturnTrue() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
-
-        assertTrue(result);
+        assertTrue(callCreate());
     }
 
     @Test
     void GivenValidArgs_WhenCreateHistoryOrder_ThenSaveCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
+        callCreate();
 
         verify(historyOrderRepo, times(1)).save(historyOrderItem);
     }
@@ -74,7 +81,7 @@ public class HistoryOrderServiceTests {
     void GivenValidArgs_WhenCreateHistoryOrder_ThenHandlerCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
+        callCreate();
 
         verify(historyOrderHandler, times(1)).saveHistoryOrder(any(HistoryOrderDTO.class));
     }
@@ -83,7 +90,7 @@ public class HistoryOrderServiceTests {
     void GivenValidArgs_WhenCreateHistoryOrder_ThenHandlerCalledWithCorrectDTO() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
+        callCreate();
 
         verify(historyOrderHandler).saveHistoryOrder(argThat(dto ->
             ORDER_ID.equals(dto.getOrderId()) &&
@@ -98,16 +105,14 @@ public class HistoryOrderServiceTests {
     void GivenHandlerReturnsNull_WhenCreateHistoryOrder_ThenReturnFalse() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
-        boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
-
-        assertFalse(result);
+        assertFalse(callCreate());
     }
 
     @Test
     void GivenHandlerReturnsNull_WhenCreateHistoryOrder_ThenSaveNeverCalled() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
-        historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, standingAreaQuantities);
+        callCreate();
 
         verify(historyOrderRepo, never()).save(any());
     }
@@ -118,9 +123,7 @@ public class HistoryOrderServiceTests {
         HistoryOrderItem item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE, emptySeats, standingAreaQuantities);
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(item);
 
-        boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, emptySeats, standingAreaQuantities);
-
-        assertTrue(result);
+        assertTrue(callCreate(emptySeats, standingAreaQuantities));
     }
 
     @Test
@@ -129,8 +132,6 @@ public class HistoryOrderServiceTests {
         HistoryOrderItem item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE, seatIds, emptyStanding);
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(item);
 
-        boolean result = historyOrderService.createHistoryOrder(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, purchaseDate, PRICE, seatIds, emptyStanding);
-
-        assertTrue(result);
+        assertTrue(callCreate(seatIds, emptyStanding));
     }
 }

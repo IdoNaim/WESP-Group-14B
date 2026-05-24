@@ -1,19 +1,14 @@
 package com.ticketpurchasingsystem.project.domain.HistoryOrder;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
@@ -22,11 +17,8 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.Get
 @ExtendWith(MockitoExtension.class)
 class HistoryOrderListenerCompanyHistoryTests {
 
-    @Mock
-    private IHistoryOrderRepo historyOrderRepo;
-
-    @Mock
-    private IHistoryOrderService historyOrderService;
+    @Mock private IHistoryOrderRepo historyOrderRepo;
+    @Mock private IHistoryOrderService historyOrderService;
 
     private HistoryOrderListener listener;
 
@@ -37,13 +29,15 @@ class HistoryOrderListenerCompanyHistoryTests {
         listener = new HistoryOrderListener(historyOrderRepo, historyOrderService);
     }
 
+    private HistoryOrderItem buildItem() {
+        HashMap<String, Integer> standing = new HashMap<>();
+        standing.put("area1", 2);
+        return new HistoryOrderItem("o1", "user-1", "e1", COMPANY_ID, 10.0, List.of("seat1"), standing);
+    }
+
     @Test
     void GivenOrdersExistInRepo_WhenOnGetCompanyHistory_ThenEventResultIsSet() {
-        List<String> seats = List.of("seat1");
-        HashMap<String,Integer> standing = new HashMap<>();
-        standing.put("area1", 2);
-        List<HistoryOrderItem> mockHistory = List.of(
-                new HistoryOrderItem("o1", "user-1", "e1", COMPANY_ID, 10.0, seats, standing));
+        List<HistoryOrderItem> mockHistory = List.of(buildItem());
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(mockHistory);
         GetCompanyHistoryEvent event = new GetCompanyHistoryEvent(COMPANY_ID);
 
