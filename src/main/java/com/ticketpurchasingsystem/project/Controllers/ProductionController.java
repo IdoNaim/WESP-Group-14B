@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,34 +35,43 @@ public class ProductionController {
 
         // POST /api/production/companies
         @PostMapping("/companies")
-        public ResponseEntity<Integer> createProductionCompany(
+        public ResponseEntity<Map<String, String>> createProductionCompany(
                         @RequestHeader("Authorization") String authHeader,
                         @RequestBody ProductionCompanyDTO body) {
 
                 String token = extractToken(authHeader);
                 Integer companyId = productionService.createProductionCompany(token, body);
-                return companyId != null
-                                ? ResponseEntity.status(HttpStatus.CREATED).body(companyId)
-                                : ResponseEntity.badRequest().build();
+                if (companyId != null) {
+                        return ResponseEntity.status(HttpStatus.CREATED)
+                                        .body(Map.of(
+                                                        "message", "Production company created successfully.",
+                                                        "companyId", companyId.toString()));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to create production company. Name may already be taken or token is invalid."));
         }
 
         // POST /api/production/companies/{companyId}/owners
         @PostMapping("/companies/{companyId}/owners")
-        public ResponseEntity<Void> assignOwner(
+        public ResponseEntity<Map<String, String>> assignOwner(
                         @RequestHeader("Authorization") String authHeader,
                         @PathVariable Integer companyId,
                         @RequestBody AssignOwnerRequestDTO body) {
 
                 String token = extractToken(authHeader);
                 boolean success = productionService.assignOwner(token, companyId, body.getAppointeeUserId());
-                return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Owner assigned successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to assign owner. You may not have permission or the user does not exist."));
         }
 
         // POST /api/production/companies/{companyId}/managers
         @PostMapping("/companies/{companyId}/managers")
-        public ResponseEntity<Void> appointManager(
+        public ResponseEntity<Map<String, String>> appointManager(
                         @RequestHeader("Authorization") String authHeader,
                         @PathVariable Integer companyId,
                         @RequestBody AppointManagerRequestDTO body) {
@@ -69,14 +79,18 @@ public class ProductionController {
                 String token = extractToken(authHeader);
                 boolean success = productionService.appointManager(
                                 token, companyId, body.getManagerId(), body.getPermissions());
-                return success
-                                ? ResponseEntity.status(HttpStatus.CREATED).build()
-                                : ResponseEntity.badRequest().build();
+                if (success) {
+                        return ResponseEntity.status(HttpStatus.CREATED)
+                                        .body(Map.of("message", "Manager appointed successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to appoint manager. You may not have permission, the user does not exist, or is already a manager."));
         }
 
         // PUT /api/production/companies/{companyId}/managers/{managerId}/permissions
         @PutMapping("/companies/{companyId}/managers/{managerId}/permissions")
-        public ResponseEntity<Void> modifyManagerPermissions(
+        public ResponseEntity<Map<String, String>> modifyManagerPermissions(
                         @RequestHeader("Authorization") String authHeader,
                         @PathVariable Integer companyId,
                         @PathVariable String managerId,
@@ -85,23 +99,29 @@ public class ProductionController {
                 String token = extractToken(authHeader);
                 boolean success = productionService.modifyManagerPermissions(
                                 token, companyId, managerId, body.getPermissions());
-                return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Manager permissions updated successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to update permissions. You may not have permission or the manager does not exist."));
         }
 
         // DELETE /api/production/companies/{companyId}/managers/{managerId}
         @DeleteMapping("/companies/{companyId}/managers/{managerId}")
-        public ResponseEntity<Void> removeManager(
+        public ResponseEntity<Map<String, String>> removeManager(
                         @RequestHeader("Authorization") String authHeader,
                         @PathVariable Integer companyId,
                         @PathVariable String managerId) {
 
                 String token = extractToken(authHeader);
                 boolean success = productionService.removeManager(token, companyId, managerId);
-                return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Manager removed successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to remove manager. You may not have permission or the manager does not exist."));
         }
 
         // GET /api/production/companies/{companyId}/roles
