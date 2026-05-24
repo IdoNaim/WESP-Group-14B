@@ -7,25 +7,21 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderListen
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.event.*;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
-import com.ticketpurchasingsystem.project.infrastructure.BarCodeGateway;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 import org.springframework.test.util.ReflectionTestUtils;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -33,9 +29,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 public class ActiveOrderAcceptanceTests {
     private IActiveOrderService activeOrderService;
@@ -61,7 +57,7 @@ public class ActiveOrderAcceptanceTests {
     private IHistoryOrderRepo historyOrderRepo;
     private IHistoryOrderService historyOrderService;
 
-    ;
+
     //external systems
     @Mock
     private IPaymentGateway paymentGatewayMock;
@@ -76,11 +72,9 @@ public class ActiveOrderAcceptanceTests {
     private int companyId = 10;
     private String eventName = "EventA";
     private Integer eventCapacity = 50;
-    private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,10, 60, true);
+    private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,0, 60, true);
     private List<DiscountDTO> discounts = new ArrayList<>();
     private LocalDateTime eventDate = LocalDateTime.of(LocalDate.now().plusYears(1), LocalTime.now());
-
-
 
     @BeforeEach
     public void setup() {
@@ -141,7 +135,7 @@ public class ActiveOrderAcceptanceTests {
                 eventDate,
                 true);
         testEvent = eventService.createEvent(e, purchasePolicyDTO, discounts);
-        this.seatingMap = eventService.configureSeatingMap(List.of(new SeatingAreaConfig(1, 1, 10)), List.of(new StandingAreaConfig(20, 10)));
+        this.seatingMap = eventService.configureSeatingMap(List.of(new SeatingAreaConfig(1, 2, 10)), List.of(new StandingAreaConfig(20, 10)));
         seatIds = new ArrayList<>(seatingMap.getSeats());
         standingAreas = new ArrayList<>(seatingMap.getStandingAreas());
         eventService.editEventSeatingMap(testEvent.eventId(), seatingMap);
@@ -408,5 +402,192 @@ public class ActiveOrderAcceptanceTests {
         }
     }
     @Test
-    public
+    public void GivenValidNonEmptySeatIds_WhenUpdateActiveOrder_ThenUpdateOrderSuccesfully(){
+        try{
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+            activeOrderService.addSeatsToActiveOrder(session, order.getOrderId(), seatIds);
+            ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            List<String> newSeats = List.of(seatIds.getFirst());
+            orderDTO.setSeatIds(newSeats);
+            activeOrderService.updateActiveOrder(session, orderDTO);
+            ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            assertTrue(updateOrderDTO.getSeatIds().containsAll(newSeats));
+            seatIds.remove(newSeats);
+            for(String seatID : seatIds){
+                assertFalse(updateOrderDTO.getSeatIds().contains(seatID));
+            }
+            //TODO: add checks that the newSeats are reserved and the other seats are not reserved
+
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+    @Test
+    public void GivenInvalidDetails_WhenUpdateActiveOrder_ThenThrowExceptionAndDontChangeOrder(){
+        try {
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+            activeOrderService.addSeatsToActiveOrder(session, order.getOrderId(), seatIds);
+            ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            List<String> oldSeats = orderDTO.getSeatIds();
+            List<String> newSeats = List.of("nonExistentSeat");
+            orderDTO.setSeatIds(newSeats);
+
+            assertThrows(Exception.class, () -> activeOrderService.updateActiveOrder(session, orderDTO));
+            ActiveOrderDTO updatedOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            assertEquals(updatedOrderDTO.getSeatIds(), oldSeats);
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+    @Test
+    public void GivenEmptyStandingAreaQuantities_WhenUpdateActiveOrder_ThenUpdateOrderSuccessfully(){
+        try {
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+
+            String validAreaId = standingAreas.getFirst();
+            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, 3);
+
+            ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+
+            java.util.HashMap<String, Integer> emptyQuantities = new java.util.HashMap<>();
+            orderDTO.setStandingAreaQuantities(emptyQuantities);
+
+            activeOrderService.updateActiveOrder(session, orderDTO);
+            ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            assertTrue(updateOrderDTO.getStandingAreaQuantities().isEmpty());
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void GivenValidNonEmptyStandingAreaQuantities_WhenUpdateActiveOrder_ThenUpdateOrderSuccessfully(){
+        try{
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+
+            String validAreaId = standingAreas.getFirst();
+            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, 5);
+
+            ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            int newQuantity = 2;
+
+            java.util.HashMap<String, Integer> updatedQuantities = new java.util.HashMap<>();
+            updatedQuantities.put(validAreaId, newQuantity);
+            orderDTO.setStandingAreaQuantities(updatedQuantities);
+
+            activeOrderService.updateActiveOrder(session, orderDTO);
+            ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+
+            assertTrue(updateOrderDTO.getStandingAreaQuantities().containsKey(validAreaId));
+            assertEquals(newQuantity, updateOrderDTO.getStandingAreaQuantities().get(validAreaId));
+            //TODO: add checks that the standing area ticket quantities are updated correctly in the event/reservation system
+
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void GivenInvalidStandingAreaDetails_WhenUpdateActiveOrder_ThenThrowExceptionAndDontChangeOrder(){
+        try {
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+
+            String validAreaId = standingAreas.getFirst();
+            int originalQuantity = 3;
+            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, originalQuantity);
+
+            ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            String nonExistentArea = "nonExistentArea";
+
+            java.util.HashMap<String, Integer> invalidQuantities = new java.util.HashMap<>();
+            invalidQuantities.put(nonExistentArea, 2);
+            orderDTO.setStandingAreaQuantities(invalidQuantities);
+
+            assertThrows(Exception.class, () -> activeOrderService.updateActiveOrder(session, orderDTO));
+
+            ActiveOrderDTO updatedOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
+            assertTrue(updatedOrderDTO.getStandingAreaQuantities().containsKey(validAreaId));
+            assertEquals(originalQuantity, updatedOrderDTO.getStandingAreaQuantities().get(validAreaId));
+            assertFalse(updatedOrderDTO.getStandingAreaQuantities().containsKey(nonExistentArea));
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+    //UC II.2.11
+    @Test
+    public void GivenValidActiveOrder_WhenCompleteOrder_ThenActiveOrderIsDeleted(){
+        try {
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+            double amountToPay = 100;
+            when(paymentGatewayMock.pay()).thenReturn(true);
+            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
+
+            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay, order.getOrderId()));
+            assertThrows(Exception.class, ()-> activeOrderService.getActiveOrderInfo(session, order.getOrderId()));
+            assertNull(activeOrderRepo.findById(order.getOrderId()));
+            //check if we can create new order:
+            ActiveOrderItem order2 = assertDoesNotThrow(()-> activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId()));
+            assertNotNull(order2);
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
+    @Test
+    public void GivenValidActiveOrder_WhenCompleteOrder_ThenHistoryOrderIsMade(){
+        try {
+            registeredUsers.add(USER1_ID);
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem order = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (order == null) {
+                fail("couldnt create active order, should have worked");
+            }
+            double amountToPay = 100;
+            when(paymentGatewayMock.pay()).thenReturn(true);
+            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
+
+            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay, order.getOrderId()));
+            HistoryOrderDTO historyOrderDTO = assertNotNull(historyOrderRepo.)
+            //check if we can create new order:
+
+        }catch (Exception e){
+            fail("got exception : " + e.getMessage());
+        }
+    }
 }
