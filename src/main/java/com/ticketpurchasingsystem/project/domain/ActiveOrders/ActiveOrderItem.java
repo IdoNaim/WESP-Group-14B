@@ -36,6 +36,15 @@ public class ActiveOrderItem {
         this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
         this.processing = false;
     }
+    public ActiveOrderItem(ActiveOrderDTO other){
+        this.orderId = other.getOrderId();
+        this.userId = other.getUserId();
+        this.eventId = other.getEventId();
+        this.createdAt = new Timestamp(other.getCreatedAt().getTime());
+        this.seatIds = new ArrayList<>(other.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
+        this.processing = false;
+    }
 
     public boolean markAsProcessing() {
         if (processing) return false;
@@ -106,6 +115,8 @@ public class ActiveOrderItem {
         }
         this.seatIds = new ArrayList<>(order.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(order.getStandingAreaQuantities());
+        //added this for tests:
+        this.createdAt = new Timestamp(order.getCreatedAt().getTime());
     }
 
     public void setSeatIds(List<String> seatIds) {
