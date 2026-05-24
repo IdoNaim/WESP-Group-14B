@@ -143,4 +143,8 @@ public class Event {
     public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
         this.ticketPurchasePolicy = ticketPurchasePolicy;
     }
+
+    public EventPurchasePolicy getPurchasePolicy() {
+        return purchasePolicy;
+    }
 }

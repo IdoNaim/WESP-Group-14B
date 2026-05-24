@@ -51,4 +51,16 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
         }
         return result;
     }
+
+    @Override
+    public HistoryOrderItem findByOrderId(String orderId) {
+        HistoryOrderItem item = null;
+        for (HistoryOrderItem historyOrder : storage.values()) {
+            if (historyOrder.getOrderId().equals(orderId)) {
+                item = historyOrder;
+                break;
+            }
+        }
+        return item;
+    }
 }
