@@ -1,32 +1,42 @@
 package com.ticketpurchasingsystem.project.domain.authTest;
 
-import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import java.util.concurrent.*;
+import java.sql.Date;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import javax.crypto.SecretKey;
-import java.util.Optional;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @ExtendWith(MockitoExtension.class)
 class DomainAuthServiceTest {
@@ -299,58 +309,103 @@ class DomainAuthServiceTest {
 
     @Nested
     class IsAdminTests {
-
-        @Mock private SystemAdminService systemAdminService;
-        @Mock private DomainAuthService nestedDomainAuthService;
+    
         @Mock private ISessionRepo nestedSessionRepo;
-
-        private AuthenticationService authService;
-
-        private static final String TOKEN    = "test-token";
-        private static final String ADMIN_ID = "admin-user";
-
+    
+        private DomainAuthService domainAuthService;
+    
+        private static String TOKEN;
+    
         @BeforeEach
-        void setUpAuthService() {
-            authService = new AuthenticationService(nestedDomainAuthService, systemAdminService, nestedSessionRepo);
+        void setUpDomainAuthService() {
+            domainAuthService = new DomainAuthService(nestedSessionRepo);
+        
+            // Use a secure key for testing (32 bytes)
+            String secureTestKey = "this-is-a-secure-test-key-32bytes!";
+            ReflectionTestUtils.setField(domainAuthService, "secret", secureTestKey);
+            domainAuthService.init();
+        
+            // Initialize TOKEN with valid claims
+            Claims claims = Jwts.claims();
+            claims.put("role", "admin");
+            useRealJwtParsing(claims);
         }
-
+    
         @Test
-        void GivenValidAdminToken_WhenIsAdmin_ThenReturnTrue() {
-            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(ADMIN_ID);
+        void GivenValidAdminToken_WhenIsAdminSessionValid_ThenReturnTrue() {
+            // Create claims with the "admin" role
+            Claims claims = Jwts.claims();
+            claims.put("role", "admin");
 
-            assertTrue(authService.isAdmin(TOKEN));
+            // Generate a valid token
+            SecretKey secureKey = Keys.hmacShaKeyFor("this-is-a-secure-test-key-32bytes!".getBytes());
+            String validToken = Jwts.builder()
+                    .setClaims(claims)
+                    .setExpiration(new Date(System.currentTimeMillis() + 10000)) // Set expiration in the future
+                    .signWith(secureKey)
+                    .compact();
+
+            // Mock the session repository to return the valid token
+            when(nestedSessionRepo.findByToken(validToken))
+                    .thenReturn(Optional.of(new SessionToken(validToken, System.currentTimeMillis() + 10000)));
+
+            // Assert that the token is valid and the user is an admin
+            assertTrue(domainAuthService.validateAdminSession(validToken));
         }
-
+    
         @Test
-        void GivenInvalidSessionToken_WhenIsAdmin_ThenReturnFalse() {
-            when(systemAdminService.validateAdminSession(TOKEN))
-                    .thenThrow(new RuntimeException("Invalid session token"));
-
-            assertFalse(authService.isAdmin(TOKEN));
+        void GivenInvalidToken_WhenIsAdminSessionValid_ThenReturnFalse() {
+            // Mock an invalid token
+            when(nestedSessionRepo.findByToken(TOKEN)).thenReturn(Optional.empty());
+    
+            // Assert that the token is invalid
+            assertFalse(domainAuthService.validateAdminSession(TOKEN));
         }
-
+    
         @Test
-        void GivenValidSessionButNotAdmin_WhenIsAdmin_ThenReturnFalse() {
-            when(systemAdminService.validateAdminSession(TOKEN))
-                    .thenThrow(new RuntimeException("User is not an admin"));
-
-            assertFalse(authService.isAdmin(TOKEN));
+        void GivenNonAdminRoleToken_WhenIsAdminSessionValid_ThenReturnFalse() {
+            // Create claims with a non-admin role
+            Claims claims = Jwts.claims();
+            claims.put("role", "user");
+    
+            // Use real JWT parsing
+            useRealJwtParsing(claims);
+    
+            // Assert that the token is valid but the user is not an admin
+            assertFalse(domainAuthService.validateAdminSession(TOKEN));
         }
-
+    
         @Test
-        void GivenValidateAdminSessionReturnsNull_WhenIsAdmin_ThenReturnFalse() {
-            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(null);
+        void GivenExpiredToken_WhenIsAdminSessionValid_ThenReturnFalse() {
+            // Create claims with the "admin" role
+            Claims claims = Jwts.claims();
+            claims.put("role", "admin");
 
-            assertFalse(authService.isAdmin(TOKEN));
+            // Generate a real expired token
+            SecretKey secureKey = Keys.hmacShaKeyFor("this-is-a-secure-test-key-32bytes!".getBytes());
+            String expiredToken = Jwts.builder()
+                    .setClaims(claims)
+                    .setExpiration(new Date(System.currentTimeMillis() - 1000)) // Set expiration in the past
+                    .signWith(secureKey)
+                    .compact();
+
+            // Assert that the token is expired
+            assertFalse(domainAuthService.validateAdminSession(expiredToken));
         }
-
-        @Test
-        void GivenValidAdminToken_WhenIsAdmin_ThenValidateAdminSessionCalledOnce() {
-            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(ADMIN_ID);
-
-            authService.isAdmin(TOKEN);
-
-            verify(systemAdminService, times(1)).validateAdminSession(TOKEN);
+    
+        private void useRealJwtParsing(Claims claims) {
+            // Generate a secure key for testing
+            SecretKey secureKey = Keys.hmacShaKeyFor("this-is-a-secure-test-key-32bytes!".getBytes());
+        
+            // Generate a real JWT token with the provided claims
+            String token = Jwts.builder()
+                    .setClaims(claims) // Set the claims directly
+                    .setExpiration(new Date(System.currentTimeMillis() + 1000)) // Set expiration time
+                    .signWith(secureKey) // Use the secure signing key
+                    .compact();
+        
+            // Update the TOKEN variable with the generated token
+            TOKEN = token;
         }
     }
 }

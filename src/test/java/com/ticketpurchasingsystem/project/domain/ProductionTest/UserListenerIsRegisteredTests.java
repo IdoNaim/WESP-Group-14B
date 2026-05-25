@@ -1,25 +1,28 @@
 package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 
 @ExtendWith(MockitoExtension.class)
 class UserListenerIsRegisteredTests {
@@ -45,7 +48,7 @@ class UserListenerIsRegisteredTests {
 
     @BeforeEach
     void setUp() {
-        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, systemAdminService, sessionRepo),userPublisher ));
+        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo),userPublisher ));
     }
 
     @Test

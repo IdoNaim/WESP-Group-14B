@@ -1,8 +1,17 @@
 package com.ticketpurchasingsystem.project.acceptance.production;
 
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
@@ -11,15 +20,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 
 class GetCompanyPurchaseHistoryAcceptanceTest {
 
@@ -37,7 +37,7 @@ class GetCompanyPurchaseHistoryAcceptanceTest {
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();
-        authService = new AuthenticationService(domainAuthService, mock(SystemAdminService.class), sessionRepo);
+        authService = new AuthenticationService(domainAuthService, sessionRepo);
         prodRepo = new ProdRepo();
         ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {
             if (event instanceof GetCompanyHistoryEvent e) {
