@@ -8,12 +8,10 @@ import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 public class AuthenticationService {
 
     private final DomainAuthService domainAuthService;
-    private final SystemAdminService systemAdminService;
     private final ISessionRepo sessionRepo;
 
-    public AuthenticationService(DomainAuthService domainAuthService, SystemAdminService systemAdminService, ISessionRepo sessionRepo) {
+    public AuthenticationService(DomainAuthService domainAuthService, ISessionRepo sessionRepo) {
         this.domainAuthService = domainAuthService;
-        this.systemAdminService = systemAdminService;
         this.sessionRepo = sessionRepo;
     }
 
