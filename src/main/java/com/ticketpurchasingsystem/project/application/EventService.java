@@ -382,7 +382,7 @@ public class EventService implements IEventService {
             logger.warn("Cannot book standing area. Event not found: " + eventId);
             throw new IllegalArgumentException("Invalid EventID");
         }
-        if(!event.getSeatingMap().unbookStandingArea(areaId, quantity)){
+        if(!event.getSeatingMap().bookStandingArea(areaId, null,quantity)){
             logger.warn("Cannot book standing area. one or more stands not booked");
             throw new IllegalArgumentException("cannot book standing area, problem occured");
         }
