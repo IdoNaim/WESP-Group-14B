@@ -1,15 +1,29 @@
 package com.ticketpurchasingsystem.project.application;
 
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
@@ -116,5 +130,93 @@ class AuthenticationServiceTest {
         // Act & Assert
         assertThrows(RuntimeException.class, () -> authenticationService.getUser(TOKEN));
         verify(domainAuthService).getUsernameFromToken(TOKEN);
+    }
+
+    // ── Concurrency tests ─────────────────────────────────────────────────────
+
+    private static final String TEST_SECRET = "my-super-secret-key-for-testing!";
+
+    private AuthenticationService buildRealAuthService() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService real = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(real, "secret", TEST_SECRET);
+        real.init();
+        return new AuthenticationService(real, sessionRepo);
+    }
+
+    @Test
+    void GivenMultipleUsers_WhenConcurrentLogin_ThenAllTokensAreValid() throws Exception {
+        // Arrange
+        AuthenticationService svc = buildRealAuthService();
+        int threadCount = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CopyOnWriteArrayList<String> tokens = new CopyOnWriteArrayList<>();
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    tokens.add(svc.login("user-" + idx));
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(0, errorCount.get(), "No exceptions should occur during concurrent logins");
+        assertEquals(threadCount, tokens.size(), "Every thread must receive a token");
+        for (String token : tokens) {
+            assertTrue(svc.validate(token), "Every issued token must be valid");
+        }
+    }
+
+    @Test
+    void GivenConcurrentLoginAndLogout_WhenOneUserLogsOut_ThenOtherUsersUnaffected() throws Exception {
+        // Arrange
+        AuthenticationService svc = buildRealAuthService();
+        String fixedToken = svc.login("fixed-user");
+        int threadCount = 15;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CopyOnWriteArrayList<String> newTokens = new CopyOnWriteArrayList<>();
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    newTokens.add(svc.login("other-user-" + idx));
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        svc.logout(fixedToken);
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertFalse(svc.validate(fixedToken), "Fixed user token must be invalidated after logout");
+        for (String token : newTokens) {
+            assertTrue(svc.validate(token), "Other users' tokens must not be affected by the logout");
+        }
     }
 }

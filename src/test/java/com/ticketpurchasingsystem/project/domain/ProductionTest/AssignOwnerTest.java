@@ -1,27 +1,45 @@
 package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
 @ExtendWith(MockitoExtension.class)
 public class AssignOwnerTest {
@@ -293,5 +311,110 @@ public class AssignOwnerTest {
 
         // Assert
         assertNull(result);
+    }
+
+    // Concurrency tests
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    private record ConcurrencyStack(AuthenticationService auth, ProdRepo repo, ProductionService service) {
+    }
+
+    private ConcurrencyStack buildRealStack() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo,
+                productionEventPublisher);
+        return new ConcurrencyStack(realAuth, realRepo, svc);
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentAssignDifferentOwners_ThenAllSucceedThroughRetries()
+            throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Shared Co", "desc", "shared@co.com"));
+        int companyId = stack.repo().findByName("Shared Co").get().getCompanyId();
+
+        int threadCount = 3;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().assignOwner(token, companyId, "owner-" + idx);
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(threadCount, successCount.get(),
+                "All concurrent assign-owner operations must eventually succeed through optimistic-locking retries");
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentAssignSameOwner_ThenOnlyOneSucceeds() throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Exclusive Co", "desc", "exclusive@co.com"));
+        int companyId = stack.repo().findByName("Exclusive Co").get().getCompanyId();
+
+        int threadCount = 5;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().assignOwner(token, companyId, "same-owner");
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(1, successCount.get(),
+                "Only one thread must succeed when all race to assign the same owner — duplicates must be rejected");
     }
 }

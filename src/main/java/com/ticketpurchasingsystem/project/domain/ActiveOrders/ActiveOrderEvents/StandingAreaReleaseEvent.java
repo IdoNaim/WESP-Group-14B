@@ -6,11 +6,13 @@ public class StandingAreaReleaseEvent extends ApplicationEvent {
     private String eventID;
     private String areaID;
     private int quantity;
-    public StandingAreaReleaseEvent(Object source, String eventID, String areaID, int quantity){
+    private String sessionToken;
+    public StandingAreaReleaseEvent(Object source, String sessionToken, String eventID, String areaID, int quantity){
         super(source);
         this.eventID = eventID;
         this.areaID = areaID;
         this.quantity = quantity;
+        this.sessionToken = sessionToken;
     }
 
     public String getEventID() {
@@ -23,5 +25,8 @@ public class StandingAreaReleaseEvent extends ApplicationEvent {
 
     public int getQuantity() {
         return quantity;
+    }
+    public String getSessionToken(){
+        return sessionToken;
     }
 }

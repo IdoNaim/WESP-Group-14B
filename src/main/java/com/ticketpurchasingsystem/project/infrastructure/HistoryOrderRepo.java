@@ -3,12 +3,13 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.stereotype.Repository;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
-import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
+@Repository
 public class HistoryOrderRepo implements IHistoryOrderRepo {
 
     private final ConcurrentHashMap<String, HistoryOrderItem> storage = new ConcurrentHashMap<>();
@@ -33,7 +34,7 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
     }
 
     @Override
-    public List<HistoryOrderItem> findByCompanyId(int companyId) {
+    public List<HistoryOrderItem> findAllByCompanyId(int companyId) {
         List<HistoryOrderItem> result = new ArrayList<>();
         for (HistoryOrderItem item : storage.values()) {
             if (item.getCompanyId() == companyId) {
@@ -41,5 +42,28 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
             }
         }
         return result;
+    }
+
+    @Override
+    public List<HistoryOrderItem> findAllByUserId(String userId) {
+        List<HistoryOrderItem> result = new ArrayList<>();
+        for (HistoryOrderItem item : storage.values()) {
+            if (item.getUserId().equals(userId)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public HistoryOrderItem findByOrderId(String orderId) {
+        HistoryOrderItem item = null;
+        for (HistoryOrderItem historyOrder : storage.values()) {
+            if (historyOrder.getOrderId().equals(orderId)) {
+                item = historyOrder;
+                break;
+            }
+        }
+        return item;
     }
 }

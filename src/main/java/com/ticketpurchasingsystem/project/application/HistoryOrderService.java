@@ -4,29 +4,29 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
-import com.ticketpurchasingsystem.project.application.UserService.IUserService;
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
+@Service
 public class HistoryOrderService implements IHistoryOrderService {
 
     private final IHistoryOrderRepo historyOrderRepo;
     private final HistoryOrderHandler historyOrderHandler;
     private final AuthenticationService authenticationService;
-    private final ISystemAdminService systemAdminService;
     private final ProductionService productionService;
-    private final IUserService userService;
 
-    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler, AuthenticationService authenticationService, ISystemAdminService systemAdminService, ProductionService productionService, IUserService userService) {
+    public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler,
+                               AuthenticationService authenticationService,
+                               ProductionService productionService) {
         this.historyOrderRepo = historyOrderRepo;
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
-        this.systemAdminService = systemAdminService;
         this.productionService = productionService;
-        this.userService = userService;
     }
 
 
@@ -41,22 +41,58 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
-    public void getHistoryOrder(SessionToken sessionToken, String orderId) {
-        // TODO Auto-generated method stub
+    public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
+        HistoryOrderDTO historyOrder = null;
+        if (isSessionTokenValid(st)){
+            HistoryOrderItem item = historyOrderRepo.findByOrderId(orderId);
+            if (item != null) {
+                if (authenticationService.isAdmin(st.getToken()) || item.getUserId().equals(authenticationService.getUser(st.getToken()))) {
+                    historyOrder = item.makeDTO();
+                }
+            }
+        }
+        return historyOrder;
     }
 
     @Override
-    public void getAllHistoryOrdersByUser(SessionToken sessionToken, String userId) {
-        // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken st, String userASk) {
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if (!isSessionTokenValid(st)) return historyOrders;
+        String tokenOwner = authenticationService.getUser(st.getToken());
+        boolean isOwner = userASk.equals(tokenOwner);
+        boolean isAdmin = authenticationService.isAdmin(st.getToken());
+        if (!isOwner && !isAdmin) return historyOrders;
+        for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userASk)) {
+            historyOrders.add(item.makeDTO());
+        }
+        return historyOrders;
     }
 
     @Override
-    public void getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
-        // TODO Auto-generated method stub
+    public List<HistoryOrderDTO> getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if(isSessionTokenValid(sessionToken)){
+            for (HistoryOrderItem item : historyOrderRepo.findAllByCompanyId(companyId)) {
+                historyOrders.add(item.makeDTO());
+            }
+        }
+        return historyOrders;
+    }
+    
+    @Override
+    // This method is intended for system administrators to retrieve all historical orders in the system. It should only be accessible to users with admin privileges, and it will return a list of HistoryOrderDTO objects representing all historical orders.
+    public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken st) {
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if (isSessionTokenValid(st) && authenticationService.isAdmin(st.getToken())) {
+            for (HistoryOrderItem item : historyOrderRepo.findAll()) {
+                historyOrders.add(item.makeDTO());
+            }
+        }
+        return historyOrders;
+
     }
 
-    @Override
-    public void getAllHistoryOrders(SessionToken sessionToken) {
-        // TODO Auto-generated method stub
+    private boolean isSessionTokenValid(SessionToken sessionToken) {
+        return authenticationService.validate(sessionToken.getToken());
     }
 }

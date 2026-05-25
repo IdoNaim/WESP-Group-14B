@@ -1,115 +1,127 @@
 package com.ticketpurchasingsystem.project.domain.Events;
 
-import com.ticketpurchasingsystem.project.domain.event.EventPurchasePolicy;
+// Explicitly import your Event-specific policy and leaf rules
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
+
+// EXPLICIT IMPORT: Tell Java to use YOUR 3-argument PurchaseContext
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;;
 
 public class EventPurchasePolicyTest {
-    
- @Test
-    void GivenValidConditions_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
 
-        boolean result = policy.canPurchase(5, 25, false);
+    @Test
+    void GivenValidConditions_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MinTicketsRule(1));
+        policy.addRule(new MaxTicketsRule(10)); // Resolves perfectly via explicit import
+        policy.addRule(new MinAgeRule(18));
+        policy.addRule(new MaxAgeRule(60));
+        policy.addRule(new EmptySeatRule(true));
 
-        assertTrue(result);
+        // Correctly resolves to your 3-argument constructor
+        PurchaseContext context = new PurchaseContext(5, 25, false);
+
+        assertTrue(policy.validate(context));
     }
 
     @Test
-    void GivenBelowMinTickets_WhenCanPurchase_ThenReturnFalse() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(3, 10, 18, 60, true);
+    void GivenBelowMinTickets_WhenValidate_ThenReturnFalse() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MinTicketsRule(3));
 
-        assertFalse(policy.canPurchase(2, 25, false));
+        PurchaseContext context = new PurchaseContext(2, 25, false);
+
+        assertFalse(policy.validate(context));
     }
 
     @Test
-    void GivenAboveMaxTickets_WhenCanPurchase_ThenReturnFalse() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 5, 18, 60, true);
+    void GivenAboveMaxTickets_WhenValidate_ThenReturnFalse() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MaxTicketsRule(5));
 
-        assertFalse(policy.canPurchase(6, 25, false));
+        PurchaseContext context = new PurchaseContext(6, 25, false);
+
+        assertFalse(policy.validate(context));
     }
 
     @Test
-    void GivenBelowMinAge_WhenCanPurchase_ThenReturnFalse() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
+    void GivenBelowMinAge_WhenValidate_ThenReturnFalse() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MinAgeRule(18));
 
-        assertFalse(policy.canPurchase(5, 16, false));
+        PurchaseContext context = new PurchaseContext(5, 16, false);
+
+        assertFalse(policy.validate(context));
     }
 
     @Test
-    void GivenAboveMaxAge_WhenCanPurchase_ThenReturnFalse() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
+    void GivenAboveMaxAge_WhenValidate_ThenReturnFalse() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MaxAgeRule(60));
 
-        assertFalse(policy.canPurchase(5, 65, false));
+        PurchaseContext context = new PurchaseContext(5, 65, false);
+
+        assertFalse(policy.validate(context));
     }
 
     @Test
-    void GivenEmptySeatNotAllowed_WhenCanPurchase_ThenReturnFalse() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, false);
+    void GivenEmptySeatNotAllowed_WhenValidate_ThenReturnFalse() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new EmptySeatRule(false));
 
-        assertFalse(policy.canPurchase(5, 25, true));
+        PurchaseContext context = new PurchaseContext(5, 25, true);
+
+        assertFalse(policy.validate(context));
     }
 
     @Test
-    void GivenEmptySeatAllowed_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
+    void GivenEmptySeatAllowed_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new EmptySeatRule(true));
 
-        assertTrue(policy.canPurchase(5, 25, true));
+        PurchaseContext context = new PurchaseContext(5, 25, true);
+
+        assertTrue(policy.validate(context));
     }
 
     @Test
-    void GivenNoTicketLimits_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(null, null, 18, 60, true);
+    void GivenExactMinTickets_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MinTicketsRule(5));
 
-        assertTrue(policy.canPurchase(100, 25, false));
+        PurchaseContext context = new PurchaseContext(5, 25, false);
+
+        assertTrue(policy.validate(context));
     }
 
     @Test
-    void GivenNoAgeLimits_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, null, null, true);
+    void GivenExactMaxTickets_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MaxTicketsRule(5));
 
-        assertTrue(policy.canPurchase(5, 5, false));
+        PurchaseContext context = new PurchaseContext(5, 25, false);
+
+        assertTrue(policy.validate(context));
     }
 
     @Test
-    void GivenExactMinTickets_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(5, 10, 18, 60, true);
+    void GivenExactMinAge_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MinAgeRule(18));
 
-        assertTrue(policy.canPurchase(5, 25, false));
+        PurchaseContext context = new PurchaseContext(5, 18, false);
+
+        assertTrue(policy.validate(context));
     }
 
     @Test
-    void GivenExactMaxTickets_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 5, 18, 60, true);
+    void GivenExactMaxAge_WhenValidate_ThenReturnTrue() {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
+        policy.addRule(new MaxAgeRule(60));
 
-        assertTrue(policy.canPurchase(5, 25, false));
-    }
+        PurchaseContext context = new PurchaseContext(5, 60, false);
 
-    @Test
-    void GivenExactMinAge_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
-
-        assertTrue(policy.canPurchase(5, 18, false));
-    }
-
-    @Test
-    void GivenExactMaxAge_WhenCanPurchase_ThenReturnTrue() {
-        EventPurchasePolicy policy =
-                new EventPurchasePolicy(1, 10, 18, 60, true);
-
-        assertTrue(policy.canPurchase(5, 60, false));
+        assertTrue(policy.validate(context));
     }
 }

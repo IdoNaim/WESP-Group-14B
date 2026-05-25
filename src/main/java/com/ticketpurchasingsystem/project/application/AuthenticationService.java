@@ -1,10 +1,9 @@
 package com.ticketpurchasingsystem.project.application;
 
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-
 import org.springframework.stereotype.Service;
 
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 @Service
 public class AuthenticationService {
 
@@ -18,6 +17,10 @@ public class AuthenticationService {
 
     public String login(String username) {
         return domainAuthService.authenticateAndCreateSession(username);
+    }
+    public String login(String username,String role) {
+        
+        return domainAuthService.authenticateAndCreateSessionAdmin(username);
     }
 
     public boolean validate(String token) {
@@ -34,5 +37,13 @@ public class AuthenticationService {
 
     public void removeSessionManually(String token) {
         sessionRepo.deleteByToken(token);
+    }
+
+    public boolean isAdmin(String token) {
+        try{
+            return domainAuthService.validateAdminSession(token);
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }

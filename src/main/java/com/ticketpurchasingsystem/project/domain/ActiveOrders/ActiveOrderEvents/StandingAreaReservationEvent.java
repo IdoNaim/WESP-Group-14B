@@ -6,14 +6,16 @@ public class StandingAreaReservationEvent extends ApplicationEvent {
     private final String eventId;
     private final String areaId;
     private final int quantity;
+    private final String sessionToken;
 
     private Boolean result;
 
-    public StandingAreaReservationEvent(Object source, String eventId, String areaId, int quantity) {
+    public StandingAreaReservationEvent(Object source, String sessionToken, String eventId, String areaId, int quantity) {
         super(source);
         this.eventId = eventId;
         this.areaId = areaId;
         this.quantity = quantity;
+        this.sessionToken = sessionToken;
         this.result = null;
     }
 
@@ -25,7 +27,11 @@ public class StandingAreaReservationEvent extends ApplicationEvent {
         return areaId;
     }
 
-    public int getAmount() {
+    public String getSessionToken() {
+        return sessionToken;
+    }
+
+    public int getQuantity() {
         return quantity;
     }
 
@@ -36,5 +42,7 @@ public class StandingAreaReservationEvent extends ApplicationEvent {
     public void setResult(Boolean result) {
         this.result = result;
     }
+
+
     
 }
