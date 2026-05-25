@@ -1,20 +1,29 @@
 package com.ticketpurchasingsystem.project.application;
 
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
@@ -132,7 +141,7 @@ class AuthenticationServiceTest {
         DomainAuthService real = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(real, "secret", TEST_SECRET);
         real.init();
-        return new AuthenticationService(real, mock(SystemAdminService.class), sessionRepo);
+        return new AuthenticationService(real, sessionRepo);
     }
 
     @Test

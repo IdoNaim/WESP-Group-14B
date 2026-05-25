@@ -8,17 +8,19 @@ import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 public class AuthenticationService {
 
     private final DomainAuthService domainAuthService;
-    private final SystemAdminService systemAdminService;
     private final ISessionRepo sessionRepo;
 
-    public AuthenticationService(DomainAuthService domainAuthService, SystemAdminService systemAdminService, ISessionRepo sessionRepo) {
+    public AuthenticationService(DomainAuthService domainAuthService, ISessionRepo sessionRepo) {
         this.domainAuthService = domainAuthService;
-        this.systemAdminService = systemAdminService;
         this.sessionRepo = sessionRepo;
     }
 
     public String login(String username) {
         return domainAuthService.authenticateAndCreateSession(username);
+    }
+    public String login(String username,String role) {
+        
+        return domainAuthService.authenticateAndCreateSessionAdmin(username);
     }
 
     public boolean validate(String token) {
@@ -39,7 +41,7 @@ public class AuthenticationService {
 
     public boolean isAdmin(String token) {
         try{
-            return systemAdminService.validateAdminSession(token) != null;
+            return domainAuthService.validateAdminSession(token);
         } catch (RuntimeException e) {
             return false;
         }
