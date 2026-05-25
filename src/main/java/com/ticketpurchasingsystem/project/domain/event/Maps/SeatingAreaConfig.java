@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Maps;
 
 public class SeatingAreaConfig {
     private int rows;

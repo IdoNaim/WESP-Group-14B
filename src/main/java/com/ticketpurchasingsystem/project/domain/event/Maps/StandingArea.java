@@ -1,7 +1,6 @@
+package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-package com.ticketpurchasingsystem.project.domain.event;
-
-public class StandingArea implements Bookable{
+public class StandingArea implements Bookable {
     private String areaId;
     private int avalibleSeats;
     private int capacity;
@@ -36,7 +35,7 @@ public class StandingArea implements Bookable{
     public double getPriceForTicket() {
         return priceForTicket;
     }
-    
+
     public int getAvalibleSeatNumber() {
         return avalibleSeats;
     }
@@ -52,6 +51,10 @@ public class StandingArea implements Bookable{
             return false;
         }
         priceForTicket = newPrice;
+        return true;
+    }
+
+    public boolean isbooked(String orderId) {
         return true;
     }
 //    public String getDesc(){

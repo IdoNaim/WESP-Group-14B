@@ -3,6 +3,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
+import com.ticketpurchasingsystem.project.domain.event.Discounts.CouponDiscount;
+import com.ticketpurchasingsystem.project.domain.event.Discounts.DependentDiscount;
+import com.ticketpurchasingsystem.project.domain.event.Discounts.*;
+import com.ticketpurchasingsystem.project.domain.event.Discounts.VisibleDiscount;
+
 public class EventDiscountPolicy {
     ArrayList<Discount> discounts;
     public EventDiscountPolicy(List<DiscountDTO> discountDTOs) {
@@ -20,6 +25,5 @@ public class EventDiscountPolicy {
 
 
 
-    
-}
 
+}

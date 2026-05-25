@@ -14,6 +14,9 @@ import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthServic
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
@@ -24,7 +27,6 @@ import org.mockito.Mock;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -70,6 +72,7 @@ public class ActiveOrderAcceptanceTests {
     private static final String VALID_TOKEN = "accept-token";
     private static final SessionToken VALID_SESSION = new SessionToken(VALID_TOKEN, 9999999999L);
     private static final String USER1_ID = "123";
+    private static final String USER2_ID = "456";
     private static final double AMOUNT = 150.0;
     private final Set<String> registeredUsers = new HashSet<>();
     private int companyId = 10;
@@ -79,6 +82,7 @@ public class ActiveOrderAcceptanceTests {
     private List<DiscountDTO> discounts = new ArrayList<>();
     private LocalDateTime eventDate = LocalDateTime.of(LocalDate.now().plusYears(1), LocalTime.now());
 
+
     @BeforeEach
     public void setup() {
         registeredUsers.clear();
@@ -86,7 +90,7 @@ public class ActiveOrderAcceptanceTests {
         eventRepo = new EventRepo();
         eventListener = new EventAggregateListener(eventRepo, eventService);
         eventPublisher = new EventAggregatePublisher(event -> {});          /// not important for these acceptance tests
-        eventService = new EventService(eventRepo, eventPublisher, eventListener);
+        eventService = new EventService(eventRepo, eventPublisher, eventListener, authenticationService);
 
 
         historyOrderRepo = new HistoryOrderRepo();
@@ -137,11 +141,16 @@ public class ActiveOrderAcceptanceTests {
                 eventCapacity,
                 eventDate,
                 true);
-        testEvent = eventService.createEvent(e, purchasePolicyDTO, discounts);
-        this.seatingMap = eventService.configureSeatingMap(List.of(new SeatingAreaConfig(1, 2, 10)), List.of(new StandingAreaConfig(20, 10)));
-        seatIds = new ArrayList<>(seatingMap.getSeats());
-        standingAreas = new ArrayList<>(seatingMap.getStandingAreas());
-        eventService.editEventSeatingMap(testEvent.eventId(), seatingMap);
+        registeredUsers.add(USER2_ID);
+        String sessionToken = authenticationService.login(USER2_ID);
+
+        eventService.createEvent(sessionToken, e, purchasePolicyDTO, discounts);
+        List<EventDTO> events = eventService.searchEventsByCompany(sessionToken, companyId);
+        testEvent = events.getFirst();
+        this.seatingMap = eventService.configureSeatingMap(sessionToken, List.of(new SeatingAreaConfig(1, 2, 10)), List.of(new StandingAreaConfig(20, 10)));
+        seatIds = new ArrayList<>(seatingMap.getSeatIds());
+        standingAreas = new ArrayList<>(seatingMap.getAreaIds());
+        eventService.editEventSeatingMap(sessionToken, testEvent.eventId(), seatingMap);
 
     }
     @Test
@@ -198,7 +207,7 @@ public class ActiveOrderAcceptanceTests {
 
             assertDoesNotThrow(() -> activeOrderService.addSeatsToActiveOrder(session, order.getOrderId(), seatIds));
             ActiveOrderDTO updatedOrder = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
-            assertTrue(updatedOrder.getSeatIds().equals(seatIds));
+            assertEquals(updatedOrder.getSeatIds(), seatIds);
         }catch (Exception e){
             fail("got exception : "+ e.getMessage());
         }
@@ -216,7 +225,7 @@ public class ActiveOrderAcceptanceTests {
             }
 
             assertDoesNotThrow(() -> activeOrderService.addSeatsToActiveOrder(session, order.getOrderId(), seatIds));
-            //TODO: add a check that each seat is reserved for orderId
+            assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds).isEmpty());
         }catch (Exception e){
             fail("got exception : "+ e.getMessage());
         }
@@ -258,7 +267,9 @@ public class ActiveOrderAcceptanceTests {
             for (String seatId : seatIds) {
                 assertFalse(orderDTO.getSeatIds().contains(seatId));
             }
-            //TODO: check that seatIds still reserved for orderId2
+            //check that seatIds still reserved for orderId2
+            assertTrue(eventService.checkSeatsReserved(sessionToken, orderId2, order.getEventId(), seatIds).isEmpty());
+
         }catch (Exception e){
             fail("got exception : "+ e.getMessage());
         }
@@ -334,6 +345,7 @@ public class ActiveOrderAcceptanceTests {
             }
 
             String validAreaId = standingAreas.getFirst();
+            int inventoryBefore = seatingMap.getArea(validAreaId).getAvalibleSeatNumber();
             int quantity = 2;
 
             assertDoesNotThrow(() -> activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, quantity));
@@ -342,7 +354,8 @@ public class ActiveOrderAcceptanceTests {
 
             assertTrue(updatedOrder.getStandingAreaQuantities().containsKey(validAreaId));
             assertEquals(quantity, updatedOrder.getStandingAreaQuantities().get(validAreaId));
-            //TODO: check that there are 2 less tickets in the event now
+            //check that there are 2 less tickets in the event now
+            assertEquals(inventoryBefore - quantity, seatingMap.getArea(validAreaId).getAvalibleSeatNumber());
         } catch (Exception e){
             fail("got exception : "+ e.getMessage());
         }
@@ -483,7 +496,7 @@ public class ActiveOrderAcceptanceTests {
             assertEquals(orderDTO.getUserId(), order.getUserId());
             assertEquals(orderDTO.getSeatIds(),order.getSeatIds());
             assertEquals(orderDTO.getStandingAreaQuantities(), order.getStandingAreaQuantities());
-            assertTrue(orderDTO.getCreatedAt().getTime() == order.getCreatedAt().getTime());
+            assertEquals(orderDTO.getCreatedAt().getTime(), order.getCreatedAt().getTime());
 
         }catch (Exception e) {
             fail("got exception : " + e.getMessage());
@@ -544,11 +557,16 @@ public class ActiveOrderAcceptanceTests {
             activeOrderService.updateActiveOrder(session, orderDTO);
             ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
             assertTrue(updateOrderDTO.getSeatIds().containsAll(newSeats));
-            seatIds.remove(newSeats);
+            seatIds.removeAll(newSeats);
             for(String seatID : seatIds){
                 assertFalse(updateOrderDTO.getSeatIds().contains(seatID));
             }
-            //TODO: add checks that the newSeats are reserved and the other seats are not reserved
+            //add checks that the newSeats are reserved and the other seats are not reserved
+            assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), newSeats).isEmpty());
+            List<String> releasedSeats = orderDTO.getSeatIds();
+            releasedSeats.removeAll(newSeats);
+            assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), releasedSeats), releasedSeats);
+
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -573,7 +591,10 @@ public class ActiveOrderAcceptanceTests {
             assertThrows(Exception.class, () -> activeOrderService.updateActiveOrder(session, orderDTO));
             ActiveOrderDTO updatedOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
             assertEquals(updatedOrderDTO.getSeatIds(), oldSeats);
-            //TODO: check that the tickets in the order are still reserved
+
+            //check that the tickets in the order are still reserved
+            assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds).isEmpty());
+
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
         }
@@ -590,17 +611,20 @@ public class ActiveOrderAcceptanceTests {
             }
 
             String validAreaId = standingAreas.getFirst();
-            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, 1);
+            int quantity = 1;
+            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, quantity);
 
             ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
 
             java.util.HashMap<String, Integer> emptyQuantities = new java.util.HashMap<>();
             orderDTO.setStandingAreaQuantities(emptyQuantities);
 
+            int inventoryBefore = seatingMap.getArea(validAreaId).getAvalibleSeatNumber();
             activeOrderService.updateActiveOrder(session, orderDTO);
             ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
             assertTrue(updateOrderDTO.getStandingAreaQuantities().isEmpty());
-            //TODO: check if tickets were released: 1 ticket from validAreaId
+            // check if tickets were released: 1 ticket from validAreaId
+            assertEquals(inventoryBefore + quantity, seatingMap.getArea(validAreaId).getAvalibleSeatNumber());
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -619,7 +643,8 @@ public class ActiveOrderAcceptanceTests {
             }
 
             String validAreaId = standingAreas.getFirst();
-            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, 5);
+            int quantity = 5;
+            activeOrderService.addStandingAreaToActiveOrder(session, order.getOrderId(), validAreaId, quantity);
 
             ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
             int newQuantity = 2;
@@ -627,14 +652,15 @@ public class ActiveOrderAcceptanceTests {
             java.util.HashMap<String, Integer> updatedQuantities = new java.util.HashMap<>();
             updatedQuantities.put(validAreaId, newQuantity);
             orderDTO.setStandingAreaQuantities(updatedQuantities);
+            int inventoryBefore = seatingMap.getArea(validAreaId).getAvalibleSeatNumber();
 
             activeOrderService.updateActiveOrder(session, orderDTO);
             ActiveOrderDTO updateOrderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
-
+            int inventoryAfter = seatingMap.getArea(validAreaId).getAvalibleSeatNumber();
             assertTrue(updateOrderDTO.getStandingAreaQuantities().containsKey(validAreaId));
             assertEquals(newQuantity, updateOrderDTO.getStandingAreaQuantities().get(validAreaId));
-            //TODO: add checks that the standing area ticket quantities are updated correctly in the event/reservation system
-
+            // add checks that the standing area ticket quantities are updated correctly in the event/reservation system
+            assertEquals(inventoryBefore + quantity - newQuantity, inventoryAfter);
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
         }
@@ -696,7 +722,9 @@ public class ActiveOrderAcceptanceTests {
             //check if we can create new order:
             ActiveOrderItem order2 = assertDoesNotThrow(()-> activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId()));
             assertNotNull(order2);
-            //TODO: check if tickets still reserved for order
+            //check if tickets still reserved for order
+            assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds).isEmpty());
+
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -751,11 +779,13 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay()).thenReturn(true);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
-            order.setCreatedAt(new Timestamp(1977,10, 10, 0,0,0,0));
+            order.setCreatedAt(java.sql.Timestamp.valueOf("1977-10-10 00:00:00"));
             activeOrderRepo.update(new ActiveOrderItem(order));
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
             assertNull(activeOrderRepo.findById(order.getOrderId()));
-            //TODO: check if tickets were releaseed
+            //check if tickets were released
+            assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
+
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -780,7 +810,9 @@ public class ActiveOrderAcceptanceTests {
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
             assertNull(activeOrderRepo.findById(order.getOrderId()));
-            //TODO: check if tickets were releaseed
+            // check if tickets were released
+            assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
+
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -805,7 +837,9 @@ public class ActiveOrderAcceptanceTests {
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
             assertNull(activeOrderRepo.findById(order.getOrderId()));
-            //TODO: check if tickets were releaseed
+            // check if tickets were released
+            assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
+
 
         }catch (Exception e){
             fail("got exception : " + e.getMessage());
@@ -828,7 +862,7 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay()).thenReturn(true);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
             PurchasePolicyDTO newPolicy = new PurchasePolicyDTO(10, eventCapacity,0, 60, true);
-            eventService.editEventPurchasePolicy(testEvent.eventId(), newPolicy);
+            eventService.editEventPurchasePolicy(sessionToken, testEvent.eventId(), newPolicy);
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
 
@@ -849,7 +883,6 @@ public class ActiveOrderAcceptanceTests {
         assertDoesNotThrow(()->activeOrderService.cancelActiveOrder(session,USER1_ID,orderItem.getOrderId()));
         assertThrows(Exception.class, () -> activeOrderService.getActiveOrderInfo(session,orderItem.getOrderId()));
         assertNull(activeOrderRepo.findById(orderItem.getOrderId()));
-        //TODO: check if tickets were releaseed
     }
     @Test
     public void GivenNonExistentOrder_WhenCancelActiveOrder_ThenThrowException(){

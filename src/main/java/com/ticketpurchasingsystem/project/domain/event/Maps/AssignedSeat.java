@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Maps;
 
 public class AssignedSeat implements Bookable {
     private String id;              //includes zone, row and number
@@ -14,6 +14,12 @@ public class AssignedSeat implements Bookable {
     }
 
     @Override
+    public boolean isbooked(String orderId) {
+        return this.orderId.equals(orderId);
+    }
+
+
+    @Override
     public String getId() {
         return id;
     }
@@ -24,7 +30,7 @@ public class AssignedSeat implements Bookable {
 
     @Override
     public boolean book(String orderId, int numberOfTickets) {
-         if (numberOfTickets != 1) {
+        if (numberOfTickets != 1) {
             return false; // Assigned seats can only be booked one at a time
         }
         if (isBooked) {
@@ -59,6 +65,6 @@ public class AssignedSeat implements Bookable {
         this.priceForTicket = newPrice;
         return true; // Price updated successfully
     }
-    
-   
+
+
 }

@@ -1,13 +1,16 @@
 package com.ticketpurchasingsystem.project.infrastructure;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.Utils.ResettableRepo;
+import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class ActiveOrderMemRepo implements IActiveOrderRepo, ResettableRepo {
+
+@Repository
+public class ActiveOrderMemRepo implements IActiveOrderRepo {
+
 
     private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ReentrantLock> orderLocks = new ConcurrentHashMap<>();
@@ -96,7 +99,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo, ResettableRepo {
             if (lock == null) {
                 continue;
             }
-            
+
             lock.lock();
             try {
                 ActiveOrderItem order = activeOrders.get(orderId);
@@ -118,7 +121,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo, ResettableRepo {
         try{
             ActiveOrderItem existing = activeOrders.get(orderId);
             if(existing == null){
-                    throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+                throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
             }
             return existing.markAsProcessing();
         }
@@ -126,11 +129,4 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo, ResettableRepo {
             lock.unlock();
         }
     }
-    public void clear(){
-        this.activeOrders.clear();
-        this.userToOrder.clear();
-        this.orderLocks.clear();
-    }
-
 }
-

@@ -13,7 +13,7 @@ public class ActiveOrderItem {
     private List<String> seatIds;
     private HashMap<String, Integer> StandingAreaQuantities;
     private boolean processing;
-    
+
 
     public final static int EXPIRATION_TIME_MINUTES = 15;
 
