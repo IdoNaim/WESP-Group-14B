@@ -20,8 +20,7 @@ public class EventServiceSeatingMapTest {
     void setUp() {
         eventService = new EventService(
                 mock(IEventRepo.class),
-                mock(EventAggregatePublisher.class),
-                mock(EventAggregateListener.class)
+                mock(EventAggregatePublisher.class)
         );
     }
 

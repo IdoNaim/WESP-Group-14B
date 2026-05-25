@@ -17,18 +17,15 @@ public class EventService implements IEventService {
 
     private final IEventRepo eventRepo;
     private final EventAggregatePublisher eventPublisher;
-    private final EventAggregateListener eventListener;
 
     // Logger instance
     private final loggerDef logger = loggerDef.getInstance();
 
     public EventService(IEventRepo eventRepo,
-                        EventAggregatePublisher eventPublisher,
-                        EventAggregateListener eventListener) {
+                        EventAggregatePublisher eventPublisher) {
 
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
-        this.eventListener = eventListener;
 
         logger.info("EventService initialized");
     }

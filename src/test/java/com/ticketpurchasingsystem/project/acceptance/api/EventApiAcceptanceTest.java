@@ -51,8 +51,7 @@ class EventApiAcceptanceTest {
         EventRepo eventRepo = new EventRepo();
         ApplicationEventPublisher noopPublisher = mock();
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(noopPublisher);
-        EventAggregateListener eventListener = mock();
-        eventService = new EventService(eventRepo, eventPublisher, eventListener);
+        eventService = new EventService(eventRepo, eventPublisher);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
         objectMapper = new ObjectMapper();

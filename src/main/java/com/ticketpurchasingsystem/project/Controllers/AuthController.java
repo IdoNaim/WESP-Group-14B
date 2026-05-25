@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
@@ -153,12 +154,12 @@ public class AuthController {
             String userId = authenticationService.getUser(token);
             UserDTO userDTO = userService.getUser(userId);
 
-            return ResponseEntity.ok(Map.of(
-                    "userId", userDTO.getUserId(),
-                    "name", userDTO.getUsername(),
-                    "email", userDTO.getEmail(),
-                    "userGroupDiscount", userDTO.getGroupDiscount()
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", userDTO.getUserId());
+            response.put("name", userDTO.getUsername());
+            response.put("email", userDTO.getEmail());
+            response.put("userGroupDiscount", userDTO.getGroupDiscount());
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));

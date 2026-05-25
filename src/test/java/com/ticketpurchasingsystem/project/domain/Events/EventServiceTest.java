@@ -27,7 +27,7 @@ public class EventServiceTest {
     @BeforeEach
     void setUp() {
         mockRepo = mock(IEventRepo.class);
-        eventService = new EventService(mockRepo, mock(EventAggregatePublisher.class), mock(EventAggregateListener.class));
+        eventService = new EventService(mockRepo, mock(EventAggregatePublisher.class));
     }
 
     // ================= CREATE EVENT =================
