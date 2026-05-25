@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -14,6 +16,7 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+@Service
 public class EventService implements IEventService {
 
     private final IEventRepo eventRepo;

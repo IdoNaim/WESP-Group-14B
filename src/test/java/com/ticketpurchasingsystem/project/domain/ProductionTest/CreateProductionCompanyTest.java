@@ -1,5 +1,30 @@
 package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
@@ -7,23 +32,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Optional;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CreateProductionCompanyTest {
@@ -59,13 +68,17 @@ public class CreateProductionCompanyTest {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(prodRepo.findByName(any())).thenReturn(Optional.empty());
-        when(prodRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(prodRepo.save(any())).thenAnswer(inv -> {
+            ProductionCompany c = inv.getArgument(0);
+            c.setCompanyId(1);
+            return c;
+        });
 
         // Act
-        boolean result = productionService.createProductionCompany(VALID_TOKEN, validDTO());
+        Integer result = productionService.createProductionCompany(VALID_TOKEN, validDTO());
 
         // Assert
-        assertTrue(result);
+        assertNotNull(result);
     }
 
     @Test
@@ -74,10 +87,10 @@ public class CreateProductionCompanyTest {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
         // Act
-        boolean result = productionService.createProductionCompany(INVALID_TOKEN, validDTO());
+        Integer result = productionService.createProductionCompany(INVALID_TOKEN, validDTO());
 
         // Assert
-        assertFalse(result);
+        assertNull(result);
         verifyNoInteractions(prodRepo);
     }
 
@@ -107,10 +120,10 @@ public class CreateProductionCompanyTest {
                 .thenReturn(Optional.of(new ProductionCompany(dto)));
 
         // Act
-        boolean result = productionService.createProductionCompany(VALID_TOKEN, dto);
+        Integer result = productionService.createProductionCompany(VALID_TOKEN, dto);
 
         // Assert
-        assertFalse(result);
+        assertNull(result);
         verify(prodRepo, never()).save(any());
     }
 
@@ -123,10 +136,10 @@ public class CreateProductionCompanyTest {
         when(prodRepo.save(any())).thenThrow(new RuntimeException("DB error"));
 
         // Act
-        boolean result = productionService.createProductionCompany(VALID_TOKEN, validDTO());
+        Integer result = productionService.createProductionCompany(VALID_TOKEN, validDTO());
 
         // Assert
-        assertFalse(result);
+        assertNull(result);
     }
 
     @Test
@@ -236,9 +249,9 @@ public class CreateProductionCompanyTest {
                 try {
                     startLatch.await();
                     String token = realAuth.login("founder-" + idx);
-                    boolean result = realService.createProductionCompany(token,
+                    Integer result = realService.createProductionCompany(token,
                             new ProductionCompanyDTO("Company-" + idx, "desc", "c" + idx + "@co.com"));
-                    if (result)
+                    if (result != null)
                         successCount.incrementAndGet();
                 } catch (Exception e) {
                     errorCount.incrementAndGet();

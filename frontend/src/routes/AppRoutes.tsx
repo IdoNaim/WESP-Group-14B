@@ -1,16 +1,19 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from '../pages/auth/LoginPage';
+import RegisterPage from '../pages/auth/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.tsx';
+import ProductionCompanyPage from '../pages/ProductionCompanyPage';
 
-// 1. We import the pages we want to show
-import LoginPage from '../pages/login/LoginPage';
 
 export default function AppRoutes() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* 2. When the URL is exactly "/login", render the LoginPage component */}
                 <Route path="/login" element={<LoginPage />} />
-
-                {/* 3. Catch-all: If someone goes to a URL that doesn't exist, send them to /login */}
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/company" element={<ProductionCompanyPage />} />
+                {/* Wildcard: Redirects any unknown paths straight to login */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </BrowserRouter>

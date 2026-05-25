@@ -1,11 +1,7 @@
 import AppRoutes from './routes/AppRoutes';
-import './App.css';
 
-function App() {
+export default function App() {
     return (
-        // We swap out the entire template code with your custom router!
         <AppRoutes />
     );
 }
-
-export default App;

@@ -1,24 +1,28 @@
 package com.ticketpurchasingsystem.project.domain.ProductionTest;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
-import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
-import com.ticketpurchasingsystem.project.application.UserService.UserService;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
+import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
+import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
+import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 
 @ExtendWith(MockitoExtension.class)
 class UserListenerIsRegisteredTests {
@@ -33,6 +37,8 @@ class UserListenerIsRegisteredTests {
     private UserPublisher userPublisher;
     @Mock
     private DomainAuthService domainAuthService;
+    @Mock
+    private SystemAdminService systemAdminService;
     @Mock
     private ISessionRepo sessionRepo;
     private UserApplicationListener listener;
@@ -49,6 +55,7 @@ class UserListenerIsRegisteredTests {
     void WhenOnIsUserRegisteredGivenExistingUser_ThenEventRegisteredIsTrue() {
         // Arrange
         when(userRepo.findByID(EXISTING_USER_ID)).thenReturn(existingUser);
+        when(userHandler.isUserRegistered(existingUser)).thenReturn(true);
         IsUserRegisteredEvent event = new IsUserRegisteredEvent(EXISTING_USER_ID);
 
         // Act
