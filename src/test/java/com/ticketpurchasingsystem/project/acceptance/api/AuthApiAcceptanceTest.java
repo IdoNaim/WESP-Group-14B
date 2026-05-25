@@ -51,6 +51,7 @@ class AuthApiAcceptanceTest {
         void setUp() {
                 InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
                 DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
+
                 ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
                 domainAuthService.init();
                 authService = new AuthenticationService(domainAuthService, sessionRepo);
