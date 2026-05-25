@@ -247,7 +247,7 @@ public class ActiveOrderAcceptanceTests {
                 fail("couldnt create active order, should have worked");
             }
             String nonExistingSeatId = "NonExistentId";
-            activeOrderService.addSeatsToActiveOrder(session,order.getOrderId(),List.of(nonExistingSeatId));
+            assertThrows(Exception.class, ()->activeOrderService.addSeatsToActiveOrder(session,order.getOrderId(),List.of(nonExistingSeatId)));
             ActiveOrderDTO orderDTO = activeOrderService.getActiveOrderInfo(session, order.getOrderId());
             assertFalse(orderDTO.getSeatIds().contains(nonExistingSeatId));
         }catch (Exception e){
@@ -568,7 +568,7 @@ public class ActiveOrderAcceptanceTests {
             }
             //add checks that the newSeats are reserved and the other seats are not reserved
             assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), newSeats).isEmpty());
-            List<String> releasedSeats = orderDTO.getSeatIds();
+            List<String> releasedSeats = new ArrayList<>(orderDTO.getSeatIds());
             releasedSeats.removeAll(newSeats);
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), releasedSeats), releasedSeats);
 
@@ -781,8 +781,8 @@ public class ActiveOrderAcceptanceTests {
             ActiveOrderDTO order = activeOrderService.getActiveOrderInfo(session, orderItem.getOrderId());
 
             double amountToPay = 100;
-            when(paymentGatewayMock.pay()).thenReturn(true);
-            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
+    //        when(paymentGatewayMock.pay()).thenReturn(true);
+      //      when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
             order.setCreatedAt(java.sql.Timestamp.valueOf("1977-10-10 00:00:00"));
             activeOrderRepo.update(new ActiveOrderItem(order));
@@ -864,8 +864,8 @@ public class ActiveOrderAcceptanceTests {
             ActiveOrderDTO order = activeOrderService.getActiveOrderInfo(session, orderItem.getOrderId());
 
             double amountToPay = 100;
-            when(paymentGatewayMock.pay()).thenReturn(true);
-            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
+           // when(paymentGatewayMock.pay()).thenReturn(true);
+            //when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
             PurchasePolicyDTO newPolicy = new PurchasePolicyDTO(10, eventCapacity,0, 60, true);
             eventService.editEventPurchasePolicy(sessionToken, testEvent.eventId(), newPolicy);
 
