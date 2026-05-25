@@ -49,6 +49,7 @@ class UserListenerIsRegisteredTests {
     void WhenOnIsUserRegisteredGivenExistingUser_ThenEventRegisteredIsTrue() {
         // Arrange
         when(userRepo.findByID(EXISTING_USER_ID)).thenReturn(existingUser);
+        when(userHandler.isUserRegistered(existingUser)).thenReturn(true);
         IsUserRegisteredEvent event = new IsUserRegisteredEvent(EXISTING_USER_ID);
 
         // Act
