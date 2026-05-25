@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.authTest;
 
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
@@ -11,6 +13,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -290,5 +293,64 @@ class DomainAuthServiceTest {
         assertTrue(validBeforeLogout, "Session must be valid right after login");
         assertFalse(validAfterLogout, "Session must be invalid after logout");
         verify(sessionRepo).deleteByToken(token);
+    }
+
+    // ── isAdmin tests ──────────────────────────────────────────────────────────
+
+    @Nested
+    class IsAdminTests {
+
+        @Mock private SystemAdminService systemAdminService;
+        @Mock private DomainAuthService nestedDomainAuthService;
+        @Mock private ISessionRepo nestedSessionRepo;
+
+        private AuthenticationService authService;
+
+        private static final String TOKEN    = "test-token";
+        private static final String ADMIN_ID = "admin-user";
+
+        @BeforeEach
+        void setUpAuthService() {
+            authService = new AuthenticationService(nestedDomainAuthService, systemAdminService, nestedSessionRepo);
+        }
+
+        @Test
+        void GivenValidAdminToken_WhenIsAdmin_ThenReturnTrue() {
+            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(ADMIN_ID);
+
+            assertTrue(authService.isAdmin(TOKEN));
+        }
+
+        @Test
+        void GivenInvalidSessionToken_WhenIsAdmin_ThenReturnFalse() {
+            when(systemAdminService.validateAdminSession(TOKEN))
+                    .thenThrow(new RuntimeException("Invalid session token"));
+
+            assertFalse(authService.isAdmin(TOKEN));
+        }
+
+        @Test
+        void GivenValidSessionButNotAdmin_WhenIsAdmin_ThenReturnFalse() {
+            when(systemAdminService.validateAdminSession(TOKEN))
+                    .thenThrow(new RuntimeException("User is not an admin"));
+
+            assertFalse(authService.isAdmin(TOKEN));
+        }
+
+        @Test
+        void GivenValidateAdminSessionReturnsNull_WhenIsAdmin_ThenReturnFalse() {
+            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(null);
+
+            assertFalse(authService.isAdmin(TOKEN));
+        }
+
+        @Test
+        void GivenValidAdminToken_WhenIsAdmin_ThenValidateAdminSessionCalledOnce() {
+            when(systemAdminService.validateAdminSession(TOKEN)).thenReturn(ADMIN_ID);
+
+            authService.isAdmin(TOKEN);
+
+            verify(systemAdminService, times(1)).validateAdminSession(TOKEN);
+        }
     }
 }

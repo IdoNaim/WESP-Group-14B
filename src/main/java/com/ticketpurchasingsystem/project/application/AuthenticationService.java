@@ -4,15 +4,16 @@ import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-
 @Service
 public class AuthenticationService {
 
     private final DomainAuthService domainAuthService;
+    private final SystemAdminService systemAdminService;
     private final ISessionRepo sessionRepo;
 
-    public AuthenticationService(DomainAuthService domainAuthService, ISessionRepo sessionRepo) {
+    public AuthenticationService(DomainAuthService domainAuthService, SystemAdminService systemAdminService, ISessionRepo sessionRepo) {
         this.domainAuthService = domainAuthService;
+        this.systemAdminService = systemAdminService;
         this.sessionRepo = sessionRepo;
     }
 
@@ -37,7 +38,10 @@ public class AuthenticationService {
     }
 
     public boolean isAdmin(String token) {
-        // TODO Auto-generated method stub
-        return true;
+        try{
+            return systemAdminService.validateAdminSession(token) != null;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }
