@@ -65,4 +65,26 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+  /* Custom Ticket Stub Designs available globally */
+  .glass-overlay {
+    background: linear-gradient(180deg, rgba(11, 19, 38, 0.6) 0%, rgba(11, 19, 38, 0.9) 100%);
+    backdrop-filter: blur(8px);
+  }
+
+  .ticket-stub-card {
+    filter: drop-shadow(0 20px 40px rgba(59, 130, 246, 0.15));
+  }
+
+  .ticket-stub-card:focus-within {
+    transform: translateY(-4px);
+  }
+
+  .dashed-divider {
+    border-top: 2px dashed #cbd5e1;
+    margin: 24px 0;
+  }
+
+  .neon-glow-primary:hover {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
 }
