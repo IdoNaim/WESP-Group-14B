@@ -17,6 +17,7 @@ public class UserHandler {
     }
 
     public UserInfo registerUser(String userId, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
+        validateEmailFormat(email);
         String encryptedPass = PasswordEncoderUtil.encodePassword(password);
         return new UserInfo(userId, name, email, encryptedPass, userGroupDiscount);
     }
@@ -82,6 +83,7 @@ public class UserHandler {
 
     public void editPassword(UserInfo userInfo, String userId, String oldPassword, String newPassword, String sessionTokenStr) {
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
+        validateNewPassword(newPassword);
         if (!PasswordEncoderUtil.matches(oldPassword, userInfo.getPassword())) {
             throw new RuntimeException("Old password does not match current password.");
         }
@@ -90,6 +92,7 @@ public class UserHandler {
 
     public void editEmail(UserInfo userInfo, String userId, String oldEmail, String newEmail, String sessionTokenStr) {
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
+        validateEmailFormat(newEmail);
         if (!userInfo.getEmail().equals(oldEmail)) {
             throw new RuntimeException("Old email does not match current email.");
         }
@@ -132,5 +135,17 @@ public class UserHandler {
 
     public boolean isUserRegistered(UserInfo userInfo) {
         return userInfo != null && !userInfo.isGuest();
+    }
+
+    private void validateEmailFormat(String email) {
+        if (email == null || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new RuntimeException("Invalid email format.");
+        }
+    }
+
+    private void validateNewPassword(String password) {
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("Password cannot be empty.");
+        }
     }
 }

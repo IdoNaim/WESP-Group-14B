@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.domain.systemAdmin;
 import java.util.List;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
