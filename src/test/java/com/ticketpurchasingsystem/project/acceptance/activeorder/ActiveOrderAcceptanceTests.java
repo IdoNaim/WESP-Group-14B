@@ -23,8 +23,10 @@ import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -37,7 +39,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-
+@ExtendWith(MockitoExtension.class)
 public class ActiveOrderAcceptanceTests {
     private IActiveOrderService activeOrderService;
     private IActiveOrderRepo activeOrderRepo;
@@ -87,11 +89,19 @@ public class ActiveOrderAcceptanceTests {
     public void setup() {
         registeredUsers.clear();
 
+
+
+
+        sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
+        authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
+        ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
+        domainAuthService.init();
+
         eventRepo = new EventRepo();
-        eventListener = new EventAggregateListener(eventRepo, eventService);
         eventPublisher = new EventAggregatePublisher(event -> {});          /// not important for these acceptance tests
         eventService = new EventService(eventRepo, eventPublisher, eventListener, authenticationService);
-
+        eventListener = new EventAggregateListener(eventRepo, eventService);
 
         historyOrderRepo = new HistoryOrderRepo();
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
@@ -99,11 +109,6 @@ public class ActiveOrderAcceptanceTests {
         historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService);
         historyOrderListener = new HistoryOrderListener(historyOrderRepo, historyOrderService);
 
-        sessionRepo = new InMemorySessionRepo();
-        DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
-        authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
-        ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
-        domainAuthService.init();
 
         activeOrderHandler = new ActiveOrderHandler();
         activeOrderRepo = new ActiveOrderMemRepo();
@@ -832,7 +837,7 @@ public class ActiveOrderAcceptanceTests {
             ActiveOrderDTO order = activeOrderService.getActiveOrderInfo(session, orderItem.getOrderId());
 
             double amountToPay = 100;
-            when(paymentGatewayMock.pay()).thenReturn(true);
+            //when(paymentGatewayMock.pay()).thenReturn(true);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
@@ -842,7 +847,7 @@ public class ActiveOrderAcceptanceTests {
 
 
         }catch (Exception e){
-            fail("got exception : " + e.getMessage());
+            fail("got exception : " + e.getMessage()+'\n'+ e.getStackTrace());
         }
     }
     @Test

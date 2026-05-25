@@ -404,9 +404,10 @@ public class EventService implements IEventService {
         }
         List<String> reservedSeatIds = new ArrayList<>();
         for (String seatId : seatIds) {
-            if (!event.getSeatingMap().getSeat(seatId).isbooked(orderId))
+            if (!event.getSeatingMap().getSeat(seatId).isbooked(orderId)) {
                 logger.warn("reserved seat " + seatId + " is not booked");
-            reservedSeatIds.add(seatId);
+                reservedSeatIds.add(seatId);
+            }
         }
         logger.info("returning the unreserved seats");
         return reservedSeatIds;
