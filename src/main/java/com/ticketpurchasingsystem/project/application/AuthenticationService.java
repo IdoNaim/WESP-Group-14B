@@ -20,6 +20,10 @@ public class AuthenticationService {
     public String login(String username) {
         return domainAuthService.authenticateAndCreateSession(username);
     }
+    public String login(String username,String role) {
+        
+        return domainAuthService.authenticateAndCreateSessionAdmin(username);
+    }
 
     public boolean validate(String token) {
         return domainAuthService.isSessionValid(token);
@@ -39,7 +43,7 @@ public class AuthenticationService {
 
     public boolean isAdmin(String token) {
         try{
-            return systemAdminService.validateAdminSession(token) != null;
+            return domainAuthService.validateAdminSession(token);
         } catch (RuntimeException e) {
             return false;
         }

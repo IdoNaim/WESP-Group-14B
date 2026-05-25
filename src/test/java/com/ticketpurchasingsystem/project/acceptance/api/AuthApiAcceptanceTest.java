@@ -5,6 +5,7 @@ import com.ticketpurchasingsystem.project.Controllers.AuthController;
 import com.ticketpurchasingsystem.project.Controllers.apidto.LoginRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
@@ -43,6 +44,8 @@ class AuthApiAcceptanceTest {
         private ObjectMapper objectMapper;
         private UserService userService;
         private AuthenticationService authService;
+        
+
 
         @BeforeEach
         void setUp() {
