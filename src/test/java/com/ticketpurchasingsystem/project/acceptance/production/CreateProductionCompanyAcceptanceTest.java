@@ -44,10 +44,10 @@ class CreateProductionCompanyAcceptanceTest {
         ProductionCompanyDTO dto = new ProductionCompanyDTO("Eden Events", "Great events", "eden@events.com");
 
         // Act
-        boolean result = productionService.createProductionCompany(token, dto);
+        Integer result = productionService.createProductionCompany(token, dto);
 
         // Assert
-        assertTrue(result);
+        assertNotNull(result);
     }
 
     @Test
@@ -73,10 +73,10 @@ class CreateProductionCompanyAcceptanceTest {
         ProductionCompanyDTO dto = new ProductionCompanyDTO("Eden Events", "desc", "eden@events.com");
 
         // Act
-        boolean result = productionService.createProductionCompany("invalid-token", dto);
+        Integer result = productionService.createProductionCompany("invalid-token", dto);
 
         // Assert
-        assertFalse(result);
+        assertNull(result);
     }
 
     @Test
@@ -87,10 +87,10 @@ class CreateProductionCompanyAcceptanceTest {
         productionService.createProductionCompany(token, dto);
 
         // Act
-        boolean secondResult = productionService.createProductionCompany(token, dto);
+        Integer secondResult = productionService.createProductionCompany(token, dto);
 
         // Assert
-        assertFalse(secondResult);
+        assertNull(secondResult);
     }
 
     @Test
@@ -100,9 +100,9 @@ class CreateProductionCompanyAcceptanceTest {
         ProductionCompanyDTO dto = new ProductionCompanyDTO("   ", "desc", "eden@events.com");
 
         // Act
-        boolean result = productionService.createProductionCompany(token, dto);
+        Integer result = productionService.createProductionCompany(token, dto);
 
         // Assert
-        assertFalse(result);
+        assertNull(result);
     }
 }

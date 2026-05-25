@@ -29,15 +29,17 @@ public class UserService implements IUserService {
         this.userPublisher = userPublisher;
     }
 
-    public void guestEntry() {
+    public String guestEntry() {
         try {
             String sessionToken = authenticationService.login(userHandler.generateUniqueId());
             UserInfo guest = userHandler.handleGuestEntry(sessionToken, authenticationService.getUser(sessionToken));
             userRepo.store(guest);
             userPublisher.publishGuestEntered(guest.getId(), sessionToken);
             loggerDef.getInstance().info("Guest entry successful. Guest ID: " + guest.getId());
+            return sessionToken;
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to handle guest entry: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 

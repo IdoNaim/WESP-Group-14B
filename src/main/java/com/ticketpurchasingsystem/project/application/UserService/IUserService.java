@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface IUserService {
 
-    public void guestEntry() ;
+    public String guestEntry() ;
     public void Exit(String sessionTokenStr) ;
 
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) ;
