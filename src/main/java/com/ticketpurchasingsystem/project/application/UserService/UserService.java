@@ -48,8 +48,13 @@ public class UserService implements IUserService {
             if (authenticationService.validate(sessionTokenStr)) {
                 String userId = authenticationService.getUser(sessionTokenStr);
                 UserInfo userInfo = userRepo.findByID(userId);
-                
-                userHandler.handleUserExit(userInfo);
+                try {
+                    userHandler.handleUserExit(userInfo);
+                } catch (Exception e) {
+                    loggerDef.getInstance().error("User is null");
+                    authenticationService.logout(sessionTokenStr);
+                    return;
+                }
                 // if we are here user info is not null, valid guest or user is leaving
                 if (userInfo.isGuest()) {
                     userRepo.delete(userId);
