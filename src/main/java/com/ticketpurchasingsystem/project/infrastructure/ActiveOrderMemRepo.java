@@ -1,10 +1,13 @@
 package com.ticketpurchasingsystem.project.infrastructure;
+import org.springframework.stereotype.Repository;
+
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Repository
 public class ActiveOrderMemRepo implements IActiveOrderRepo {
 
     private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();

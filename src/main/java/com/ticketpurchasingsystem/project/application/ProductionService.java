@@ -15,8 +15,11 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+@Service
 public class ProductionService implements IProductionService {
 
     private final AuthenticationService authenticationService;
@@ -35,30 +38,30 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    public boolean createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
+    public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
-            return false;
+            return null;
         }
         String userId = authenticationService.getUser(sessionToken);
 
         Optional<ProductionCompany> existing = prodRepo.findByName(companyDetails.getCompanyName());
         if (existing.isPresent()) {
             loggerDef.getInstance().error("Company name already exists: " + companyDetails.getCompanyName());
-            return false;
+            return null;
         }
 
         ProductionCompany company = productionHandler.createProductionCompany(userId, companyDetails);
         if (company == null) {
-            return false;
+            return null;
         }
 
         try {
             ProductionCompany saved = prodRepo.save(company);
             productionEventPublisher.publishNewProdEvent(saved);
-            return true;
+            return saved.getCompanyId();
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to save company: " + e.getMessage());
-            return false;
+            return null;
         }
     }
 

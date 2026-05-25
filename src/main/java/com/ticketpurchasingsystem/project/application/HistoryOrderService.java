@@ -4,12 +4,15 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
+@Service
 public class HistoryOrderService implements IHistoryOrderService {
 
     private final IHistoryOrderRepo historyOrderRepo;
@@ -67,8 +70,13 @@ public class HistoryOrderService implements IHistoryOrderService {
 
     @Override
     public List<HistoryOrderDTO> getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
-        return null;
-         // TODO Auto-generated method stub
+        List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
+        if(isSessionTokenValid(sessionToken)){
+            for (HistoryOrderItem item : historyOrderRepo.findAllByCompanyId(companyId)) {
+                historyOrders.add(item.makeDTO());
+            }
+        }
+        return historyOrders;
     }
     
     @Override
@@ -87,10 +95,4 @@ public class HistoryOrderService implements IHistoryOrderService {
     private boolean isSessionTokenValid(SessionToken sessionToken) {
         return authenticationService.validate(sessionToken.getToken());
     }
-
-    private boolean isCompanyInSystem(int companyId) {
-        // TODO: Implement a method in productionService to check if a company exists and use it here
-        return true; // Placeholder return value
-    }
-
 }

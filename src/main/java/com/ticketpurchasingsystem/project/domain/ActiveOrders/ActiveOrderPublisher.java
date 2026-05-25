@@ -1,10 +1,12 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
 
 import java.util.List;
 
+@Component
 public class ActiveOrderPublisher {
     private ApplicationEventPublisher eventPublisher;
 

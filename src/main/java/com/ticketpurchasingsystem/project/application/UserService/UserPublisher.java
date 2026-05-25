@@ -46,6 +46,4 @@ public class UserPublisher {
     public void publishUserNotFound(String userId) {
         eventPublisher.publishEvent(new UserNotFoundEvent(userId));
     }
-
-    
 }
