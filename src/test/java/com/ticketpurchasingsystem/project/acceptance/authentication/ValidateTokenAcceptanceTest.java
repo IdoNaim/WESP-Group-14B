@@ -1,5 +1,11 @@
 package com.ticketpurchasingsystem.project.acceptance.authentication;
 
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+
+import static org.mockito.Mockito.mock;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,7 +31,7 @@ class ValidateTokenAcceptanceTest {
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();
-        authService = new AuthenticationService(domainAuthService, mock(SystemAdminService.class), sessionRepo);
+        authService = new AuthenticationService(domainAuthService, sessionRepo);
     }
 
     @Test

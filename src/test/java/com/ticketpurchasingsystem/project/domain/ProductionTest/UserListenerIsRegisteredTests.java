@@ -48,7 +48,7 @@ class UserListenerIsRegisteredTests {
 
     @BeforeEach
     void setUp() {
-        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, systemAdminService, sessionRepo),userPublisher ));
+        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo),userPublisher ));
     }
 
     @Test

@@ -325,7 +325,7 @@ public class AssignOwnerTest {
         DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
         domainAuth.init();
-        AuthenticationService realAuth = new AuthenticationService(domainAuth, mock(SystemAdminService.class), sessionRepo);
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
         ProdRepo realRepo = new ProdRepo();
         ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo,
                 productionEventPublisher);

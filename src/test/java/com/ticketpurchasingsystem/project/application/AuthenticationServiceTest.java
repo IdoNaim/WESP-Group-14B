@@ -141,7 +141,7 @@ class AuthenticationServiceTest {
         DomainAuthService real = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(real, "secret", TEST_SECRET);
         real.init();
-        return new AuthenticationService(real, mock(SystemAdminService.class), sessionRepo);
+        return new AuthenticationService(real, sessionRepo);
     }
 
     @Test

@@ -38,7 +38,7 @@ class GetCompanyPurchaseHistoryAcceptanceTest {
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();
-        authService = new AuthenticationService(domainAuthService, mock(SystemAdminService.class), sessionRepo);
+        authService = new AuthenticationService(domainAuthService, sessionRepo);
         prodRepo = new ProdRepo();
         ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {
             if (event instanceof GetCompanyHistoryEvent e) {

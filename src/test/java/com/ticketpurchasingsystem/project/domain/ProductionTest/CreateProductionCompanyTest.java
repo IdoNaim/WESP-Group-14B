@@ -27,7 +27,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
@@ -232,7 +231,7 @@ public class CreateProductionCompanyTest {
         ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
         domainAuth.init();
         com.ticketpurchasingsystem.project.application.AuthenticationService realAuth = new com.ticketpurchasingsystem.project.application.AuthenticationService(
-                domainAuth, mock(SystemAdminService.class), sessionRepo);
+                domainAuth, sessionRepo);
         ProdRepo realRepo = new ProdRepo();
         ProductionService realService = new ProductionService(realAuth, new ProductionHandler(), realRepo,
                 productionEventPublisher);
