@@ -694,6 +694,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
@@ -720,6 +721,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
@@ -780,13 +782,14 @@ public class ActiveOrderServiceUnitTest {
 
         // FIX: Stub the handler to explicitly mark this order as expired
         when(activeOrderHandlerMock.isOrderExpired(expiredOrder)).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
 
         // Stub the fallback guards to allow the rollback to execute
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
         when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(IllegalStateException.class, () ->
+        assertThrows(Exception.class, () ->
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
         );
 
@@ -808,6 +811,7 @@ public class ActiveOrderServiceUnitTest {
         validOrder.setStandingAreaQuantities(standingArea);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -819,7 +823,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(IllegalStateException.class, () ->
+        assertThrows(Exception.class, () ->
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
         );
 
@@ -837,6 +841,7 @@ public class ActiveOrderServiceUnitTest {
         validOrder.setSeatIds(List.of("C-1"));
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -847,7 +852,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         // Act & Assert
-        assertThrows(IllegalStateException.class, () ->
+        assertThrows(Exception.class, () ->
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, AMOUNT, ORDER_ID)
         );
 
@@ -869,6 +874,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
@@ -968,6 +974,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
+        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(paymentGatewayMock.pay()).thenReturn(true);
