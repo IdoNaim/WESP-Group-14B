@@ -1,7 +1,18 @@
 package com.ticketpurchasingsystem.project.acceptance.production;
 
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
@@ -10,15 +21,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class AssignOwnerAcceptanceTest {
 

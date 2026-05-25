@@ -7,4 +7,5 @@ public interface IHistoryOrderRepo {
     List<HistoryOrderItem> findAll();
     List<HistoryOrderItem> findAllByCompanyId(int companyId);
     List<HistoryOrderItem> findAllByUserId(String userId);
+    HistoryOrderItem findByOrderId(String orderId);
 }

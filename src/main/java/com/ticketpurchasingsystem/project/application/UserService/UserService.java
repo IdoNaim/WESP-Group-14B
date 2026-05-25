@@ -31,8 +31,9 @@ public class UserService implements IUserService {
 
     public String guestEntry() {
         try {
-            String sessionToken = authenticationService.login(userHandler.generateUniqueId());
-            UserInfo guest = userHandler.handleGuestEntry(sessionToken, authenticationService.getUser(sessionToken));
+            String uniqueGuestId = userHandler.generateUniqueId();
+            String sessionToken = authenticationService.login(uniqueGuestId);
+            UserInfo guest = userHandler.handleGuestEntry(sessionToken, uniqueGuestId);
             userRepo.store(guest);
             userPublisher.publishGuestEntered(guest.getId(), sessionToken);
             loggerDef.getInstance().info("Guest entry successful. Guest ID: " + guest.getId());
@@ -43,38 +44,46 @@ public class UserService implements IUserService {
         }
     }
 
+
     public void Exit(String sessionTokenStr) {
         try {
             if (authenticationService.validate(sessionTokenStr)) {
                 String userId = authenticationService.getUser(sessionTokenStr);
                 UserInfo userInfo = userRepo.findByID(userId);
-                
-                if (userInfo != null) {
-                    if (userInfo.isGuest()) {
-                        userRepo.delete(userInfo.getId());
-                        userPublisher.publishGuestExited(userInfo.getId(), userInfo.getSessionTokenStr());
-                    } else {
-                        userHandler.handleUserExit(userInfo);
-                        userRepo.store(userInfo);
-                        userPublisher.publishUserLeftPlatform(userInfo.getId(), sessionTokenStr);
-                    }
+                try {
+                    userHandler.handleUserExit(userInfo);
+                } catch (Exception e) {
+                    loggerDef.getInstance().error("User is null");
+                    authenticationService.logout(sessionTokenStr);
+                    return;
                 }
+                // if we are here user info is not null, valid guest or user is leaving
+                if (userInfo.isGuest()) {
+                    userRepo.delete(userId);
+                    userPublisher.publishGuestExited(userId, sessionTokenStr);
+                } else {
+                    userRepo.store(userInfo);
+                    userPublisher.publishUserLoggedOut(userId, sessionTokenStr);
+                }
+
                 authenticationService.logout(sessionTokenStr);
                 loggerDef.getInstance().info("Exit successful for token/user.");
+            }
+            else {
+                loggerDef.getInstance().warn("Invalid session token provided for exit.");
             }
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to handle exit: " + e.getMessage());
         }
     }
-
+ 
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
         try {
             if (!authenticationService.validate(sessionTokenStr)) {
                 throw new RuntimeException("Invalid session token.");
             }
-            if (userRepo.findByID(userId) != null) {
-                throw new RuntimeException("User with the same ID already exists.");
-            }
+            userHandler.validateUserDoesNotExist(userRepo.findByID(userId));
+            // if we are here the user id is not taken
             UserInfo newUser = userHandler.registerUser(userId, name, email, password, userGroupDiscount);
             userRepo.store(newUser);
             userPublisher.publishUserCreated(userId);
@@ -90,7 +99,14 @@ public class UserService implements IUserService {
             if (!authenticationService.validate(sessionTokenStr)) {
                 throw new RuntimeException("Invalid session token.");
             }
+            String guestId = authenticationService.getUser(sessionTokenStr);
+            UserInfo guestInfo = userRepo.findByID(guestId);
+            userHandler.validateGuest(guestInfo);
+            // if we are here, it means that session token is valid
+            // the user is not null and a guest so he can login and become a user 
             UserInfo userInfo = userRepo.findByID(userId);
+            userHandler.validateUserFound(userInfo);
+            // validate user exists
             
             // Generate a fresh session token via auth service
             String newSessionTokenStr = authenticationService.login(userId);
@@ -99,14 +115,13 @@ public class UserService implements IUserService {
             userHandler.loginUser(userInfo, password, newSessionTokenStr);
             
             // Delete guest matching the OLD session token before saving the user
-            String guestId = authenticationService.getUser(sessionTokenStr);
-            if (guestId != null && userRepo.findByID(guestId) != null && userRepo.findByID(guestId).isGuest()) {
-                userRepo.delete(guestId);
-                userPublisher.publishGuestExited(guestId, sessionTokenStr);
-            }
-            authenticationService.logout(sessionTokenStr);
 
-            userRepo.store(userInfo);
+            
+            userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
+            authenticationService.logout(sessionTokenStr);
+            userPublisher.publishGuestExited(guestId, sessionTokenStr);
+
+            userRepo.store(userInfo); // Store the updated user info with new session token and logged-in status
             userPublisher.publishUserLoggedIn(userId, newSessionTokenStr);
             loggerDef.getInstance().info("User logged in successfully: " + userId);
             return newSessionTokenStr;
@@ -121,10 +136,10 @@ public class UserService implements IUserService {
             if (!authenticationService.validate(sessionToken)) {
                 throw new RuntimeException("Invalid session token.");
             }
+            // 
             UserInfo userInfo = userRepo.findByID(userId);
-            if (userInfo == null) {
-                throw new RuntimeException("User not found.");
-            }
+            userHandler.validateUserFound(userInfo);
+
             userHandler.logoutUser(userInfo);
             userRepo.store(userInfo);
             userPublisher.publishUserLoggedOut(userId, sessionToken);
@@ -254,8 +269,7 @@ public class UserService implements IUserService {
         }
     }
     public boolean isUserRegistered(String userId){
-        UserInfo user = userRepo.findByID(userId);
-        return user != null;
+        return userHandler.isUserRegistered(userRepo.findByID(userId));
     }
 
 }

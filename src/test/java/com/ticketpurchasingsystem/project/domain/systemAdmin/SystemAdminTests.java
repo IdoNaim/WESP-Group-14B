@@ -34,31 +34,38 @@ class SystemAdminTests {
     // --- getAllActiveOrders ---
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsOrders_ThenReturnOrders() {
+    void GivenPublisherReturnsOrders_WhenGetAllActiveOrders_ThenReturnOrders() {
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1", "1"));
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(mockOrders);
 
         List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
 
         assertEquals(mockOrders, result);
+        verify(adminPublisher, times(1)).publishGetAllActiveOrders(anyString());
     }
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsNull_ThenReturnNull() {
+    void GivenPublisherReturnsNull_WhenGetAllActiveOrders_ThenReturnNull() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(null);
 
-        assertNull(systemAdmin.getAllActiveOrders());
+        List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
+
+        assertNull(result);
+        verify(adminPublisher, times(1)).publishGetAllActiveOrders(anyString());
     }
 
     @Test
-    void WhenGetAllActiveOrdersGivenPublisherReturnsEmpty_ThenReturnEmpty() {
+    void GivenPublisherReturnsEmpty_WhenGetAllActiveOrders_ThenReturnEmpty() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(Collections.emptyList());
 
-        assertTrue(systemAdmin.getAllActiveOrders().isEmpty());
+        List<ActiveOrderItem> result = systemAdmin.getAllActiveOrders();
+
+        assertTrue(result.isEmpty());
+        verify(adminPublisher, times(1)).publishGetAllActiveOrders(anyString());
     }
 
     @Test
-    void WhenGetAllActiveOrdersGiven_ThenPublisherCalledWithAdminId() {
+    void GivenAdminIsInitialized_WhenGetAllActiveOrders_ThenPublisherCalledWithAdminId() {
         when(adminPublisher.publishGetAllActiveOrders(anyString())).thenReturn(Collections.emptyList());
 
         systemAdmin.getAllActiveOrders();
@@ -69,31 +76,38 @@ class SystemAdminTests {
     // --- getAllHistoryOrderItems ---
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsHistory_ThenReturnHistory() {
+    void GivenPublisherReturnsHistory_WhenGetAllHistoryOrderItems_ThenReturnHistory() {
         List<HistoryOrderItem> mockHistory = List.of(new HistoryOrderItem("1", "user","event", 15,10.0, new ArrayList<>(), new HashMap<>()));
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(mockHistory);
 
         List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();
 
         assertEquals(mockHistory, result);
+        verify(adminPublisher, times(1)).publishGetAllOrdersHistory(anyString());
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsNull_ThenReturnNull() {
+    void GivenPublisherReturnsNull_WhenGetAllHistoryOrderItems_ThenReturnNull() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(null);
 
-        assertNull(systemAdmin.getAllHistoryOrderItems());
+        List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();
+
+        assertNull(result);
+        verify(adminPublisher, times(1)).publishGetAllOrdersHistory(anyString());
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGivenPublisherReturnsEmpty_ThenReturnEmpty() {
+    void GivenPublisherReturnsEmpty_WhenGetAllHistoryOrderItems_ThenReturnEmpty() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(Collections.emptyList());
 
-        assertTrue(systemAdmin.getAllHistoryOrderItems().isEmpty());
+        List<HistoryOrderItem> result = systemAdmin.getAllHistoryOrderItems();
+
+        assertTrue(result.isEmpty());
+        verify(adminPublisher, times(1)).publishGetAllOrdersHistory(anyString());
     }
 
     @Test
-    void WhenGetAllHistoryOrderItemsGiven_ThenPublisherCalledWithAdminId() {
+    void GivenAdminIsInitialized_WhenGetAllHistoryOrderItems_ThenPublisherCalledWithAdminId() {
         when(adminPublisher.publishGetAllOrdersHistory(anyString())).thenReturn(Collections.emptyList());
 
         systemAdmin.getAllHistoryOrderItems();

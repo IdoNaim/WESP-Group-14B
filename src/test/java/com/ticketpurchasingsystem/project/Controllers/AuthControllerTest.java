@@ -1,6 +1,9 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ticketpurchasingsystem.project.Controllers.apidto.LoginRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.ProfileUpdateRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.UserService.IUserService;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
@@ -10,207 +13,335 @@ import com.ticketpurchasingsystem.project.domain.User.UserState;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(AuthController.class)
+@Import(SecurityConfig.class)
 class AuthControllerTest {
 
-    @Mock
-    private IUserService userService;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Mock
-    private AuthenticationService authenticationService;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @Mock
-    private IAdminRepo adminRepo;
+        @MockBean
+        private IUserService userService;
 
-    @InjectMocks
-    private AuthController authController;
+        @MockBean
+        private AuthenticationService authenticationService;
 
-    private static final String VALID_TOKEN = "valid-token";
-    private static final String INVALID_TOKEN = "invalid-token";
-    private static final String USER_ID = "test-user-id";
+        @MockBean
+        private IAdminRepo adminRepo;
 
-    @Test
-    void GivenValidToken_WhenGetCurrentUser_ThenReturnsUserDetailsExcludingPassword() {
-        // Arrange
-        String authHeader = "Bearer " + VALID_TOKEN;
-        UserDTO userDTO = new UserDTO(USER_ID, "john_doe", "john@example.com", UserGroupDiscount.NONE);
+        private static final String VALID_AUTH = "Bearer valid-token";
 
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(userService.getUser(USER_ID)).thenReturn(userDTO);
+        // guest entry
+        // POST /api/identity/guest
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = authController.getCurrentUser(authHeader);
+        @Test
+        void WhenGuestEntry_ThenReturn200WithToken() throws Exception {
+                when(userService.guestEntry()).thenReturn("guest-token-123");
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        Map<String, Object> body = response.getBody();
-        assertNotNull(body);
-        assertEquals(USER_ID, body.get("userId"));
-        assertEquals("john_doe", body.get("name"));
-        assertEquals("john@example.com", body.get("email"));
-        assertEquals(UserGroupDiscount.NONE, body.get("userGroupDiscount"));
-        assertFalse(body.containsKey("password")); // CRITICAL: password must not be returned
-    }
+                mockMvc.perform(post("/api/identity/guest"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("guest-token-123"));
+        }
 
-    @Test
-    void GivenInvalidToken_WhenGetCurrentUser_ThenReturnsUnauthorized() {
-        // Arrange
-        String authHeader = "Bearer " + INVALID_TOKEN;
-        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+        @Test
+        void WhenGuestEntryFails_ThenReturn500WithError() throws Exception {
+                when(userService.guestEntry()).thenThrow(new RuntimeException("Session store unavailable"));
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = authController.getCurrentUser(authHeader);
+                mockMvc.perform(post("/api/identity/guest"))
+                                .andExpect(status().isInternalServerError())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-        // Assert
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        Map<String, Object> body = response.getBody();
-        assertNotNull(body);
-        assertTrue(body.containsKey("error"));
-    }
+        // register
+        // POST /api/identity/register
 
-    @Test
-    void GivenMissingBearerPrefix_WhenGetCurrentUser_ThenStillExtractsTokenAndProcesses() {
-        // Arrange
-        String authHeader = VALID_TOKEN;
-        UserDTO userDTO = new UserDTO(USER_ID, "john_doe", "john@example.com", UserGroupDiscount.NONE);
+        @Test
+        void GivenValidRequest_WhenRegister_ThenReturn201WithMessage() throws Exception {
+                RegisterRequestDTO dto = new RegisterRequestDTO();
+                dto.setUserId("eden");
+                dto.setName("Eden Yaakobi");
+                dto.setPassword("pass123");
+                dto.setEmail("eden@test.com");
+                dto.setUserGroupDiscount(UserGroupDiscount.NONE);
+                doNothing().when(userService).registerUser(any(), any(), any(), any(), any(), any());
 
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(userService.getUser(USER_ID)).thenReturn(userDTO);
+                mockMvc.perform(post("/api/identity/register")
+                                .header("Authorization", VALID_AUTH)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.message").value("User registered successfully."));
+        }
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = authController.getCurrentUser(authHeader);
+        @Test
+        void GivenDuplicateUserId_WhenRegister_ThenReturn400WithError() throws Exception {
+                RegisterRequestDTO dto = new RegisterRequestDTO();
+                dto.setUserId("eden");
+                dto.setName("Eden");
+                dto.setPassword("pass");
+                dto.setEmail("eden@test.com");
+                doThrow(new RuntimeException("User already exists")).when(userService)
+                                .registerUser(any(), any(), any(), any(), any(), any());
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(USER_ID, response.getBody().get("userId"));
-    }
+                mockMvc.perform(post("/api/identity/register")
+                                .header("Authorization", VALID_AUTH)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-    @Test
-    void GivenValidTokenAndNewProfileDetails_WhenUpdateProfile_ThenUpdatesSuccessfully() {
-        // Arrange
-        String authHeader = "Bearer " + VALID_TOKEN;
-        ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
-        requestDTO.setName("new_name");
-        requestDTO.setEmail("new@example.com");
-        requestDTO.setUserGroupDiscount(UserGroupDiscount.STUDENT);
+        // login
+        // POST /api/identity/login
 
-        UserDTO userDTO = new UserDTO(USER_ID, "john_doe", "john@example.com", UserGroupDiscount.NONE);
+        @Test
+        void GivenValidCredentials_WhenLogin_ThenReturn200WithTokenAndUserId() throws Exception {
+                LoginRequestDTO dto = new LoginRequestDTO();
+                dto.setUserId("eden");
+                dto.setPassword("pass123");
+                when(userService.loginUser(eq("eden"), eq("pass123"), any())).thenReturn("session-token-xyz");
 
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(userService.getUser(USER_ID)).thenReturn(userDTO);
+                mockMvc.perform(post("/api/identity/login")
+                                .header("Authorization", VALID_AUTH)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("session-token-xyz"))
+                                .andExpect(jsonPath("$.userId").value("eden"));
+        }
 
-        // Act
-        ResponseEntity<Map<String, String>> response = authController.updateProfile(authHeader, requestDTO);
+        @Test
+        void GivenWrongPassword_WhenLogin_ThenReturn401WithError() throws Exception {
+                LoginRequestDTO dto = new LoginRequestDTO();
+                dto.setUserId("eden");
+                dto.setPassword("wrong");
+                doThrow(new RuntimeException("Invalid credentials")).when(userService)
+                                .loginUser(any(), any(), any());
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Profile updated successfully.", response.getBody().get("message"));
+                mockMvc.perform(post("/api/identity/login")
+                                .header("Authorization", VALID_AUTH)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-        verify(userService).editUsername(USER_ID, "john_doe", "new_name", VALID_TOKEN);
-        verify(userService).editEmail(USER_ID, "john@example.com", "new@example.com", VALID_TOKEN);
-        verify(userService).setUserGroupDiscount(USER_ID, UserGroupDiscount.STUDENT, VALID_TOKEN);
-    }
+        // logout
+        // POST /api/identity/logout
 
-    @Test
-    void GivenValidTokenAndNoChanges_WhenUpdateProfile_ThenNoUpdatesExecuted() {
-        // Arrange
-        String authHeader = "Bearer " + VALID_TOKEN;
-        ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
-        requestDTO.setName("john_doe");
-        requestDTO.setEmail("john@example.com");
-        requestDTO.setUserGroupDiscount(UserGroupDiscount.NONE);
+        @Test
+        void GivenLoggedInUser_WhenLogout_ThenReturn200WithMessage() throws Exception {
+                doNothing().when(userService).logoutUser(any(), any());
 
-        UserDTO userDTO = new UserDTO(USER_ID, "john_doe", "john@example.com", UserGroupDiscount.NONE);
+                mockMvc.perform(post("/api/identity/logout")
+                                .header("Authorization", VALID_AUTH)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(Map.of("userId", "eden"))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Logged out successfully."));
+        }
 
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(userService.getUser(USER_ID)).thenReturn(userDTO);
+        @Test
+        void GivenInvalidToken_WhenLogout_ThenReturn400WithError() throws Exception {
+                doThrow(new RuntimeException("Invalid session")).when(userService).logoutUser(any(), any());
 
-        // Act
-        ResponseEntity<Map<String, String>> response = authController.updateProfile(authHeader, requestDTO);
+                mockMvc.perform(post("/api/identity/logout")
+                                .header("Authorization", "Bearer bad-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(Map.of("userId", "eden"))))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService, never()).editUsername(any(), any(), any(), any());
-        verify(userService, never()).editEmail(any(), any(), any(), any());
-        verify(userService, never()).setUserGroupDiscount(any(), any(), any());
-    }
+        // exit
+        // POST /api/identity/exit
 
-    @Test
-    void GivenInvalidToken_WhenUpdateProfile_ThenReturnsUnauthorized() {
-        // Arrange
-        String authHeader = "Bearer " + INVALID_TOKEN;
-        ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
+        @Test
+        void GivenValidToken_WhenExit_ThenReturn200WithMessage() throws Exception {
+                doNothing().when(userService).Exit(any());
 
-        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+                mockMvc.perform(post("/api/identity/exit")
+                                .header("Authorization", VALID_AUTH))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Exited platform successfully."));
+        }
 
-        // Act
-        ResponseEntity<Map<String, String>> response = authController.updateProfile(authHeader, requestDTO);
+        @Test
+        void GivenInvalidToken_WhenExit_ThenReturn400WithError() throws Exception {
+                doThrow(new RuntimeException("Token not found")).when(userService).Exit(any());
 
-        // Assert
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertTrue(response.getBody().containsKey("error"));
-    }
+                mockMvc.perform(post("/api/identity/exit")
+                                .header("Authorization", "Bearer bad-token"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-    @Test
-    void GivenValidToken_WhenGetPermissions_ThenReturnsUserPermissionsAndState() {
-        // Arrange
-        String authHeader = "Bearer " + VALID_TOKEN;
-        UserInfo userInfo = new UserInfo(USER_ID, "john_doe", "john@example.com", "pass", UserGroupDiscount.NONE);
-        userInfo.setUserState(UserState.MEMBER);
-        
-        // Add a mock production role
-        UserProduction userProd = new UserProduction();
-        userProd.addProduction(101, UserProduction.RoleInProduction.FOUNDER);
-        userInfo.setUserProduction(userProd);
+        // --- Identity Management Tasks 4-6 ---
 
-        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(userService.getUserInfo(USER_ID)).thenReturn(userInfo);
-        when(adminRepo.isAdmin(USER_ID)).thenReturn(true);
+        // GET /api/identity/me
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = authController.getPermissions(authHeader);
+        @Test
+        void GivenValidToken_WhenGetCurrentUser_ThenReturnsUserDetailsExcludingPassword() throws Exception {
+                UserDTO userDTO = new UserDTO("test-user-id", "john_doe", "john@example.com", UserGroupDiscount.NONE);
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        Map<String, Object> body = response.getBody();
-        assertNotNull(body);
-        assertEquals(USER_ID, body.get("userId"));
-        assertEquals("MEMBER", body.get("state"));
-        assertEquals(true, body.get("isAdmin"));
+                when(authenticationService.validate("valid-token")).thenReturn(true);
+                when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
+                when(userService.getUser("test-user-id")).thenReturn(userDTO);
 
-        Map<Integer, String> productionRoles = (Map<Integer, String>) body.get("productionRoles");
-        assertNotNull(productionRoles);
-        assertEquals("FOUNDER", productionRoles.get(101));
-    }
+                mockMvc.perform(get("/api/identity/me")
+                                .header("Authorization", "Bearer valid-token"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.userId").value("test-user-id"))
+                                .andExpect(jsonPath("$.name").value("john_doe"))
+                                .andExpect(jsonPath("$.email").value("john@example.com"))
+                                .andExpect(jsonPath("$.userGroupDiscount").value("NONE"))
+                                .andExpect(jsonPath("$.password").doesNotExist());
+        }
 
-    @Test
-    void GivenInvalidToken_WhenGetPermissions_ThenReturnsUnauthorized() {
-        // Arrange
-        String authHeader = "Bearer " + INVALID_TOKEN;
-        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+        @Test
+        void GivenInvalidToken_WhenGetCurrentUser_ThenReturnsUnauthorized() throws Exception {
+                when(authenticationService.validate("invalid-token")).thenReturn(false);
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = authController.getPermissions(authHeader);
+                mockMvc.perform(get("/api/identity/me")
+                                .header("Authorization", "Bearer invalid-token"))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 
-        // Assert
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertTrue(response.getBody().containsKey("error"));
-    }
+        @Test
+        void GivenMissingBearerPrefix_WhenGetCurrentUser_ThenStillExtractsTokenAndProcesses() throws Exception {
+                UserDTO userDTO = new UserDTO("test-user-id", "john_doe", "john@example.com", UserGroupDiscount.NONE);
+
+                when(authenticationService.validate("valid-token")).thenReturn(true);
+                when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
+                when(userService.getUser("test-user-id")).thenReturn(userDTO);
+
+                mockMvc.perform(get("/api/identity/me")
+                                .header("Authorization", "valid-token"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.userId").value("test-user-id"));
+        }
+
+        // PUT /api/identity/profile
+
+        @Test
+        void GivenValidTokenAndNewProfileDetails_WhenUpdateProfile_ThenUpdatesSuccessfully() throws Exception {
+                ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
+                requestDTO.setName("new_name");
+                requestDTO.setEmail("new@example.com");
+                requestDTO.setUserGroupDiscount(UserGroupDiscount.STUDENT);
+
+                UserDTO userDTO = new UserDTO("test-user-id", "john_doe", "john@example.com", UserGroupDiscount.NONE);
+
+                when(authenticationService.validate("valid-token")).thenReturn(true);
+                when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
+                when(userService.getUser("test-user-id")).thenReturn(userDTO);
+
+                mockMvc.perform(put("/api/identity/profile")
+                                .header("Authorization", "Bearer valid-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(requestDTO)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Profile updated successfully."));
+
+                verify(userService).editUsername("test-user-id", "john_doe", "new_name", "valid-token");
+                verify(userService).editEmail("test-user-id", "john@example.com", "new@example.com", "valid-token");
+                verify(userService).setUserGroupDiscount("test-user-id", UserGroupDiscount.STUDENT, "valid-token");
+        }
+
+        @Test
+        void GivenValidTokenAndNoChanges_WhenUpdateProfile_ThenNoUpdatesExecuted() throws Exception {
+                ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
+                requestDTO.setName("john_doe");
+                requestDTO.setEmail("john@example.com");
+                requestDTO.setUserGroupDiscount(UserGroupDiscount.NONE);
+
+                UserDTO userDTO = new UserDTO("test-user-id", "john_doe", "john@example.com", UserGroupDiscount.NONE);
+
+                when(authenticationService.validate("valid-token")).thenReturn(true);
+                when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
+                when(userService.getUser("test-user-id")).thenReturn(userDTO);
+
+                mockMvc.perform(put("/api/identity/profile")
+                                .header("Authorization", "Bearer valid-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(requestDTO)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Profile updated successfully."));
+
+                verify(userService, never()).editUsername(any(), any(), any(), any());
+                verify(userService, never()).editEmail(any(), any(), any(), any());
+                verify(userService, never()).setUserGroupDiscount(any(), any(), any());
+        }
+
+        @Test
+        void GivenInvalidToken_WhenUpdateProfile_ThenReturnsUnauthorized() throws Exception {
+                ProfileUpdateRequestDTO requestDTO = new ProfileUpdateRequestDTO();
+
+                when(authenticationService.validate("invalid-token")).thenReturn(false);
+
+                mockMvc.perform(put("/api/identity/profile")
+                                .header("Authorization", "Bearer invalid-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(requestDTO)))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.error").exists());
+        }
+
+        // GET /api/identity/permissions
+
+        @Test
+        void GivenValidToken_WhenGetPermissions_ThenReturnsUserPermissionsAndState() throws Exception {
+                UserInfo userInfo = new UserInfo("test-user-id", "john_doe", "john@example.com", "pass", UserGroupDiscount.NONE);
+                userInfo.setUserState(UserState.MEMBER);
+                
+                UserProduction userProd = new UserProduction();
+                userProd.addProduction(101, UserProduction.RoleInProduction.FOUNDER);
+                userInfo.setUserProduction(userProd);
+
+                when(authenticationService.validate("valid-token")).thenReturn(true);
+                when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
+                when(userService.getUserInfo("test-user-id")).thenReturn(userInfo);
+                when(adminRepo.isAdmin("test-user-id")).thenReturn(true);
+
+                mockMvc.perform(get("/api/identity/permissions")
+                                .header("Authorization", "Bearer valid-token"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.userId").value("test-user-id"))
+                                .andExpect(jsonPath("$.state").value("MEMBER"))
+                                .andExpect(jsonPath("$.isAdmin").value(true))
+                                .andExpect(jsonPath("$.productionRoles['101']").value("FOUNDER"));
+        }
+
+        @Test
+        void GivenInvalidToken_WhenGetPermissions_ThenReturnsUnauthorized() throws Exception {
+                when(authenticationService.validate("invalid-token")).thenReturn(false);
+
+                mockMvc.perform(get("/api/identity/permissions")
+                                .header("Authorization", "Bearer invalid-token"))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.error").exists());
+        }
 }
