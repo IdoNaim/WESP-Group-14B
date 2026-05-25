@@ -66,14 +66,16 @@ public class HistoryOrderServiceTests {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
         assertTrue(callCreate());
+        verify(historyOrderRepo, times(1)).save(historyOrderItem);
     }
 
     @Test
     void GivenValidArgs_WhenCreateHistoryOrder_ThenSaveCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        callCreate();
+        boolean result = callCreate();
 
+        assertTrue(result);
         verify(historyOrderRepo, times(1)).save(historyOrderItem);
     }
 
@@ -81,8 +83,9 @@ public class HistoryOrderServiceTests {
     void GivenValidArgs_WhenCreateHistoryOrder_ThenHandlerCalledOnce() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(historyOrderItem);
 
-        callCreate();
+        boolean result = callCreate();
 
+        assertTrue(result);
         verify(historyOrderHandler, times(1)).saveHistoryOrder(any(HistoryOrderDTO.class));
     }
 
@@ -106,14 +109,16 @@ public class HistoryOrderServiceTests {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
         assertFalse(callCreate());
+        verify(historyOrderRepo, never()).save(any());
     }
 
     @Test
     void GivenHandlerReturnsNull_WhenCreateHistoryOrder_ThenSaveNeverCalled() {
         when(historyOrderHandler.saveHistoryOrder(any(HistoryOrderDTO.class))).thenReturn(null);
 
-        callCreate();
+        boolean result = callCreate();
 
+        assertFalse(result);
         verify(historyOrderRepo, never()).save(any());
     }
 
