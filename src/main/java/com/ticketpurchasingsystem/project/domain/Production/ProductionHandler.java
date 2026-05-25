@@ -9,10 +9,11 @@ import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
+import org.springframework.stereotype.Component;
+
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import java.util.Set;
-
+@Component
 public class ProductionHandler {
 
     public ProductionCompany createProductionCompany(String userId, ProductionCompanyDTO companyDetails) {

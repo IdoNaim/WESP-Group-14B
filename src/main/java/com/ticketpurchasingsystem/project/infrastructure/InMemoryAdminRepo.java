@@ -5,9 +5,12 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.springframework.stereotype.Repository;
+
 import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminInfo;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 
+@Repository
 public class InMemoryAdminRepo implements IAdminRepo {
 
     private final ConcurrentHashMap<String, AdminInfo> storage = new ConcurrentHashMap<>();

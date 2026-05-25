@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -131,7 +132,7 @@ class AuthenticationServiceTest {
         DomainAuthService real = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(real, "secret", TEST_SECRET);
         real.init();
-        return new AuthenticationService(real, sessionRepo);
+        return new AuthenticationService(real, mock(SystemAdminService.class), sessionRepo);
     }
 
     @Test

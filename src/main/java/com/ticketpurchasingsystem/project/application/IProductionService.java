@@ -23,7 +23,7 @@ public interface IProductionService {
 
     public String getEventAsCustomer(String eventId);
 
-    public boolean createProductionCompany(String sessionToken,
+    public Integer createProductionCompany(String sessionToken,
             ProductionCompanyDTO companyDetails);
 
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId);

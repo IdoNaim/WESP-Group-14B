@@ -29,7 +29,7 @@ public class UserService implements IUserService {
         this.userPublisher = userPublisher;
     }
 
-    public void guestEntry() {
+    public String guestEntry() {
         try {
             String uniqueGuestId = userHandler.generateUniqueId();
             String sessionToken = authenticationService.login(uniqueGuestId);
@@ -37,8 +37,10 @@ public class UserService implements IUserService {
             userRepo.store(guest);
             userPublisher.publishGuestEntered(guest.getId(), sessionToken);
             loggerDef.getInstance().info("Guest entry successful. Guest ID: " + guest.getId());
+            return sessionToken;
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to handle guest entry: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
