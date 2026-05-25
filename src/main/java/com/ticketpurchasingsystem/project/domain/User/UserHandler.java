@@ -1,11 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.User;
-
 import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.domain.Utils.PasswordEncoderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestLeavedPlatformEvent;
-import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLeavedPlatformEvent;
 
 @Component
 public class UserHandler {
@@ -29,23 +25,13 @@ public class UserHandler {
         return new UserInfo(guestId, sessionTokenStr);
     }
 
-    public ExitProcessData handleUserExit(UserInfo userInfo) {
+    public void handleUserExit(UserInfo userInfo) {
         if (userInfo == null) {
-            return new ExitProcessData(null, null);
+            throw new RuntimeException("userInfo cannot be null.");
         }
-        String sessionTokenStr = userInfo.getSessionTokenStr();
-        if (userInfo.isGuest()) {
-            return new ExitProcessData(
-                null,
-                new GuestLeavedPlatformEvent(userInfo.getId(), sessionTokenStr)
-            );
-        } else {
-            userInfo.LoggedIn = false;
+        if (!userInfo.isGuest()){
             userInfo.setSessionTokenStr(null);
-            return new ExitProcessData(
-                userInfo,
-                new UserLeavedPlatformEvent(userInfo.getId(), sessionTokenStr)
-            );
+            userInfo.setLoggedIn(false);
         }
     }
 
@@ -57,14 +43,14 @@ public class UserHandler {
             throw new RuntimeException("User is already logged in.");
         }
         userInfo.setSessionTokenStr(newSessionTokenStr);
-        userInfo.LoggedIn = true;
+        userInfo.setLoggedIn(true);
     }
 
     public void logoutUser(UserInfo userInfo) {
         if (userInfo == null || !userInfo.isLoggedIn()) {
             throw new RuntimeException("User is not found or not logged in.");
         }
-        userInfo.LoggedIn = false;
+        userInfo.setLoggedIn(false);
         userInfo.setSessionTokenStr(null);
     }
 
@@ -142,5 +128,9 @@ public class UserHandler {
         if (userInfo == null) {
             throw new RuntimeException("User not found.");
         }
+    }
+
+    public boolean isUserRegistered(UserInfo userInfo) {
+        return userInfo != null && !userInfo.isGuest();
     }
 }

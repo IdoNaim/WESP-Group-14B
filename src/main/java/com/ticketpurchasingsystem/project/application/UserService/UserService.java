@@ -14,8 +14,6 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import com.ticketpurchasingsystem.project.domain.User.ExitProcessData;
-
 @Service
 public class UserService implements IUserService {
 
@@ -33,8 +31,9 @@ public class UserService implements IUserService {
 
     public void guestEntry() {
         try {
-            String sessionToken = authenticationService.login(userHandler.generateUniqueId());
-            UserInfo guest = userHandler.handleGuestEntry(sessionToken, authenticationService.getUser(sessionToken));
+            String uniqueGuestId = userHandler.generateUniqueId();
+            String sessionToken = authenticationService.login(uniqueGuestId);
+            UserInfo guest = userHandler.handleGuestEntry(sessionToken, uniqueGuestId);
             userRepo.store(guest);
             userPublisher.publishGuestEntered(guest.getId(), sessionToken);
             loggerDef.getInstance().info("Guest entry successful. Guest ID: " + guest.getId());
@@ -43,10 +42,6 @@ public class UserService implements IUserService {
         }
     }
 
-    // we can treat guest and user the same in the exit flow
-    // we can in both scenarios to delete the user/guest
-    // handleuserexit can handle both scenarios as well
-    // 
 
     public void Exit(String sessionTokenStr) {
         try {
@@ -54,13 +49,16 @@ public class UserService implements IUserService {
                 String userId = authenticationService.getUser(sessionTokenStr);
                 UserInfo userInfo = userRepo.findByID(userId);
                 
-                ExitProcessData data = userHandler.handleUserExit(userInfo);
-                
-                userRepo.delete(userId);
-                userRepo.store(data.userInfoToStore());
-                userPublisher.publishEvent(data.exitEvent());
+                userHandler.handleUserExit(userInfo);
+                // if we are here user info is not null, valid guest or user is leaving
+                if (userInfo.isGuest()) {
+                    userRepo.delete(userId);
+                    userPublisher.publishGuestExited(userId, sessionTokenStr);
+                } else {
+                    userRepo.store(userInfo);
+                    userPublisher.publishUserLoggedOut(userId, sessionTokenStr);
+                }
 
-                
                 authenticationService.logout(sessionTokenStr);
                 loggerDef.getInstance().info("Exit successful for token/user.");
             }
@@ -78,6 +76,7 @@ public class UserService implements IUserService {
                 throw new RuntimeException("Invalid session token.");
             }
             userHandler.validateUserDoesNotExist(userRepo.findByID(userId));
+            // if we are here the user id is not taken
             UserInfo newUser = userHandler.registerUser(userId, name, email, password, userGroupDiscount);
             userRepo.store(newUser);
             userPublisher.publishUserCreated(userId);
@@ -96,8 +95,11 @@ public class UserService implements IUserService {
             String guestId = authenticationService.getUser(sessionTokenStr);
             UserInfo guestInfo = userRepo.findByID(guestId);
             userHandler.validateGuest(guestInfo);
+            // if we are here, it means that session token is valid
+            // the user is not null and a guest so he can login and become a user 
             UserInfo userInfo = userRepo.findByID(userId);
             userHandler.validateUserFound(userInfo);
+            // validate user exists
             
             // Generate a fresh session token via auth service
             String newSessionTokenStr = authenticationService.login(userId);
@@ -109,11 +111,10 @@ public class UserService implements IUserService {
 
             
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
-            userPublisher.publishGuestExited(guestId, sessionTokenStr);
-            
             authenticationService.logout(sessionTokenStr);
+            userPublisher.publishGuestExited(guestId, sessionTokenStr);
 
-            userRepo.store(userInfo);
+            userRepo.store(userInfo); // Store the updated user info with new session token and logged-in status
             userPublisher.publishUserLoggedIn(userId, newSessionTokenStr);
             loggerDef.getInstance().info("User logged in successfully: " + userId);
             return newSessionTokenStr;
@@ -128,6 +129,7 @@ public class UserService implements IUserService {
             if (!authenticationService.validate(sessionToken)) {
                 throw new RuntimeException("Invalid session token.");
             }
+            // 
             UserInfo userInfo = userRepo.findByID(userId);
             userHandler.validateUserFound(userInfo);
 
@@ -251,8 +253,7 @@ public class UserService implements IUserService {
         }
     }
     public boolean isUserRegistered(String userId){
-        UserInfo user = userRepo.findByID(userId);
-        return user != null;
+        return userHandler.isUserRegistered(userRepo.findByID(userId));
     }
 
 }
