@@ -1,14 +1,17 @@
 package com.ticketpurchasingsystem.project.domain.authentication;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import java.util.Date;
+
+import javax.crypto.SecretKey;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import javax.crypto.SecretKey;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import java.util.Date;
-import java.util.function.Function;
 
 @Service
 public class DomainAuthService {
@@ -35,6 +38,21 @@ public class DomainAuthService {
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(expireTime))
+                .claim("role", "User") // Add role claim for authorization
+                .signWith(key)
+                .compact();
+
+        sessionRepo.save(new SessionToken(tokenStr, expireTime));
+        return tokenStr;
+    }
+
+    public String authenticateAndCreateSessionAdmin(String username) {
+        long expireTime = System.currentTimeMillis() + expirationTime;
+        String tokenStr = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(expireTime))
+                .claim("role", "admin") // Add role claim for authorization
                 .signWith(key)
                 .compact();
 
@@ -58,5 +76,29 @@ public class DomainAuthService {
 
     public void invalidateSession(String token) {
         sessionRepo.deleteByToken(token);
+    }
+
+    public boolean validateAdminSession(String token) {
+        if (isSessionValid(token)) {
+            try {
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(key)
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+
+                // Check if the role is "admin"
+                String role = claims.get("role", String.class);
+                return "admin".equals(role);
+            } catch (ExpiredJwtException e) {
+                // Token is expired
+                return false;
+            } catch (Exception e) {
+                // Token is invalid for other reasons
+                return false;
+            }
+        }
+        return false;
+
     }
 }

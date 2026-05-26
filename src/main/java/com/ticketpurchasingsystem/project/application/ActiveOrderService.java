@@ -1,4 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
+import org.springframework.stereotype.Service;
+
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Service
 public class ActiveOrderService implements IActiveOrderService {
     ActiveOrderListener activeOrderListener;
     ActiveOrderPublisher activeOrderPublisher;

@@ -52,7 +52,7 @@ public class SystemAdminService implements ISystemAdminService {
                 .collect(Collectors.toList());
     }
 
-    private String validateAdminSession(String token) {
+    public String validateAdminSession(String token) {
         if (!authenticationService.validate(token)) {
             logger.error("Invalid session token for admin operation");
             throw new RuntimeException("Invalid session token");

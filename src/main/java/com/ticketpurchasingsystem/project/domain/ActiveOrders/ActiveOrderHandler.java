@@ -1,10 +1,13 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
 
 import com.sun.java.accessibility.util.EventID;
+import org.springframework.stereotype.Component;
+
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 import java.util.*;
 
+@Component
 public class ActiveOrderHandler {
     private loggerDef logger = loggerDef.getInstance();
 

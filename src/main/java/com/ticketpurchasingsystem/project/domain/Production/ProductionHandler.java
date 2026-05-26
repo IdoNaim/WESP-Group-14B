@@ -4,14 +4,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
+import org.springframework.stereotype.Component;
+
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import java.util.Set;
-
+@Component
 public class ProductionHandler {
 
     public ProductionCompany createProductionCompany(String userId, ProductionCompanyDTO companyDetails) {
@@ -168,6 +170,20 @@ public class ProductionHandler {
         }
         return company;
     }
+    public ProductionCompany addPurchasePolicyRule(String userId, Integer companyId, IPurchaseRule rule, ProductionCompany company) {
+        if (isInvalid(userId) || companyId == null || rule == null || company == null) {
+            loggerDef.getInstance().error("addPurchasePolicyRule called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwner(userId)) {
+            loggerDef.getInstance().error(
+                    "addPurchasePolicyRule: caller " + userId + " is not an owner of company " + companyId);
+            return null;
+        }
+        company.getPurchasePolicy().addRule(rule);
+        return company;
+    }
+
     private boolean isInvalid(String str) {
         return str == null || str.trim().isEmpty();
     }

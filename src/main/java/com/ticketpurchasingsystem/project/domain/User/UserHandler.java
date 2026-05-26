@@ -1,5 +1,4 @@
 package com.ticketpurchasingsystem.project.domain.User;
-
 import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.domain.Utils.PasswordEncoderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +17,7 @@ public class UserHandler {
     }
 
     public UserInfo registerUser(String userId, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
+        validateEmailFormat(email);
         String encryptedPass = PasswordEncoderUtil.encodePassword(password);
         return new UserInfo(userId, name, email, encryptedPass, userGroupDiscount);
     }
@@ -28,10 +28,12 @@ public class UserHandler {
 
     public void handleUserExit(UserInfo userInfo) {
         if (userInfo == null) {
-            throw new RuntimeException("User not found.");
+            throw new RuntimeException("userInfo cannot be null.");
         }
-        userInfo.LoggedIn = false;
-        userInfo.setSessionTokenStr(null);
+        if (!userInfo.isGuest()){
+            userInfo.setSessionTokenStr(null);
+            userInfo.setLoggedIn(false);
+        }
     }
 
     public void loginUser(UserInfo userInfo, String password, String newSessionTokenStr) {
@@ -42,14 +44,14 @@ public class UserHandler {
             throw new RuntimeException("User is already logged in.");
         }
         userInfo.setSessionTokenStr(newSessionTokenStr);
-        userInfo.LoggedIn = true;
+        userInfo.setLoggedIn(true);
     }
 
     public void logoutUser(UserInfo userInfo) {
         if (userInfo == null || !userInfo.isLoggedIn()) {
             throw new RuntimeException("User is not found or not logged in.");
         }
-        userInfo.LoggedIn = false;
+        userInfo.setLoggedIn(false);
         userInfo.setSessionTokenStr(null);
     }
 
@@ -81,6 +83,7 @@ public class UserHandler {
 
     public void editPassword(UserInfo userInfo, String userId, String oldPassword, String newPassword, String sessionTokenStr) {
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
+        validateNewPassword(newPassword);
         if (!PasswordEncoderUtil.matches(oldPassword, userInfo.getPassword())) {
             throw new RuntimeException("Old password does not match current password.");
         }
@@ -89,6 +92,7 @@ public class UserHandler {
 
     public void editEmail(UserInfo userInfo, String userId, String oldEmail, String newEmail, String sessionTokenStr) {
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
+        validateEmailFormat(newEmail);
         if (!userInfo.getEmail().equals(oldEmail)) {
             throw new RuntimeException("Old email does not match current email.");
         }
@@ -105,5 +109,43 @@ public class UserHandler {
             userInfo.setUserProduction(new UserProduction());
         }
         userInfo.getUserProduction().addProduction(companyId, role);
+    }
+
+    public void validateGuest(UserInfo userInfo) {
+        if (userInfo == null) {
+            throw new RuntimeException("Invalid guest info.");
+        }
+        if (!userInfo.isGuest()) {
+            throw new RuntimeException("User is not a guest.");
+        }
+    }
+
+    public void validateUserDoesNotExist(UserInfo userInfo) {
+        if (userInfo == null) {
+            return;
+        }
+        throw new RuntimeException("User with the same ID already exists.");
+    }
+
+    public void validateUserFound(UserInfo userInfo) {
+        if (userInfo == null) {
+            throw new RuntimeException("User not found.");
+        }
+    }
+
+    public boolean isUserRegistered(UserInfo userInfo) {
+        return userInfo != null && !userInfo.isGuest();
+    }
+
+    private void validateEmailFormat(String email) {
+        if (email == null || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new RuntimeException("Invalid email format.");
+        }
+    }
+
+    private void validateNewPassword(String password) {
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("Password cannot be empty.");
+        }
     }
 }

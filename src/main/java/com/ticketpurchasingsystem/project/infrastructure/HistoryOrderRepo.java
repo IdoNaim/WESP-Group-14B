@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.stereotype.Repository;
+
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 
+@Repository
 public class HistoryOrderRepo implements IHistoryOrderRepo {
 
     private final ConcurrentHashMap<String, HistoryOrderItem> storage = new ConcurrentHashMap<>();
@@ -50,5 +53,17 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
             }
         }
         return result;
+    }
+
+    @Override
+    public HistoryOrderItem findByOrderId(String orderId) {
+        HistoryOrderItem item = null;
+        for (HistoryOrderItem historyOrder : storage.values()) {
+            if (historyOrder.getOrderId().equals(orderId)) {
+                item = historyOrder;
+                break;
+            }
+        }
+        return item;
     }
 }
