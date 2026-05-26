@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointManagerEvent;
@@ -13,6 +14,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsU
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.ModifyManagerPermissionsEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.NewProdEvent;
 
+@Component
 public class ProductionEventPublisher {
 
     private final ApplicationEventPublisher eventPublisher;

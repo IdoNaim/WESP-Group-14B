@@ -66,15 +66,19 @@ public class HistoryOrderServiceGetAllOrdersTests {
     void GivenInvalidSession_WhenGetAllHistoryOrders_ThenReturnEmptyList() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        assertTrue(historyOrderService.getAllHistoryOrders(INVALID_SESSION).isEmpty());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(INVALID_SESSION);
+
+        assertTrue(result.isEmpty());
+        verify(historyOrderRepo, never()).findAll();
     }
 
     @Test
     void GivenInvalidSession_WhenGetAllHistoryOrders_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        historyOrderService.getAllHistoryOrders(INVALID_SESSION);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(INVALID_SESSION);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, never()).findAll();
     }
 
@@ -84,15 +88,19 @@ public class HistoryOrderServiceGetAllOrdersTests {
     void GivenValidSessionNotAdmin_WhenGetAllHistoryOrders_ThenReturnEmptyList() {
         stubNonAdminSession();
 
-        assertTrue(historyOrderService.getAllHistoryOrders(VALID_SESSION).isEmpty());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
+
+        assertTrue(result.isEmpty());
+        verify(historyOrderRepo, never()).findAll();
     }
 
     @Test
     void GivenValidSessionNotAdmin_WhenGetAllHistoryOrders_ThenRepoNeverCalled() {
         stubNonAdminSession();
 
-        historyOrderService.getAllHistoryOrders(VALID_SESSION);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, never()).findAll();
     }
 
@@ -103,7 +111,10 @@ public class HistoryOrderServiceGetAllOrdersTests {
         stubAdminSession();
         when(historyOrderRepo.findAll()).thenReturn(List.of());
 
-        assertTrue(historyOrderService.getAllHistoryOrders(VALID_SESSION).isEmpty());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
+
+        assertTrue(result.isEmpty());
+        verify(historyOrderRepo, times(1)).findAll();
     }
 
     @Test
@@ -113,7 +124,11 @@ public class HistoryOrderServiceGetAllOrdersTests {
             List.of("seat-2"), new HashMap<>());
         when(historyOrderRepo.findAll()).thenReturn(List.of(item, item2));
 
-        assertEquals(2, historyOrderService.getAllHistoryOrders(VALID_SESSION).size());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
+
+        assertEquals(2, result.size());
+        assertEquals(ORDER_ID, result.get(0).getOrderId());
+        verify(historyOrderRepo, times(1)).findAll();
     }
 
     @Test
@@ -126,6 +141,7 @@ public class HistoryOrderServiceGetAllOrdersTests {
         assertEquals(ORDER_ID, result.get(0).getOrderId());
         assertEquals(USER_ID, result.get(0).getUserId());
         assertEquals(EVENT_ID, result.get(0).getEventId());
+        verify(historyOrderRepo, times(1)).findAll();
     }
 
     @Test
@@ -133,8 +149,9 @@ public class HistoryOrderServiceGetAllOrdersTests {
         stubAdminSession();
         when(historyOrderRepo.findAll()).thenReturn(List.of());
 
-        historyOrderService.getAllHistoryOrders(VALID_SESSION);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, times(1)).findAll();
     }
 }

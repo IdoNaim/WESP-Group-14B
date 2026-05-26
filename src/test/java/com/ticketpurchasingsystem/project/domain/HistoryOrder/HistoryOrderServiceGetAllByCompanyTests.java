@@ -60,15 +60,19 @@ public class HistoryOrderServiceGetAllByCompanyTests {
     void GivenInvalidSession_WhenGetAllHistoryOrdersByCompany_ThenReturnEmptyList() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        assertTrue(historyOrderService.getAllHistoryOrdersByCompany(INVALID_SESSION, COMPANY_ID).isEmpty());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(INVALID_SESSION, COMPANY_ID);
+
+        assertTrue(result.isEmpty());
+        verify(historyOrderRepo, never()).findAllByCompanyId(anyInt());
     }
 
     @Test
     void GivenInvalidSession_WhenGetAllHistoryOrdersByCompany_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        historyOrderService.getAllHistoryOrdersByCompany(INVALID_SESSION, COMPANY_ID);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(INVALID_SESSION, COMPANY_ID);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, never()).findAllByCompanyId(anyInt());
     }
 
@@ -79,7 +83,10 @@ public class HistoryOrderServiceGetAllByCompanyTests {
         stubValidSession();
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(List.of());
 
-        assertTrue(historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID).isEmpty());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID);
+
+        assertTrue(result.isEmpty());
+        verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 
     @Test
@@ -87,8 +94,9 @@ public class HistoryOrderServiceGetAllByCompanyTests {
         stubValidSession();
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(List.of());
 
-        historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID);
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID);
 
+        assertTrue(result.isEmpty());
         verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 
@@ -99,7 +107,10 @@ public class HistoryOrderServiceGetAllByCompanyTests {
         stubValidSession();
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(List.of(item));
 
-        assertEquals(1, historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID).size());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID);
+
+        assertEquals(1, result.size());
+        verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 
     @Test
@@ -109,7 +120,10 @@ public class HistoryOrderServiceGetAllByCompanyTests {
             List.of("seat-2"), new HashMap<>());
         when(historyOrderRepo.findAllByCompanyId(COMPANY_ID)).thenReturn(List.of(item, item2));
 
-        assertEquals(2, historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID).size());
+        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrdersByCompany(VALID_SESSION, COMPANY_ID);
+
+        assertEquals(2, result.size());
+        verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 
     @Test
@@ -122,5 +136,6 @@ public class HistoryOrderServiceGetAllByCompanyTests {
         assertEquals(ORDER_ID, result.get(0).getOrderId());
         assertEquals(USER_ID, result.get(0).getUserId());
         assertEquals(EVENT_ID, result.get(0).getEventId());
+        verify(historyOrderRepo, times(1)).findAllByCompanyId(COMPANY_ID);
     }
 }

@@ -10,15 +10,15 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 // Not sure where to put user premissions and roles, maybe we can have a separate class for that and link it to the user info class, or maybe we can just have a field in the user info class for that, we will decide on that later when we have a better understanding of the requirements and the design of the system
 //  */
 public class UserInfo {
-    String id;
-    String name;
-    String email;
-    String password;
-    UserState userState;
-    UserGroupDiscount userGroupDiscount;
-    boolean LoggedIn = false ;
-    String sessionTokenStr;
-    UserProduction userProduction;
+    private String id;
+    private String name;
+    private String email;
+    private String password;
+    private UserState userState;
+    private UserGroupDiscount userGroupDiscount;
+    private boolean LoggedIn = false ;
+    private String sessionTokenStr;
+    private UserProduction userProduction;
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
@@ -44,10 +44,6 @@ public class UserInfo {
         this.sessionTokenStr = sessionTokenStr;
         this.LoggedIn = false;
         this.userProduction = null; // Guests do not have production roles
-    }
-
-    public boolean isLoggedIn() {
-        return LoggedIn;
     }
 
     public void setUserGroupDiscount(UserGroupDiscount userGroupDiscount) {
@@ -123,5 +119,30 @@ public class UserInfo {
 
     public void setUserProduction(UserProduction userProduction) {
         this.userProduction = userProduction;
+    }
+
+    public void setLoggedIn(boolean loggedIn) {
+        this.LoggedIn = loggedIn;
+    }
+
+    public boolean isLoggedIn() {
+        return LoggedIn;
+    }
+
+    public void setState(String newState) {
+        switch (newState) {
+            case "guest":
+                this.userState = UserState.GUEST;
+                break;
+            case "member":
+                this.userState = UserState.MEMBER;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid user state: " + newState);
+        }
+    }
+
+    public String getState() {
+        return this.userState.toString();
     }
 }
