@@ -9,7 +9,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateReques
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,45 +48,53 @@ class EventControllerTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
     }
-    // create event
+
+    // ================= create event =================
     // POST /api/events
 
     @Test
     void GivenValidRequest_WhenCreateEvent_ThenReturn201() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
         dto.setPurchasePolicy(mock(PurchasePolicyDTO.class));
-        when(eventService.createEvent(any(), any(), any())).thenReturn(true);
+
+        // FIXED: Added 4th 'any()' for authHeader
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(true);
 
         mockMvc.perform(post("/api/events")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void GivenServiceFailure_WhenCreateEvent_ThenReturn400() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
-        when(eventService.createEvent(any(), any(), any())).thenReturn(false);
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+
+        // FIXED: Added 4th 'any()' for authHeader
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(false);
 
         mockMvc.perform(post("/api/events")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
-    // get event by id
+
+    // ================= get event by id =================
     // GET /api/events/{eventId}
 
     @Test
     void GivenExistingEvent_WhenGetEvent_ThenReturn200WithBody() throws Exception {
-        EventDTO event = new EventDTO(1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
-        when(eventService.searchEvent("evt-1")).thenReturn(event);
+        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
+
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.searchEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(event);
 
         mockMvc.perform(get("/api/events/evt-1")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eventName").value("Rock Festival"))
                 .andExpect(jsonPath("$.companyId").value(1));
@@ -94,54 +102,60 @@ class EventControllerTest {
 
     @Test
     void GivenUnknownEvent_WhenGetEvent_ThenReturn404() throws Exception {
-        when(eventService.searchEvent(any())).thenReturn(null);
+        // FIXED: Added second any()
+        when(eventService.searchEvent(any(), any())).thenReturn(null);
 
         mockMvc.perform(get("/api/events/unknown-id")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isNotFound());
     }
 
-    // get all events by company id
+    // ================= get all events by company id =================
     // GET /api/events?companyId=1
 
     @Test
     void GivenCompanyWithEvents_WhenGetEventsByCompany_ThenReturn200WithList() throws Exception {
         List<EventDTO> events = List.of(
-                new EventDTO(1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
-                new EventDTO(1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
-        when(eventService.searchEventsByCompany(1)).thenReturn(events);
+                new EventDTO("evt-1",1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
+                new EventDTO("evt-2",1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
+
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.searchEventsByCompany(eq(VALID_AUTH), eq(1))).thenReturn(events);
 
         mockMvc.perform(get("/api/events")
-                .param("companyId", "1")
-                .header("Authorization", VALID_AUTH))
+                        .param("companyId", "1")
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
     void GivenCompanyWithNoEvents_WhenGetEventsByCompany_ThenReturn200WithEmptyList() throws Exception {
-        when(eventService.searchEventsByCompany(99)).thenReturn(null);
+        // FIXED: Added any() for authHeader
+        when(eventService.searchEventsByCompany(any(), eq(99))).thenReturn(null);
 
         mockMvc.perform(get("/api/events")
-                .param("companyId", "99")
-                .header("Authorization", VALID_AUTH))
+                        .param("companyId", "99")
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    // edit event date
+    // ================= edit event date =================
     // PUT /api/events/{eventId}/date
 
     @Test
     void GivenValidDate_WhenEditEventDate_ThenReturn200() throws Exception {
         EditEventDateRequestDTO dto = new EditEventDateRequestDTO();
         dto.setNewDateTime(LocalDateTime.now().plusDays(30));
-        when(eventService.editEventDate(eq("evt-1"), any())).thenReturn(true);
+
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.editEventDate(eq(VALID_AUTH), eq("evt-1"), any())).thenReturn(true);
 
         mockMvc.perform(put("/api/events/evt-1/date")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -149,28 +163,32 @@ class EventControllerTest {
     void GivenUnknownEvent_WhenEditEventDate_ThenReturn400() throws Exception {
         EditEventDateRequestDTO dto = new EditEventDateRequestDTO();
         dto.setNewDateTime(LocalDateTime.now().plusDays(30));
-        when(eventService.editEventDate(any(), any())).thenReturn(false);
+
+        // FIXED: Added 3rd any() for authHeader
+        when(eventService.editEventDate(any(), any(), any())).thenReturn(false);
 
         mockMvc.perform(put("/api/events/unknown/date")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
-    // edit event capacity
+    // ================= edit event capacity =================
     // PUT /api/events/{eventId}/capacity
 
     @Test
     void GivenValidCapacity_WhenEditCapacity_ThenReturn200() throws Exception {
         EditEventCapacityRequestDTO dto = new EditEventCapacityRequestDTO();
         dto.setNewCapacity(750);
-        when(eventService.editEventInventory("evt-1", 750)).thenReturn(true);
+
+        // FIXED: Added eq(VALID_AUTH) and matcher for capacity
+        when(eventService.editEventInventory(eq(VALID_AUTH), eq("evt-1"), eq(750))).thenReturn(true);
 
         mockMvc.perform(put("/api/events/evt-1/capacity")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -178,37 +196,41 @@ class EventControllerTest {
     void GivenUnknownEvent_WhenEditCapacity_ThenReturn400() throws Exception {
         EditEventCapacityRequestDTO dto = new EditEventCapacityRequestDTO();
         dto.setNewCapacity(100);
-        when(eventService.editEventInventory(any(), any(Integer.class))).thenReturn(false);
+
+        // FIXED: Added 3rd any() for authHeader
+        when(eventService.editEventInventory(any(), any(), any(Integer.class))).thenReturn(false);
 
         mockMvc.perform(put("/api/events/unknown/capacity")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
-    // remove event
+    // ================= remove event =================
     // DELETE /api/events/{eventId}
 
     @Test
     void GivenExistingEvent_WhenRemoveEvent_ThenReturn200() throws Exception {
-        when(eventService.removeEvent("evt-1")).thenReturn(true);
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.removeEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(true);
 
         mockMvc.perform(delete("/api/events/evt-1")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk());
     }
 
     @Test
     void GivenUnknownEvent_WhenRemoveEvent_ThenReturn400() throws Exception {
-        when(eventService.removeEvent(any())).thenReturn(false);
+        // FIXED: Added 2nd any() for authHeader
+        when(eventService.removeEvent(any(), any())).thenReturn(false);
 
         mockMvc.perform(delete("/api/events/unknown")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isBadRequest());
     }
 
-    // configure seating map
+    // ================= configure seating map =================
     // PUT /api/events/{eventId}/seating-map
 
     @Test
@@ -221,13 +243,14 @@ class EventControllerTest {
         dto.setSeatingAreas(List.of(area));
         dto.setStandingAreas(Collections.emptyList());
 
-        when(eventService.configureSeatingMap(any(), any())).thenReturn(mock(SeatingMap.class));
-        when(eventService.editEventSeatingMap(eq("evt-1"), any())).thenReturn(true);
+        // FIXED: Added authHeader parameter to both mock setups
+        when(eventService.configureSeatingMap(any(), any(), any())).thenReturn(mock(SeatingMap.class));
+        when(eventService.editEventSeatingMap(eq(VALID_AUTH), eq("evt-1"), any())).thenReturn(true);
 
         mockMvc.perform(put("/api/events/evt-1/seating-map")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -237,13 +260,14 @@ class EventControllerTest {
         dto.setSeatingAreas(Collections.emptyList());
         dto.setStandingAreas(Collections.emptyList());
 
-        when(eventService.configureSeatingMap(any(), any())).thenReturn(mock(SeatingMap.class));
-        when(eventService.editEventSeatingMap(any(), any())).thenReturn(false);
+        // FIXED: Added authHeader parameter to both mock setups
+        when(eventService.configureSeatingMap(any(), any(), any())).thenReturn(mock(SeatingMap.class));
+        when(eventService.editEventSeatingMap(any(), any(), any())).thenReturn(false);
 
         mockMvc.perform(put("/api/events/unknown/seating-map")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 }
