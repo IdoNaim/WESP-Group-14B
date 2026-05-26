@@ -1,21 +1,27 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonAlias;
 
+// ignore extra UserInfo fields (password, sessionToken, etc.) when mapping to DTO
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UserDTO {
+
+    @JsonProperty("id")
     @JsonAlias({"id", "userId"})
     private String userId;
 
+    @JsonProperty("name")
     @JsonAlias({"name", "username"})
     private String username;
 
     private String email;
+
+    @JsonProperty("userGroupDiscount")
     private UserGroupDiscount userGroupDiscount;
-    
-    public UserDTO() {
-    }
+
+    public UserDTO() {}
 
     public UserDTO(String userId, String username, String email, UserGroupDiscount userGroupDiscount) {
         this.userId = userId;
