@@ -413,13 +413,13 @@ public class EventServiceTest {
         when(mockRepo.findById("1")).thenReturn(mockEvent);
         when(mockEvent.getSeatingMap()).thenReturn(mockMap);
 
-        // Note: Testing the current logic which uses unbookStandingArea inside reserveStandingArea
-        when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
+        // Note: Testing the current logic which uses bookStandingArea inside reserveStandingArea
+        when(mockMap.bookStandingArea("AREA1",null, 5)).thenReturn(true);
 
         boolean result = eventService.reserveStandingArea(VALID_TOKEN, "1", "AREA1", 5);
 
         assertTrue(result);
-        verify(mockMap).unbookStandingArea("AREA1", 5);
+        verify(mockMap).bookStandingArea("AREA1", null,5);
     }
 
     @Test
