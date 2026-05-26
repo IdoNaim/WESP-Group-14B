@@ -18,13 +18,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -49,9 +47,9 @@ class EventApiAcceptanceTest {
     @BeforeEach
     void setUp() {
         EventRepo eventRepo = new EventRepo();
-        ApplicationEventPublisher noopPublisher = mock();
+        ApplicationEventPublisher noopPublisher = mock(ApplicationEventPublisher.class);
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(noopPublisher);
-        EventAggregateListener eventListener = mock();
+        EventAggregateListener eventListener = mock(EventAggregateListener.class);
         eventService = new EventService(eventRepo, eventPublisher, eventListener);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
@@ -66,9 +64,9 @@ class EventApiAcceptanceTest {
         CreateEventRequestDTO dto = buildCreateEventRequest(1, "Summer Concert", 500);
 
         mockMvc.perform(post("/api/events")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated());
     }
 
@@ -77,13 +75,15 @@ class EventApiAcceptanceTest {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, 0, 120, false)); // minTickets=10 > maxTickets=1
+
+        // UPDATED: Using new boolean configuration flags (min, max, isQuantityOr, minAge, maxAge, isAgeOr, isAgeAndQuantityOr)
+        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false)); // minTickets=10 > maxTickets=1
         dto.setDiscounts(Collections.emptyList());
 
         mockMvc.perform(post("/api/events")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -94,7 +94,7 @@ class EventApiAcceptanceTest {
         String eventId = createEventAndGetId("Rock Night", 1, 300);
 
         mockMvc.perform(get("/api/events/" + eventId)
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eventName").value("Rock Night"))
                 .andExpect(jsonPath("$.companyId").value(1));
@@ -103,7 +103,7 @@ class EventApiAcceptanceTest {
     @Test
     void GivenUnknownEventId_WhenGetEvent_ThenReturn404() throws Exception {
         mockMvc.perform(get("/api/events/nonexistent-id")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isNotFound());
     }
 
@@ -115,8 +115,8 @@ class EventApiAcceptanceTest {
         createEventAndGetId("Event B", 7, 200);
 
         mockMvc.perform(get("/api/events")
-                .param("companyId", "7")
-                .header("Authorization", VALID_AUTH))
+                        .param("companyId", "7")
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -124,8 +124,8 @@ class EventApiAcceptanceTest {
     @Test
     void GivenNoEventsForCompany_WhenGetEventsByCompany_ThenReturn200WithEmptyList() throws Exception {
         mockMvc.perform(get("/api/events")
-                .param("companyId", "999")
-                .header("Authorization", VALID_AUTH))
+                        .param("companyId", "999")
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
@@ -140,9 +140,9 @@ class EventApiAcceptanceTest {
         dto.setNewDateTime(LocalDateTime.now().plusDays(60));
 
         mockMvc.perform(put("/api/events/" + eventId + "/date")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -152,9 +152,9 @@ class EventApiAcceptanceTest {
         dto.setNewDateTime(LocalDateTime.now().plusDays(30));
 
         mockMvc.perform(put("/api/events/nonexistent/date")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -168,9 +168,9 @@ class EventApiAcceptanceTest {
         dto.setNewCapacity(500);
 
         mockMvc.perform(put("/api/events/" + eventId + "/capacity")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -180,9 +180,9 @@ class EventApiAcceptanceTest {
         dto.setNewCapacity(200);
 
         mockMvc.perform(put("/api/events/nonexistent/capacity")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -193,14 +193,14 @@ class EventApiAcceptanceTest {
         String eventId = createEventAndGetId("Remove Me", 4, 50);
 
         mockMvc.perform(delete("/api/events/" + eventId)
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isOk());
     }
 
     @Test
     void GivenUnknownEvent_WhenRemoveEvent_ThenReturn400() throws Exception {
         mockMvc.perform(delete("/api/events/nonexistent")
-                .header("Authorization", VALID_AUTH))
+                        .header("Authorization", VALID_AUTH))
                 .andExpect(status().isBadRequest());
     }
 
@@ -219,9 +219,9 @@ class EventApiAcceptanceTest {
         dto.setStandingAreas(Collections.emptyList());
 
         mockMvc.perform(put("/api/events/" + eventId + "/seating-map")
-                .header("Authorization", VALID_AUTH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
     }
 
@@ -229,7 +229,9 @@ class EventApiAcceptanceTest {
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(companyId, name, capacity, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, 0, 120, false));
+
+        // UPDATED: Using new boolean configuration flags
+        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
         dto.setDiscounts(Collections.emptyList());
         return dto;
     }

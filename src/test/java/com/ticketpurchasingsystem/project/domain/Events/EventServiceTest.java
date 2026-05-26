@@ -27,7 +27,11 @@ public class EventServiceTest {
     @BeforeEach
     void setUp() {
         mockRepo = mock(IEventRepo.class);
-        eventService = new EventService(mockRepo, mock(EventAggregatePublisher.class), mock(EventAggregateListener.class));
+        eventService = new EventService(
+                mockRepo,
+                mock(EventAggregatePublisher.class),
+                mock(EventAggregateListener.class)
+        );
     }
 
     // ================= CREATE EVENT =================
@@ -39,9 +43,11 @@ public class EventServiceTest {
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
         when(policyDTO.maxTickets()).thenReturn(10);
+        when(policyDTO.isQuantityOr()).thenReturn(false);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+        when(policyDTO.isAgeOr()).thenReturn(false);
+        when(policyDTO.isAgeAndQuantityOr()).thenReturn(false);
 
         boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
 
@@ -55,11 +61,13 @@ public class EventServiceTest {
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
-        when(policyDTO.minTickets()).thenReturn(15); // Invalid condition
+        when(policyDTO.minTickets()).thenReturn(15); // Invalid condition when combined with AND
         when(policyDTO.maxTickets()).thenReturn(5);
+        when(policyDTO.isQuantityOr()).thenReturn(false); // Triggers validation failure
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+        when(policyDTO.isAgeOr()).thenReturn(false);
+        when(policyDTO.isAgeAndQuantityOr()).thenReturn(false);
 
         boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
 
@@ -75,9 +83,11 @@ public class EventServiceTest {
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
         when(policyDTO.maxTickets()).thenReturn(10);
-        when(policyDTO.minAge()).thenReturn(65); // Invalid condition
+        when(policyDTO.isQuantityOr()).thenReturn(false);
+        when(policyDTO.minAge()).thenReturn(65); // Invalid condition when combined with AND
         when(policyDTO.maxAge()).thenReturn(18);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+        when(policyDTO.isAgeOr()).thenReturn(false); // Triggers validation failure
+        when(policyDTO.isAgeAndQuantityOr()).thenReturn(false);
 
         boolean result = eventService.createEvent(dto, policyDTO, Collections.emptyList());
 
@@ -93,9 +103,11 @@ public class EventServiceTest {
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
         when(policyDTO.maxTickets()).thenReturn(10);
+        when(policyDTO.isQuantityOr()).thenReturn(false);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
+        when(policyDTO.isAgeOr()).thenReturn(false);
+        when(policyDTO.isAgeAndQuantityOr()).thenReturn(false);
 
         doThrow(new RuntimeException()).when(mockRepo).save(any());
 

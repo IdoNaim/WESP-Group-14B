@@ -40,43 +40,57 @@ public class EventService implements IEventService {
         logger.info("Creating event: " + eventDTO.eventName());
 
         // --- VALIDATION LAYER ---
-        // Retain the logical checks that used to live in your old value object constructor
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+        if (!purchasePolicyDTO.isQuantityOr() && purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
-            logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
+            logger.error("Failed to create event: minTickets cannot be greater than maxTickets in an AND condition");
             return false;
         }
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+        if (!purchasePolicyDTO.isAgeOr() && purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
-            logger.error("Failed to create event: minAge cannot be greater than maxAge");
+            logger.error("Failed to create event: minAge cannot be greater than maxAge in an AND condition");
             return false;
         }
 
         // --- COMPOSITE RULE CONSTRUCTION ---
-        // Initialize the composite container
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
 
-        // Dynamically add your rules if they are specified in the DTO
-        if (purchasePolicyDTO.minTickets() != null) {
-            purchasePolicy.addRule(new MinTicketsRule(purchasePolicyDTO.minTickets()));
+        // 1. Build Quantity Block
+        IPurchaseRule quantityRule = null;
+        IPurchaseRule minTkts = purchasePolicyDTO.minTickets() != null ? new MinTicketsRule(purchasePolicyDTO.minTickets()) : null;
+        IPurchaseRule maxTkts = purchasePolicyDTO.maxTickets() != null ? new MaxTicketsRule(purchasePolicyDTO.maxTickets()) : null;
+
+        if (minTkts != null && maxTkts != null) {
+            quantityRule = purchasePolicyDTO.isQuantityOr() ? new OrRule(minTkts, maxTkts) : new AndRule(minTkts, maxTkts);
+        } else {
+            quantityRule = (minTkts != null) ? minTkts : maxTkts;
         }
 
-        // REUSE: Use your colleague's production rule right here!
-        if (purchasePolicyDTO.maxTickets() != null) {
-            purchasePolicy.addRule(new MaxTicketsRule(purchasePolicyDTO.maxTickets()));
+        // 2. Build Age Block
+        IPurchaseRule ageRule = null;
+        IPurchaseRule minAge = purchasePolicyDTO.minAge() != null ? new MinAgeRule(purchasePolicyDTO.minAge()) : null;
+        IPurchaseRule maxAge = purchasePolicyDTO.maxAge() != null ? new MaxAgeRule(purchasePolicyDTO.maxAge()) : null;
+
+        if (minAge != null && maxAge != null) {
+            ageRule = purchasePolicyDTO.isAgeOr() ? new OrRule(minAge, maxAge) : new AndRule(minAge, maxAge);
+        } else {
+            ageRule = (minAge != null) ? minAge : maxAge;
         }
 
-        if (purchasePolicyDTO.minAge() != null) {
-            purchasePolicy.addRule(new MinAgeRule(purchasePolicyDTO.minAge()));
+        // 3. Outer Connection: If OR is requested, wrap them.
+        // Otherwise, add them as separate flat rules to the policy!
+        if (purchasePolicyDTO.isAgeAndQuantityOr() && quantityRule != null && ageRule != null) {
+            purchasePolicy.addRule(new OrRule(ageRule, quantityRule));
+        } else {
+            // No explicit logical wrapper needed! They are added flatly to the checklist.
+            if (quantityRule != null) {
+                purchasePolicy.addRule(quantityRule);
+            }
+            if (ageRule != null) {
+                purchasePolicy.addRule(ageRule);
+            }
         }
 
-        if (purchasePolicyDTO.maxAge() != null) {
-            purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
-        }
-
-        // Preserve your original typo method name 'emnptySeatLeft()' from your DTO
-        purchasePolicy.addRule(new EmptySeatRule(purchasePolicyDTO.emnptySeatLeft()));
-
+        // --- DOMAIN CREATION & PERSISTENCE ---
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
 
         Event event = new Event(
@@ -90,19 +104,12 @@ public class EventService implements IEventService {
         );
 
         try {
-            // Save the event and capture the returned object (which includes the newly generated eventId)
             Event savedEvent = eventRepo.save(event);
-
-            // Publish the EventCreatedEvent for other domains (Notification, Ticket) to listen to
             eventPublisher.publishEventCreated(savedEvent);
-
             logger.info("Event created successfully: " + eventDTO.eventName());
             return true;
-
         } catch (Exception e) {
-            logger.error("Failed to create event: "
-                    + eventDTO.eventName()
-                    + " | Error: " + e.getMessage());
+            logger.error("Failed to create event: " + eventDTO.eventName() + " | Error: " + e.getMessage());
             return false;
         }
     }
