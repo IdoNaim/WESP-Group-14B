@@ -35,7 +35,6 @@ public class EventServiceSeatingMapTest {
         eventService = new EventService(
                 mock(IEventRepo.class),
                 mock(EventAggregatePublisher.class),
-                mock(EventAggregateListener.class),
                 mockAuthService
         );
     }

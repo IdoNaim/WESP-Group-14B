@@ -37,13 +37,12 @@ public class EventServiceTest {
         mockRepo = mock(IEventRepo.class);
         mockAuthService = mock(AuthenticationService.class);
         mockPublisher = mock(EventAggregatePublisher.class);
-        mockListener = mock(EventAggregateListener.class);
 
         // Setup default authentication behavior
         when(mockAuthService.validate(VALID_TOKEN)).thenReturn(true);
         when(mockAuthService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        eventService = new EventService(mockRepo, mockPublisher, mockListener, mockAuthService);
+        eventService = new EventService(mockRepo, mockPublisher, mockAuthService);
     }
 
     // ================= AUTHENTICATION FAILURE TEST =================
