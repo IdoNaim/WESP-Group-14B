@@ -9,6 +9,10 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReservationEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsUpToPolicyEvent;
 
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
+
+import java.util.List;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -115,6 +119,15 @@ public class EventAggregateListener {
             }
         }catch(Exception e){
             event.setResult(false);
+        }
+    }
+    @EventListener
+    public void onCheckSeatsReservedEvent(CheckSeatsReservedEvent event){
+        try{
+            List<String> reservedSeats = eventService.checkSeatsReserved(event.getSessionToken(), event.getOrderId(), event.getEventId(), event.getSeatIds());
+            event.setResult(reservedSeats);
+        }catch(Exception e){
+            event.setResult(List.of());
         }
     }
 }

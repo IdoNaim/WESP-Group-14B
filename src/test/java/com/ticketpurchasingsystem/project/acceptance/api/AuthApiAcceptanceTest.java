@@ -13,6 +13,7 @@ import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -62,7 +63,8 @@ class AuthApiAcceptanceTest {
                 UserPublisher userPublisher = new UserPublisher(noopPublisher);
                 userService = new UserService(userRepo, userHandler, authService, userPublisher);
 
-                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userService)).build();
+                IAdminRepo adminRepo = mock(IAdminRepo.class);
+                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userService, authService, adminRepo)).build();
                 objectMapper = new ObjectMapper();
         }
 

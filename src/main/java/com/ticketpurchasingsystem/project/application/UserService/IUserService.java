@@ -15,6 +15,7 @@ public interface IUserService {
 
     public List<UserDTO> getAllUsers() ; 
     public UserDTO getUser(String userId) ; 
+    public com.ticketpurchasingsystem.project.domain.User.UserInfo getUserInfo(String userId) ; 
     public void deleteUser(String userId, String sessionTokenStr) ;
 
     public void editUsername(String userId, String oldUsername, String newUsername, String sessionTokenStr) ;

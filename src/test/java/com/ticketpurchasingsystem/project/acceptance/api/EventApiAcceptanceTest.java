@@ -7,6 +7,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMap
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -24,7 +25,9 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -49,8 +52,10 @@ class EventApiAcceptanceTest {
         EventRepo eventRepo = new EventRepo();
         ApplicationEventPublisher noopPublisher = mock(ApplicationEventPublisher.class);
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(noopPublisher);
-        EventAggregateListener eventListener = mock(EventAggregateListener.class);
-        eventService = new EventService(eventRepo, eventPublisher, eventListener);
+        AuthenticationService authService = mock(AuthenticationService.class);
+        when(authService.validate(anyString())).thenReturn(true); // Default to true for these tests
+
+        eventService = new EventService(eventRepo, eventPublisher, authService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
         objectMapper = new ObjectMapper();
@@ -75,9 +80,7 @@ class EventApiAcceptanceTest {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true));
-
-        // UPDATED: Using new boolean configuration flags (min, max, isQuantityOr, minAge, maxAge, isAgeOr, isAgeAndQuantityOr)
-        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false)); // minTickets=10 > maxTickets=1
+        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, 0, 120, false)); // minTickets=10 > maxTickets=1
         dto.setDiscounts(Collections.emptyList());
 
         mockMvc.perform(post("/api/events")
@@ -229,9 +232,7 @@ class EventApiAcceptanceTest {
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(companyId, name, capacity, LocalDateTime.now().plusDays(30), true));
-
-        // UPDATED: Using new boolean configuration flags
-        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
+        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, 0, 120, false));
         dto.setDiscounts(Collections.emptyList());
         return dto;
     }
@@ -244,14 +245,15 @@ class EventApiAcceptanceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)));
 
-        // fetch from service directly to get the generated ID
-        return eventService.searchEventsByCompany(companyId).stream()
+        // FIXED: Added VALID_AUTH as the first parameter
+        return eventService.searchEventsByCompany(VALID_AUTH, companyId).stream()
                 .filter(e -> e.eventName().equals(name))
                 .findFirst()
                 .map(e -> {
                     // get the id of the event from repository
                     for (int id = 1; id <= 100; id++) {
-                        var found = eventService.searchEvent(String.valueOf(id));
+                        // FIXED: Added VALID_AUTH as the first parameter
+                        var found = eventService.searchEvent(VALID_AUTH, String.valueOf(id));
                         if (found != null && name.equals(found.eventName()) && companyId == found.companyId()) {
                             return String.valueOf(id);
                         }
