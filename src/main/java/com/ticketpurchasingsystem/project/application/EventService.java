@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.application;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -9,6 +10,9 @@ import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -18,14 +22,16 @@ public class EventService implements IEventService {
     private final IEventRepo eventRepo;
     private final EventAggregatePublisher eventPublisher;
     private final EventAggregateListener eventListener;
+    private final AuthenticationService authenticationService;
 
     // Logger instance
     private final loggerDef logger = loggerDef.getInstance();
 
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
-                        EventAggregateListener eventListener) {
-
+                        EventAggregateListener eventListener,
+                        AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
         this.eventListener = eventListener;
@@ -33,14 +39,17 @@ public class EventService implements IEventService {
         logger.info("EventService initialized");
     }
 
-    public boolean createEvent(EventDTO eventDTO,
+    public boolean createEvent(String sessionToken, EventDTO eventDTO,
                                PurchasePolicyDTO purchasePolicyDTO,
                                List<DiscountDTO> discountPolicyDTO) {
-
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
         logger.info("Creating event: " + eventDTO.eventName());
 
         // --- VALIDATION LAYER ---
         // Retain the logical checks that used to live in your old value object constructor
+
         if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
             logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
@@ -108,7 +117,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public EventDTO searchEvent(String eventId) {
+    public EventDTO searchEvent(String sessionToken, String eventId) {
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Searching for event with ID: " + eventId);
 
@@ -131,7 +143,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public List<EventDTO> searchEventsByCompany(int companyId) {
+    public List<EventDTO> searchEventsByCompany(String sessionToke, int companyId) {
+        if(!authenticationService.validate(sessionToke)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Searching events for company ID: " + companyId);
 
@@ -152,7 +167,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean editEventDate(String eventId, LocalDateTime newDateTime) {
+    public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime) {
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Editing date for event ID: " + eventId);
 
@@ -179,7 +197,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean removeEvent(String eventId) {
+    public boolean removeEvent(String sessionToken, String eventId) {
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Removing event ID: " + eventId);
 
@@ -205,7 +226,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean editEventInventory(String eventId, int newCapacity) {
+    public boolean editEventInventory(String sessionToken, String eventId, int newCapacity) {
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Updating capacity for event ID: "
                 + eventId
@@ -238,7 +262,10 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean editEventSeatingMap(String eventId, SeatingMap seatingMap) {
+    public boolean editEventSeatingMap(String sesionToken, String eventId, SeatingMap seatingMap) {
+        if(!authenticationService.validate(sesionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Updating seating map for event ID: " + eventId);
 
@@ -265,8 +292,11 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public SeatingMap configureSeatingMap(List<SeatingAreaConfig> seatingAreas,
+    public SeatingMap configureSeatingMap(String sessionToken, List<SeatingAreaConfig> seatingAreas,
                                           List<StandingAreaConfig> standingAreas) {
+        if(!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
 
         logger.info("Configuring seating map");
 
@@ -290,23 +320,96 @@ public class EventService implements IEventService {
         logger.info("Seating map configured successfully");
         return seatingMap;
     }
-    public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
+    public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
         //TODO: Implement the logic to release reserved seats based on the orderId, eventId, and seatIds
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("Releasing seats");
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot release seats. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        if (!event.getSeatingMap().unbookAssignedSeats(seatIds)) {
+            logger.warn("Cannot release seats. one or more seats not booked");
+            throw new IllegalArgumentException("one or more seats not booked");
+        }
+        logger.info("Released seats successfully");
     }
      public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
         //TODO: Implement the logic to release reserved standing area based on the eventId, areaId, and quantity
+         if (!authenticationService.validate(sessionToken)) {
+             throw new IllegalArgumentException("Invalid session token");
+         }
+         logger.info("Releasing standing area");
+         Event event = eventRepo.findById(eventId);
+         if (event == null) {
+             logger.warn("Cannot release standing area. Event not found: " + eventId);
+             throw new IllegalArgumentException("Invalid EventID");
+         }
+         if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
+             logger.warn("Cannot release standing area. one or more stands not booked");
+             throw new IllegalArgumentException("one or more stands not booked");
+         }
+         logger.info("Released standing area successfully");
      }
      public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
-            return false;
+         if (!authenticationService.validate(sessionToken)) {
+             throw new IllegalArgumentException("Invalid session token");
+         }
+         logger.info("Releasing seats");
+         Event event = eventRepo.findById(eventId);
+         if (event == null) {
+             logger.warn("Cannot release seats. Event not found: " + eventId);
+             throw new IllegalArgumentException("Invalid EventID");
+         }
+         if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
+             logger.warn("Cannot book seats, problem occured");
+             throw new IllegalArgumentException("cannot book seats, problem occured");
+         }
+         logger.info("booked seats successfully");
+         return true;
      }
      public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
         //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
-            return false;
+         if (!authenticationService.validate(sessionToken)) {
+             throw new IllegalArgumentException("Invalid session token");
+         }
+         logger.info("booking standing area");
+         Event event = eventRepo.findById(eventId);
+         if (event == null) {
+             logger.warn("Cannot book standing area. Event not found: " + eventId);
+             throw new IllegalArgumentException("Invalid EventID");
+         }
+         if(!event.getSeatingMap().unbookStandingArea(areaId, quantity)){
+             logger.warn("Cannot book standing area. one or more stands not booked");
+             throw new IllegalArgumentException("cannot book standing area, problem occured");
+         }
+         logger.info("booked standing area successfully");
+         return true;
+
      }
-     //checks for each seatId if its reserved to orderId, and returns a list of seatIds, that arent reserved for this specific orderId.
      public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
-        //TODO: Implement the logic to check if seats are reserved based on the orderId, eventId, and seatIds
-            return List.of();
+        //checks for each seatid if really saved for this specific orderID, if not, add the seatID to result
+         //string list and return it
+         if (!authenticationService.validate(sessionToken)) {
+             throw new IllegalArgumentException("Invalid session token");
+         }
+         logger.info("checking reserved seats");
+         Event event = eventRepo.findById(eventId);
+         if (event == null) {
+             logger.warn("Cannot check reserved seats. Event not found: " + eventId);
+             throw new IllegalArgumentException("Invalid EventID");
+         }
+         List<String> reservedSeatIds = new ArrayList<>();
+         for (String seatId : seatIds) {
+             if (!event.getSeatingMap().getSeat(seatId).isbooked(orderId))
+                 logger.warn("reserved seat " + seatId + " is not booked");
+                 reservedSeatIds.add(seatId);
+         }
+         logger.info("returning the unreserved seats");
+         return reservedSeatIds;
+         }
      }
-}
