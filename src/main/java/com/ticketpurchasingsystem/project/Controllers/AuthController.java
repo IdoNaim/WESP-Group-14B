@@ -60,7 +60,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> register(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody RegisterRequestDTO body) {
-
+        System.out.println("hey im here");
         String token = extractToken(authHeader);
         try {
             UserGroupDiscount discount = body.getUserGroupDiscount() != null
@@ -94,11 +94,21 @@ public class AuthController {
 
         String token = extractToken(authHeader);
         try {
+            // 1. Let's see exactly what React sent to Java:
+            System.out.println("--- LOGIN ATTEMPT ---");
+            System.out.println("User ID: " + body.getUserId());
+            System.out.println("Password: " + body.getPassword());
+            System.out.println("Guest Token: " + token);
+
             String newToken = userService.loginUser(body.getUserId(), body.getPassword(), token);
             return ResponseEntity.ok(Map.of(
                     "token", newToken,
                     "userId", body.getUserId()));
         } catch (Exception e) {
+            // 2. Print the exact error to the Java terminal!
+            System.out.println("--- LOGIN FAILED ---");
+            e.printStackTrace();
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", e.getMessage()));
         }
