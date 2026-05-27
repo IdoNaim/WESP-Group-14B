@@ -19,6 +19,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.Pur
 import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
 public class ProductionCompany {
     private Integer companyId;
@@ -33,6 +34,7 @@ public class ProductionCompany {
     private DiscountPolicy discountPolicy;
     private final Map<String, Set<ManagerPermission>> managerPermissions;
     private long version;
+    private ITicketPurchaseRule ticketPurchasePolicy;
 
     public ProductionCompany(ProductionCompanyDTO dto) {
         this.companyName = dto.getCompanyName();
@@ -66,6 +68,7 @@ public class ProductionCompany {
             this.managerPermissions.put(entry.getKey(), permCopy);
         }
         this.version = other.version;
+        this.ticketPurchasePolicy = other.ticketPurchasePolicy;
     }
 
     public void initFounder(String userId) {
@@ -210,5 +213,13 @@ public class ProductionCompany {
 
     public void setVersion(long version) {
         this.version = version;
+    }
+
+    public ITicketPurchaseRule getTicketPurchasePolicy() {
+        return ticketPurchasePolicy;
+    }
+
+    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
+        this.ticketPurchasePolicy = ticketPurchasePolicy;
     }
 }
