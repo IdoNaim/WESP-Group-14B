@@ -21,7 +21,6 @@ public class EventService implements IEventService {
 
     private final IEventRepo eventRepo;
     private final EventAggregatePublisher eventPublisher;
-    private final EventAggregateListener eventListener;
     private final AuthenticationService authenticationService;
 
     // Logger instance
@@ -29,12 +28,10 @@ public class EventService implements IEventService {
 
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
-                        EventAggregateListener eventListener,
                         AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
-        this.eventListener = eventListener;
 
         logger.info("EventService initialized");
     }

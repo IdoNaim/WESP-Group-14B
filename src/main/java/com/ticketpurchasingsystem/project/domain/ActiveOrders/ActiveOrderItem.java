@@ -86,6 +86,11 @@ public class ActiveOrderItem {
             this.seatIds.add(id);
         }
     }
+    public void removeSeatIds(List<String> seatIds) {
+        for (String id : seatIds) {
+            this.seatIds.remove(id);
+        }
+    }
     public void addStandingAreaQuantity(String areaId, int quantity) {
         if(StandingAreaQuantities.containsKey(areaId)){
             int currQuantity = StandingAreaQuantities.get(areaId);

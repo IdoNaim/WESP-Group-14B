@@ -11,6 +11,8 @@ import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurc
 
 import java.time.LocalDateTime;
 
+import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
+
 public class Event {
 
     private String eventId;
@@ -29,6 +31,8 @@ public class Event {
     private EventDiscountPolicy discountPolicy;
 
     private EventPurchasePolicy purchasePolicy;
+
+    private ITicketPurchaseRule ticketPurchasePolicy;
 
     private int version = 0;
 
@@ -77,6 +81,7 @@ public class Event {
         this.discountPolicy = other.discountPolicy;
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
+        this.ticketPurchasePolicy = other.ticketPurchasePolicy;
     }
 
 
@@ -137,6 +142,14 @@ public class Event {
     }
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
+
+    public ITicketPurchaseRule getTicketPurchasePolicy() {
+        return ticketPurchasePolicy;
+    }
+
+    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
+        this.ticketPurchasePolicy = ticketPurchasePolicy;
+    }
 
     public EventPurchasePolicy getPurchasePolicy() {
         return purchasePolicy;

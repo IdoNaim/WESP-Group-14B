@@ -65,5 +65,9 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-
+    public List<String> publishCheckSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
+        CheckSeatsReservedEvent event = new CheckSeatsReservedEvent(this, sessionToken, orderId, eventId, seatIds);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
 }

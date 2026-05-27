@@ -52,14 +52,10 @@ class EventApiAcceptanceTest {
         EventRepo eventRepo = new EventRepo();
         ApplicationEventPublisher noopPublisher = mock(ApplicationEventPublisher.class);
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(noopPublisher);
-        EventAggregateListener eventListener = mock(EventAggregateListener.class);
-
-        // FIXED: Mocked AuthenticationService to fulfill the constructor requirement
         AuthenticationService authService = mock(AuthenticationService.class);
         when(authService.validate(anyString())).thenReturn(true); // Default to true for these tests
 
-        // FIXED: Added authService to the constructor
-        eventService = new EventService(eventRepo, eventPublisher, eventListener, authService);
+        eventService = new EventService(eventRepo, eventPublisher, authService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
         objectMapper = new ObjectMapper();
