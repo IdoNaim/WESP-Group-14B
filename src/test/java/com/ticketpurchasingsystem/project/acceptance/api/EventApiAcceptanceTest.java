@@ -11,7 +11,6 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +79,9 @@ class EventApiAcceptanceTest {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, 0, 120, false)); // minTickets=10 > maxTickets=1
+
+        // ADJUSTED: Matching new 7-parameter PurchasePolicyDTO record structure
+        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false));
         dto.setDiscounts(Collections.emptyList());
 
         mockMvc.perform(post("/api/events")
@@ -232,7 +233,10 @@ class EventApiAcceptanceTest {
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(companyId, name, capacity, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, 0, 120, false));
+
+        // ADJUSTED: Matching new 7-parameter PurchasePolicyDTO record structure
+        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
+
         dto.setDiscounts(Collections.emptyList());
         return dto;
     }
@@ -245,14 +249,11 @@ class EventApiAcceptanceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)));
 
-        // FIXED: Added VALID_AUTH as the first parameter
         return eventService.searchEventsByCompany(VALID_AUTH, companyId).stream()
                 .filter(e -> e.eventName().equals(name))
                 .findFirst()
                 .map(e -> {
-                    // get the id of the event from repository
                     for (int id = 1; id <= 100; id++) {
-                        // FIXED: Added VALID_AUTH as the first parameter
                         var found = eventService.searchEvent(VALID_AUTH, String.valueOf(id));
                         if (found != null && name.equals(found.eventName()) && companyId == found.companyId()) {
                             return String.valueOf(id);
