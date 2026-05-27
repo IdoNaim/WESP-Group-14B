@@ -100,7 +100,7 @@ public class ActiveOrderAcceptanceTests {
 
         eventRepo = new EventRepo();
         eventPublisher = new EventAggregatePublisher(event -> {});          /// not important for these acceptance tests
-        eventService = new EventService(eventRepo, eventPublisher, eventListener, authenticationService);
+        eventService = new EventService(eventRepo, eventPublisher, authenticationService);
         eventListener = new EventAggregateListener(eventRepo, eventService);
 
         historyOrderRepo = new HistoryOrderRepo();
