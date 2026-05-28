@@ -1,5 +1,25 @@
 package com.ticketpurchasingsystem.project.acceptance.api;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ticketpurchasingsystem.project.Controllers.EventController;
@@ -13,22 +33,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Acceptance tests for the EventController HTTP layer.
@@ -79,7 +83,7 @@ class EventApiAcceptanceTest {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(null,1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, 0, 120, false)); // minTickets=10 > maxTickets=1
+        dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false)); // minTickets=10 > maxTickets=1
         dto.setDiscounts(Collections.emptyList());
 
         mockMvc.perform(post("/api/events")
@@ -231,7 +235,7 @@ class EventApiAcceptanceTest {
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
         dto.setEvent(new EventDTO(null, companyId, name, capacity, LocalDateTime.now().plusDays(30), true));
-        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, 0, 120, false));
+        dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
         dto.setDiscounts(Collections.emptyList());
         return dto;
     }

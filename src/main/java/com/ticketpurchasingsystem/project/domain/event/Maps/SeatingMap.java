@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.domain.event.Maps;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -149,6 +150,12 @@ public class SeatingMap {
 
     public List<String> getAreaIds(){
         return new ArrayList<>(standingAreas.keySet());
+    }
+
+    public Map<String, Bookable> getPurchaseAreas(){
+        Map<String, Bookable> combined = new HashMap<>(seats);
+        combined.putAll(standingAreas);
+        return combined;
     }
 
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){

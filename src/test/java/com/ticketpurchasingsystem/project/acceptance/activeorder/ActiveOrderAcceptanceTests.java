@@ -1,7 +1,55 @@
 package com.ticketpurchasingsystem.project.acceptance.activeorder;
 
-import com.ticketpurchasingsystem.project.application.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import com.ticketpurchasingsystem.project.application.ActiveOrderService;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.EventService;
+import com.ticketpurchasingsystem.project.application.HistoryOrderService;
+import com.ticketpurchasingsystem.project.application.IActiveOrderService;
+import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
+import com.ticketpurchasingsystem.project.application.IEventService;
+import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
+import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.CompletedOrderEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.GetCompanyIdEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsUpToPolicyEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderHandler;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublisher;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderListener;
@@ -13,7 +61,9 @@ import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -21,24 +71,6 @@ import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class ActiveOrderAcceptanceTests {
     private IActiveOrderService activeOrderService;
@@ -80,7 +112,7 @@ public class ActiveOrderAcceptanceTests {
     private int companyId = 10;
     private String eventName = "EventA";
     private Integer eventCapacity = 50;
-    private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,0, 60, true);
+    private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,false, 0, 60, true, false);
     private List<DiscountDTO> discounts = new ArrayList<>();
     private LocalDateTime eventDate = LocalDateTime.of(LocalDate.now().plusYears(1), LocalTime.now());
 
@@ -866,7 +898,7 @@ public class ActiveOrderAcceptanceTests {
             double amountToPay = 100;
            // when(paymentGatewayMock.pay()).thenReturn(true);
             //when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
-            PurchasePolicyDTO newPolicy = new PurchasePolicyDTO(10, eventCapacity,0, 60, true);
+            PurchasePolicyDTO newPolicy = new PurchasePolicyDTO(10, eventCapacity,false, 0, 60, true, false);
             eventService.editEventPurchasePolicy(sessionToken, testEvent.eventId(), newPolicy);
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay,order.getOrderId()));
