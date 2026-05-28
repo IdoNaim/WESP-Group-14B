@@ -55,7 +55,7 @@ class EventControllerTest {
     @Test
     void GivenValidRequest_WhenCreateEvent_ThenReturn201() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
         dto.setPurchasePolicy(mock(PurchasePolicyDTO.class));
 
         // FIXED: Added 4th 'any()' for authHeader
@@ -71,7 +71,7 @@ class EventControllerTest {
     @Test
     void GivenServiceFailure_WhenCreateEvent_ThenReturn400() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
 
         // FIXED: Added 4th 'any()' for authHeader
         when(eventService.createEvent(any(), any(), any(), any())).thenReturn(false);
@@ -88,7 +88,7 @@ class EventControllerTest {
 
     @Test
     void GivenExistingEvent_WhenGetEvent_ThenReturn200WithBody() throws Exception {
-        EventDTO event = new EventDTO(1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
+        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
 
         // FIXED: Added eq(VALID_AUTH)
         when(eventService.searchEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(event);
@@ -116,8 +116,8 @@ class EventControllerTest {
     @Test
     void GivenCompanyWithEvents_WhenGetEventsByCompany_ThenReturn200WithList() throws Exception {
         List<EventDTO> events = List.of(
-                new EventDTO(1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
-                new EventDTO(1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
+                new EventDTO("evt-1",1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
+                new EventDTO("evt-2",1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
 
         // FIXED: Added eq(VALID_AUTH)
         when(eventService.searchEventsByCompany(eq(VALID_AUTH), eq(1))).thenReturn(events);

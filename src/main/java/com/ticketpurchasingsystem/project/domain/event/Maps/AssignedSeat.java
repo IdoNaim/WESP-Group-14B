@@ -15,7 +15,12 @@ public class AssignedSeat implements Bookable {
 
     @Override
     public boolean isbooked(String orderId) {
-        return this.orderId.equals(orderId);
+        if(orderId == null){
+            return false;
+        }
+        else{
+            return orderId.equals(this.orderId);
+        }
     }
 
 
@@ -30,7 +35,7 @@ public class AssignedSeat implements Bookable {
 
     @Override
     public boolean book(String orderId, int numberOfTickets) {
-         if (numberOfTickets != 1) {
+        if (numberOfTickets != 1) {
             return false; // Assigned seats can only be booked one at a time
         }
         if (isBooked) {
@@ -65,6 +70,6 @@ public class AssignedSeat implements Bookable {
         this.priceForTicket = newPrice;
         return true; // Price updated successfully
     }
-    
-   
+
+
 }

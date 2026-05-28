@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.tsx';
-import ProductionCompanyPage from '../pages/ProductionCompanyPage';
+import ProductionCompanyPage from '../pages/production-company/ProductionCompanyPage.tsx';
 import EventsPage from "../pages/events/EventsPage.tsx";
 import EventDetailsPage from "../pages/events/EventDetailsPage.tsx";
 
