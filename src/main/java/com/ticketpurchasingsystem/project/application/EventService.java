@@ -290,18 +290,148 @@ public class EventService implements IEventService {
         logger.info("Seating map configured successfully");
         return seatingMap;
     }
-    public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
-        //TODO: Implement the logic to release reserved seats based on the orderId, eventId, and seatIds
+    @Override
+    public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return true;
+        logger.info("Reserving " + seatIds.size() + " seat(s) for event: " + eventId + ", orderId: " + orderId);
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.error("Reserve seats failed: event not found: " + eventId);
+            return false;
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.error("Reserve seats failed: event has no seating map: " + eventId);
+            return false;
+        }
+        try {
+            return seatingMap.bookAssignedSeats(seatIds, orderId);
+        } catch (IllegalStateException e) {
+            logger.error("Reserve seats failed for event " + eventId + ": " + e.getMessage());
+            return false;
+        }
     }
-     public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
-        //TODO: Implement the logic to release reserved standing area based on the eventId, areaId, and quantity
-     }
-     public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
-        //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
+
+    @Override
+    public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity) {
+        if (quantity <= 0) return true;
+        logger.info("Reserving " + quantity + " standing ticket(s) in area " + areaId + " for event: " + eventId);
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.error("Reserve standing area failed: event not found: " + eventId);
             return false;
-     }
-     public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
-        //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.error("Reserve standing area failed: event has no seating map: " + eventId);
             return false;
-     }
+        }
+        boolean result = seatingMap.bookStandingArea(areaId, null, quantity);
+        if (!result) {
+            logger.error("Reserve standing area failed: insufficient capacity in area " + areaId + " for event " + eventId);
+        }
+        return result;
+    }
+
+    @Override
+    public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return;
+        logger.info("Releasing " + seatIds.size() + " seat(s) for event: " + eventId + ", orderId: " + orderId);
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Release seats: event not found: " + eventId);
+            return;
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.warn("Release seats: event has no seating map: " + eventId);
+            return;
+        }
+        try {
+            seatingMap.unbookAssignedSeats(seatIds);
+        } catch (Exception e) {
+            logger.error("Release seats failed for event " + eventId + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity) {
+        if (quantity <= 0) return;
+        logger.info("Releasing " + quantity + " standing ticket(s) from area " + areaID + " for event: " + eventId);
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Release standing area: event not found: " + eventId);
+            return;
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.warn("Release standing area: event has no seating map: " + eventId);
+            return;
+        }
+        boolean released = seatingMap.unbookStandingArea(areaID, quantity);
+        if (!released) {
+            logger.warn("Release standing area failed for area " + areaID + " in event " + eventId);
+        }
+    }
+
+    @Override
+    public boolean checkSeatAvailability(String eventId, List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return true;
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.error("checkSeatAvailability: event not found: " + eventId);
+            return false;
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.error("checkSeatAvailability: event has no seating map: " + eventId);
+            return false;
+        }
+        for (String seatId : seatIds) {
+            Bookable area = seatingMap.getArea(seatId);
+            if (area == null) {
+                logger.warn("checkSeatAvailability: seat not found: " + seatId);
+                return false;
+            }
+            if (!(area instanceof AssignedSeat)) {
+                logger.warn("checkSeatAvailability: " + seatId + " is not an assigned seat");
+                return false;
+            }
+            if (((AssignedSeat) area).isBooked()) {
+                logger.info("checkSeatAvailability: seat already booked: " + seatId);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
+        if (quantity <= 0) return true;
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.error("checkStandingAreaAvailability: event not found: " + eventId);
+            return false;
+        }
+        SeatingMap seatingMap = event.getSeatingMap();
+        if (seatingMap == null) {
+            logger.error("checkStandingAreaAvailability: event has no seating map: " + eventId);
+            return false;
+        }
+        Bookable area = seatingMap.getArea(areaId);
+        if (area == null) {
+            logger.warn("checkStandingAreaAvailability: area not found: " + areaId);
+            return false;
+        }
+        if (!(area instanceof StandingArea)) {
+            logger.warn("checkStandingAreaAvailability: " + areaId + " is not a standing area");
+            return false;
+        }
+        int available = ((StandingArea) area).getAvalibleSeatNumber();
+        if (available < quantity) {
+            logger.info("checkStandingAreaAvailability: only " + available + " spots available, requested " + quantity);
+            return false;
+        }
+        return true;
+    }
 }
