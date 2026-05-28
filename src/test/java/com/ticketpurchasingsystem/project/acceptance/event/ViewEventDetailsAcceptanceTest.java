@@ -1,13 +1,12 @@
 package com.ticketpurchasingsystem.project.acceptance.event;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -49,7 +48,7 @@ class ViewEventDetailsAcceptanceTest {
 
         // 4. Seed an event
         // Notice the updated PurchasePolicyDTO constructor signature matching your record!
-        EventDTO newEvent = new EventDTO(42, "Cyberpunk Symphony", 500, LocalDateTime.now().plusDays(10), true);
+        EventDTO newEvent = new EventDTO(null,42, "Cyberpunk Symphony", 500, LocalDateTime.now().plusDays(10), true);
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, null, null, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
