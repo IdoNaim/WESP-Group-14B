@@ -208,7 +208,9 @@ public class EventService implements IEventService {
                 return false;
             }
 
+            String eventName = event.getEventName();
             eventRepo.delete(eventId);
+            eventPublisher.publishEventCancelled(eventId, eventName);
 
             logger.info("Successfully removed event ID: " + eventId);
             return true;
