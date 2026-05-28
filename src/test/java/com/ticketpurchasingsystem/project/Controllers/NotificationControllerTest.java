@@ -38,6 +38,7 @@ class NotificationControllerTest {
 
     private ObjectMapper objectMapper;
     private static final String TOKEN = "Bearer valid-token";
+    private static final String RAW_TOKEN = "valid-token";
     private static final String NOTIF_ID = "NOTIF-1";
 
     @BeforeEach
@@ -132,7 +133,7 @@ class NotificationControllerTest {
 
     @Test
     void GivenOwner_WhenGetById_ThenReturn200() throws Exception {
-        when(notificationService.getNotificationById(eq(TOKEN), eq(NOTIF_ID)))
+        when(notificationService.getNotificationById(eq(RAW_TOKEN), eq(NOTIF_ID)))
                 .thenReturn(sampleDTO());
 
         mockMvc.perform(get("/api/notifications/" + NOTIF_ID)
