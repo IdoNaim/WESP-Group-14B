@@ -1,6 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.event.Discounts;
 
-
 public class DependentDiscount implements Discount {
         private final String discountName;
     private final int haveToBuyAmount;

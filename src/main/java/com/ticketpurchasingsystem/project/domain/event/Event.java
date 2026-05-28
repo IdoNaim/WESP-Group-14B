@@ -1,5 +1,11 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 
@@ -147,5 +153,19 @@ public class Event {
 
     public EventPurchasePolicy getPurchasePolicy() {
         return purchasePolicy;
+    }
+
+    public void setPurchasePolicy(PurchasePolicyDTO purchasePolicyDTO){
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+        IPurchaseRule minAgeRule = new MinAgeRule(purchasePolicyDTO.minAge());
+        IPurchaseRule maxAgeRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
+        IPurchaseRule minTicketsRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
+        IPurchaseRule maxTicketsRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
+        purchasePolicy.addRule(minAgeRule);
+        purchasePolicy.addRule(maxAgeRule);
+        purchasePolicy.addRule(minTicketsRule);
+        purchasePolicy.addRule(maxTicketsRule);
+        this.purchasePolicy = purchasePolicy;
+
     }
 }

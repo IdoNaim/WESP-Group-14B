@@ -1,5 +1,4 @@
 package com.ticketpurchasingsystem.project.domain.event.Discounts;
-
 import java.time.LocalDateTime;
 
 public class VisibleDiscount implements Discount {
