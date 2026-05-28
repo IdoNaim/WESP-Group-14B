@@ -13,6 +13,8 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.OrderRefundedEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReleaseEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
+import java.util.Objects;
+
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -30,7 +32,7 @@ public class NotificationEventListener {
                                      IHistoryOrderRepo historyOrderRepo) {
         this.notificationService = notificationService;
         this.authenticationService = authenticationService;
-        this.historyOrderRepo = historyOrderRepo;
+        this.historyOrderRepo = Objects.requireNonNull(historyOrderRepo, "historyOrderRepo must not be null");
     }
 
     @EventListener

@@ -15,7 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ticketpurchasingsystem.project.Controllers.apidto.BroadcastNotificationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateNotificationRequestDTO;
+import com.ticketpurchasingsystem.project.application.ForbiddenException;
 import com.ticketpurchasingsystem.project.application.INotificationService;
+import com.ticketpurchasingsystem.project.application.NotFoundException;
+import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 
 @RestController
@@ -43,6 +46,8 @@ public class NotificationController {
         try {
             NotificationDTO created = notificationService.createNotification(bearerToken(token), body.getTargetUserId(), body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -55,7 +60,7 @@ public class NotificationController {
         try {
             List<NotificationDTO> notifications = notificationService.getNotificationsForUser(bearerToken(token));
             return ResponseEntity.ok(notifications);
-        } catch (IllegalArgumentException e) {
+        } catch (UnauthorizedException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
@@ -67,7 +72,7 @@ public class NotificationController {
         try {
             long count = notificationService.getUnreadCount(bearerToken(token));
             return ResponseEntity.ok(count);
-        } catch (IllegalArgumentException e) {
+        } catch (UnauthorizedException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
@@ -80,12 +85,12 @@ public class NotificationController {
         try {
             NotificationDTO notification = notificationService.getNotificationById(bearerToken(token), id);
             return ResponseEntity.ok(notification);
-        } catch (IllegalArgumentException e) {
-            String msg = e.getMessage();
-            if (msg.contains("Access denied")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(msg);
-            }
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(msg);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
@@ -98,6 +103,8 @@ public class NotificationController {
         try {
             List<NotificationDTO> created = notificationService.createNotificationsForEvent(bearerToken(token), eventId, body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -112,6 +119,10 @@ public class NotificationController {
         try {
             List<NotificationDTO> created = notificationService.createNotificationsForProduction(bearerToken(token), companyId, body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -125,12 +136,12 @@ public class NotificationController {
         try {
             notificationService.markAsRead(bearerToken(token), id);
             return ResponseEntity.ok("Notification marked as read");
-        } catch (IllegalArgumentException e) {
-            String msg = e.getMessage();
-            if (msg.contains("Access denied")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(msg);
-            }
-            return ResponseEntity.badRequest().body(msg);
+        } catch (UnauthorizedException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 }

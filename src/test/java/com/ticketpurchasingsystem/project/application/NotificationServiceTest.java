@@ -63,9 +63,8 @@ class NotificationServiceTest {
     void GivenInvalidToken_WhenCreateNotification_ThenThrow() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.createNotification(INVALID_TOKEN, USER_ID, MESSAGE));
-        assertNotNull(ex.getMessage());
         verify(notificationRepo, never()).save(any());
     }
 
@@ -108,9 +107,8 @@ class NotificationServiceTest {
     void GivenInvalidToken_WhenGetNotifications_ThenThrow() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.getNotificationsForUser(INVALID_TOKEN));
-        assertNotNull(ex.getMessage());
     }
 
     @Test
@@ -144,21 +142,19 @@ class NotificationServiceTest {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(notificationRepo.findById("NOTIF-X")).thenReturn(null);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(NotFoundException.class, () ->
                 notificationService.getNotificationById(VALID_TOKEN, "NOTIF-X"));
-        assertNotNull(ex.getMessage());
     }
 
     @Test
-    void GivenDifferentUser_WhenGetById_ThenThrowAccessDenied() {
+    void GivenDifferentUser_WhenGetById_ThenThrowForbidden() {
         Notification n = new Notification("NOTIF-1", OTHER_USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(ForbiddenException.class, () ->
                 notificationService.getNotificationById(VALID_TOKEN, "NOTIF-1"));
-        assertTrue(ex.getMessage().contains("Access denied"));
     }
 
     // ── markAsRead ──────────────────────────────────────────────────────────
@@ -183,9 +179,8 @@ class NotificationServiceTest {
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(ForbiddenException.class, () ->
                 notificationService.markAsRead(VALID_TOKEN, "NOTIF-1"));
-        assertTrue(ex.getMessage().contains("Access denied"));
         assertFalse(n.isRead());
     }
 
@@ -194,18 +189,16 @@ class NotificationServiceTest {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(notificationRepo.findById("NOTIF-X")).thenReturn(null);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(NotFoundException.class, () ->
                 notificationService.markAsRead(VALID_TOKEN, "NOTIF-X"));
-        assertNotNull(ex.getMessage());
     }
 
     @Test
     void GivenInvalidToken_WhenMarkAsRead_ThenThrow() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.markAsRead(INVALID_TOKEN, "NOTIF-1"));
-        assertNotNull(ex.getMessage());
     }
 
     // ── getUnreadCount ──────────────────────────────────────────────────────
@@ -223,9 +216,8 @@ class NotificationServiceTest {
     void GivenInvalidToken_WhenGetUnreadCount_ThenThrow() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.getUnreadCount(INVALID_TOKEN));
-        assertNotNull(ex.getMessage());
     }
 
     @Test

@@ -23,7 +23,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.ticketpurchasingsystem.project.application.ForbiddenException;
 import com.ticketpurchasingsystem.project.application.INotificationService;
+import com.ticketpurchasingsystem.project.application.NotFoundException;
+import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 
 @WebMvcTest(NotificationController.class)
@@ -70,9 +73,9 @@ class NotificationControllerTest {
     }
 
     @Test
-    void GivenInvalidToken_WhenCreateNotification_ThenReturn400() throws Exception {
+    void GivenInvalidToken_WhenCreateNotification_ThenReturn401() throws Exception {
         when(notificationService.createNotification(any(), any(), any()))
-                .thenThrow(new IllegalArgumentException("Invalid session token"));
+                .thenThrow(new UnauthorizedException("Invalid session token"));
 
         String body = "{\"targetUserId\":\"alice\",\"message\":\"hi\"}";
 
@@ -80,7 +83,7 @@ class NotificationControllerTest {
                         .header("Authorization", "bad-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized());
     }
 
     // ── GET /api/notifications ──────────────────────────────────────────────
@@ -100,7 +103,7 @@ class NotificationControllerTest {
     @Test
     void GivenInvalidToken_WhenGetNotifications_ThenReturn401() throws Exception {
         when(notificationService.getNotificationsForUser(any()))
-                .thenThrow(new IllegalArgumentException("Invalid session token"));
+                .thenThrow(new UnauthorizedException("Invalid session token"));
 
         mockMvc.perform(get("/api/notifications")
                         .header("Authorization", "bad-token"))
@@ -122,7 +125,7 @@ class NotificationControllerTest {
     @Test
     void GivenInvalidToken_WhenGetUnreadCount_ThenReturn401() throws Exception {
         when(notificationService.getUnreadCount(any()))
-                .thenThrow(new IllegalArgumentException("Invalid session token"));
+                .thenThrow(new UnauthorizedException("Invalid session token"));
 
         mockMvc.perform(get("/api/notifications/unread-count")
                         .header("Authorization", "bad-token"))
@@ -143,9 +146,19 @@ class NotificationControllerTest {
     }
 
     @Test
+    void GivenInvalidToken_WhenGetById_ThenReturn401() throws Exception {
+        when(notificationService.getNotificationById(any(), any()))
+                .thenThrow(new UnauthorizedException("Invalid session token"));
+
+        mockMvc.perform(get("/api/notifications/" + NOTIF_ID)
+                        .header("Authorization", "bad-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void GivenNotFound_WhenGetById_ThenReturn404() throws Exception {
         when(notificationService.getNotificationById(any(), any()))
-                .thenThrow(new IllegalArgumentException("Notification not found"));
+                .thenThrow(new NotFoundException("Notification not found"));
 
         mockMvc.perform(get("/api/notifications/NOTIF-X")
                         .header("Authorization", TOKEN))
@@ -155,11 +168,65 @@ class NotificationControllerTest {
     @Test
     void GivenWrongUser_WhenGetById_ThenReturn403() throws Exception {
         when(notificationService.getNotificationById(any(), any()))
-                .thenThrow(new IllegalArgumentException("Access denied: notification belongs to another user"));
+                .thenThrow(new ForbiddenException("Access denied: notification belongs to another user"));
 
         mockMvc.perform(get("/api/notifications/" + NOTIF_ID)
                         .header("Authorization", "other-token"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ── POST /api/notifications/event/{eventId} ─────────────────────────────
+
+    @Test
+    void GivenValidRequest_WhenNotifyEvent_ThenReturn201() throws Exception {
+        when(notificationService.createNotificationsForEvent(any(), any(), any()))
+                .thenReturn(List.of(sampleDTO()));
+
+        mockMvc.perform(post("/api/notifications/event/EVT-1")
+                        .header("Authorization", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Event updated\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$[0].id").value(NOTIF_ID));
+    }
+
+    @Test
+    void GivenInvalidToken_WhenNotifyEvent_ThenReturn401() throws Exception {
+        when(notificationService.createNotificationsForEvent(any(), any(), any()))
+                .thenThrow(new UnauthorizedException("Invalid session token"));
+
+        mockMvc.perform(post("/api/notifications/event/EVT-1")
+                        .header("Authorization", "bad-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Event updated\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ── POST /api/notifications/production/{companyId} ──────────────────────
+
+    @Test
+    void GivenValidRequest_WhenNotifyProduction_ThenReturn201() throws Exception {
+        when(notificationService.createNotificationsForProduction(any(), eq(42), any()))
+                .thenReturn(List.of(sampleDTO()));
+
+        mockMvc.perform(post("/api/notifications/production/42")
+                        .header("Authorization", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Team update\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$[0].id").value(NOTIF_ID));
+    }
+
+    @Test
+    void GivenInvalidToken_WhenNotifyProduction_ThenReturn401() throws Exception {
+        when(notificationService.createNotificationsForProduction(any(), any(), any()))
+                .thenThrow(new UnauthorizedException("Invalid session token"));
+
+        mockMvc.perform(post("/api/notifications/production/42")
+                        .header("Authorization", "bad-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Team update\"}"))
+                .andExpect(status().isUnauthorized());
     }
 
     // ── PUT /api/notifications/{id}/read ────────────────────────────────────
@@ -174,9 +241,19 @@ class NotificationControllerTest {
     }
 
     @Test
+    void GivenInvalidToken_WhenMarkAsRead_ThenReturn401() throws Exception {
+        when(notificationService.markAsRead(any(), any()))
+                .thenThrow(new UnauthorizedException("Invalid session token"));
+
+        mockMvc.perform(put("/api/notifications/" + NOTIF_ID + "/read")
+                        .header("Authorization", "bad-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void GivenWrongUser_WhenMarkAsRead_ThenReturn403() throws Exception {
         when(notificationService.markAsRead(any(), any()))
-                .thenThrow(new IllegalArgumentException("Access denied: notification belongs to another user"));
+                .thenThrow(new ForbiddenException("Access denied: notification belongs to another user"));
 
         mockMvc.perform(put("/api/notifications/" + NOTIF_ID + "/read")
                         .header("Authorization", "other-token"))
@@ -184,12 +261,12 @@ class NotificationControllerTest {
     }
 
     @Test
-    void GivenNotFound_WhenMarkAsRead_ThenReturn400() throws Exception {
+    void GivenNotFound_WhenMarkAsRead_ThenReturn404() throws Exception {
         when(notificationService.markAsRead(any(), any()))
-                .thenThrow(new IllegalArgumentException("Notification not found"));
+                .thenThrow(new NotFoundException("Notification not found"));
 
         mockMvc.perform(put("/api/notifications/NOTIF-X/read")
                         .header("Authorization", TOKEN))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 }

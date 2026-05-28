@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ public class NotificationService implements INotificationService {
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
     private final IProdRepo prodRepo;
-    private long idCounter = 0;
+    private final AtomicLong idCounter = new AtomicLong(0);
 
     public NotificationService(INotificationRepo notificationRepo,
                                AuthenticationService authenticationService,
@@ -34,8 +35,8 @@ public class NotificationService implements INotificationService {
         this.prodRepo = prodRepo;
     }
 
-    private synchronized String nextId() {
-        return "NOTIF-" + (++idCounter);
+    private String nextId() {
+        return "NOTIF-" + idCounter.incrementAndGet();
     }
 
     private NotificationDTO toDTO(Notification n) {
@@ -44,7 +45,7 @@ public class NotificationService implements INotificationService {
 
     private void requireValidToken(String token) {
         if (!authenticationService.validate(token)) {
-            throw new IllegalArgumentException("Invalid session token");
+            throw new UnauthorizedException("Invalid session token");
         }
     }
 
@@ -92,7 +93,7 @@ public class NotificationService implements INotificationService {
             throw new IllegalArgumentException("Message must not be empty");
         }
         ProductionCompany company = prodRepo.findById(companyId)
-                .orElseThrow(() -> new IllegalArgumentException("Production company not found: " + companyId));
+                .orElseThrow(() -> new NotFoundException("Production company not found: " + companyId));
 
         Set<String> userIds = new LinkedHashSet<>(company.getOwnerIds());
         userIds.addAll(company.getManagerTree().keySet());
@@ -118,11 +119,11 @@ public class NotificationService implements INotificationService {
         requireValidToken(token);
         Notification notification = notificationRepo.findById(notificationId);
         if (notification == null) {
-            throw new IllegalArgumentException("Notification not found");
+            throw new NotFoundException("Notification not found");
         }
         String userId = authenticationService.getUser(token);
         if (!notification.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Access denied: notification belongs to another user");
+            throw new ForbiddenException("Access denied: notification belongs to another user");
         }
         return toDTO(notification);
     }
@@ -132,11 +133,11 @@ public class NotificationService implements INotificationService {
         requireValidToken(token);
         Notification notification = notificationRepo.findById(notificationId);
         if (notification == null) {
-            throw new IllegalArgumentException("Notification not found");
+            throw new NotFoundException("Notification not found");
         }
         String userId = authenticationService.getUser(token);
         if (!notification.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Access denied: notification belongs to another user");
+            throw new ForbiddenException("Access denied: notification belongs to another user");
         }
         notification.markAsRead();
         return true;

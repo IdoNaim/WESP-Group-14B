@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
@@ -22,12 +23,16 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.OrderRefundedEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReleaseEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationEventListenerTest {
 
     @Mock private INotificationService notificationService;
     @Mock private AuthenticationService authenticationService;
+    @Mock private IHistoryOrderRepo historyOrderRepo;
 
     private NotificationEventListener listener;
 
@@ -40,7 +45,7 @@ class NotificationEventListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new NotificationEventListener(notificationService, authenticationService, null);
+        listener = new NotificationEventListener(notificationService, authenticationService, historyOrderRepo);
     }
 
     // ── CompletedOrderEvent ─────────────────────────────────────────────────
@@ -158,6 +163,40 @@ class NotificationEventListenerTest {
         listener.onStandingAreaReleased(event);
 
         verify(notificationService, never()).createSystemNotification(eq(USER_ID), contains(AREA_ID));
+    }
+
+    // ── EventCancelledEvent ─────────────────────────────────────────────────
+
+    @Test
+    void GivenBuyers_WhenOnEventCancelled_ThenNotifyEachBuyer() {
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>());
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", "user-002", EVENT_ID, 1, 50.0, List.of(), new HashMap<>());
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2));
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(notificationService).createSystemNotification(eq(USER_ID), contains("Rock Concert"));
+        verify(notificationService).createSystemNotification(eq("user-002"), contains("Rock Concert"));
+    }
+
+    @Test
+    void GivenDuplicateBuyers_WhenOnEventCancelled_ThenNotifyOncePerUser() {
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>());
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>());
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2));
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(notificationService).createSystemNotification(eq(USER_ID), contains("Rock Concert"));
+    }
+
+    @Test
+    void GivenNoBuyers_WhenOnEventCancelled_ThenNoNotificationSent() {
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of());
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(notificationService, never()).createSystemNotification(any(), any());
     }
 
     // ── OrderRefundedEvent ──────────────────────────────────────────────────
