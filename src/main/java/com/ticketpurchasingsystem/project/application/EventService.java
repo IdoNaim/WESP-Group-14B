@@ -80,9 +80,6 @@ public class EventService implements IEventService {
             purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
         }
 
-        // Preserve your original typo method name 'emnptySeatLeft()' from your DTO
-        purchasePolicy.addRule(new EmptySeatRule(purchasePolicyDTO.emnptySeatLeft()));
-
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
 
         Event event = new Event(
@@ -131,6 +128,7 @@ public class EventService implements IEventService {
         logger.info("Event found: " + event.getEventName());
 
         return new EventDTO(
+                event.getEventId(),
                 event.getCompanyId(),
                 event.getEventName(),
                 event.getEventCapacity(),
@@ -150,6 +148,7 @@ public class EventService implements IEventService {
         List<EventDTO> events = eventRepo.findByCompanyId(companyId)
                 .stream()
                 .map(event -> new EventDTO(
+                        event.getEventId(),
                         event.getCompanyId(),
                         event.getEventName(),
                         event.getEventCapacity(),
@@ -334,79 +333,102 @@ public class EventService implements IEventService {
         }
         logger.info("Released seats successfully");
     }
-     public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
+    public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
         //TODO: Implement the logic to release reserved standing area based on the eventId, areaId, and quantity
-         if (!authenticationService.validate(sessionToken)) {
-             throw new IllegalArgumentException("Invalid session token");
-         }
-         logger.info("Releasing standing area");
-         Event event = eventRepo.findById(eventId);
-         if (event == null) {
-             logger.warn("Cannot release standing area. Event not found: " + eventId);
-             throw new IllegalArgumentException("Invalid EventID");
-         }
-         if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
-             logger.warn("Cannot release standing area. one or more stands not booked");
-             throw new IllegalArgumentException("one or more stands not booked");
-         }
-         logger.info("Released standing area successfully");
-     }
-     public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("Releasing standing area");
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot release standing area. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
+            logger.warn("Cannot release standing area. one or more stands not booked");
+            throw new IllegalArgumentException("one or more stands not booked");
+        }
+        logger.info("Released standing area successfully");
+    }
+    public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
-         if (!authenticationService.validate(sessionToken)) {
-             throw new IllegalArgumentException("Invalid session token");
-         }
-         logger.info("Releasing seats");
-         Event event = eventRepo.findById(eventId);
-         if (event == null) {
-             logger.warn("Cannot release seats. Event not found: " + eventId);
-             throw new IllegalArgumentException("Invalid EventID");
-         }
-         if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
-             logger.warn("Cannot book seats, problem occured");
-             throw new IllegalArgumentException("cannot book seats, problem occured");
-         }
-         logger.info("booked seats successfully");
-         return true;
-     }
-     public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("Releasing seats");
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot release seats. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
+            logger.warn("Cannot book seats, problem occured");
+            throw new IllegalArgumentException("cannot book seats, problem occured");
+        }
+        logger.info("booked seats successfully");
+        return true;
+    }
+    public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
         //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
-         if (!authenticationService.validate(sessionToken)) {
-             throw new IllegalArgumentException("Invalid session token");
-         }
-         logger.info("booking standing area");
-         Event event = eventRepo.findById(eventId);
-         if (event == null) {
-             logger.warn("Cannot book standing area. Event not found: " + eventId);
-             throw new IllegalArgumentException("Invalid EventID");
-         }
-         if(!event.getSeatingMap().unbookStandingArea(areaId, quantity)){
-             logger.warn("Cannot book standing area. one or more stands not booked");
-             throw new IllegalArgumentException("cannot book standing area, problem occured");
-         }
-         logger.info("booked standing area successfully");
-         return true;
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("booking standing area");
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot book standing area. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        if(!event.getSeatingMap().bookStandingArea(areaId, null,quantity)){
+            logger.warn("Cannot book standing area. one or more stands not booked");
+            throw new IllegalArgumentException("cannot book standing area, problem occured");
+        }
+        logger.info("booked standing area successfully");
+        return true;
 
-     }
-     public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
+    }
+    public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //checks for each seatid if really saved for this specific orderID, if not, add the seatID to result
-         //string list and return it
-         if (!authenticationService.validate(sessionToken)) {
-             throw new IllegalArgumentException("Invalid session token");
-         }
-         logger.info("checking reserved seats");
-         Event event = eventRepo.findById(eventId);
-         if (event == null) {
-             logger.warn("Cannot check reserved seats. Event not found: " + eventId);
-             throw new IllegalArgumentException("Invalid EventID");
-         }
-         List<String> reservedSeatIds = new ArrayList<>();
-         for (String seatId : seatIds) {
-             if (!event.getSeatingMap().getSeat(seatId).isbooked(orderId))
-                 logger.warn("reserved seat " + seatId + " is not booked");
-                 reservedSeatIds.add(seatId);
-         }
-         logger.info("returning the unreserved seats");
-         return reservedSeatIds;
-         }
-     }
+        //string list and return it
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("checking reserved seats");
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot check reserved seats. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        List<String> reservedSeatIds = new ArrayList<>();
+        for (String seatId : seatIds) {
+            if (!event.getSeatingMap().getSeat(seatId).isbooked(orderId)) {
+                logger.warn("reserved seat " + seatId + " is not booked");
+                reservedSeatIds.add(seatId);
+            }
+        }
+        logger.info("returning the unreserved seats");
+        return reservedSeatIds;
+    }
+    @Override
+    public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO){
+        if(!authenticationService.validate(sesssionToken)){
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if(event == null){
+            logger.warn("Cannot check reserved seats. Event not found: " + eventId);
+            throw new RuntimeException("couldnt find event by eventId "+ eventId);
+        }
+        event.setPurchasePolicy(purchasePolicyDTO);
+        try {
+            eventRepo.save(event);
+            logger.info("changed purchase policy of event with id: " + eventId);
+            return true;
+        }catch (Exception e){
+            logger.error("Failed to edit event purchse policy for ID: "
+                    + eventId
+                    + " | Error: " + e.getMessage());
+            return false;
+        }
+    }
+}

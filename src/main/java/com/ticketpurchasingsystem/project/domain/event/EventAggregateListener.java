@@ -76,9 +76,8 @@ public class EventAggregateListener {
         }
         PurchaseContext context = new PurchaseContext(  
                 event.getTotalTickets(),
-                event.getAge(),
-                event.isSeatEmpty()
-        );
+                event.getAge()        );
+
         boolean isValid = policy.validate(context);
         event.setResult(isValid);
     }

@@ -1,4 +1,3 @@
-
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
 public class StandingArea implements Bookable {
@@ -36,7 +35,7 @@ public class StandingArea implements Bookable {
     public double getPriceForTicket() {
         return priceForTicket;
     }
-    
+
     public int getAvalibleSeatNumber() {
         return avalibleSeats;
     }
