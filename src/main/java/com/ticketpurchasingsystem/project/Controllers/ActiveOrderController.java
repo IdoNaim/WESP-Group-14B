@@ -74,6 +74,8 @@ public class ActiveOrderController {
         try {
             ActiveOrderDTO order = activeOrderService.getActiveOrderInfo(sessionToken, orderId);
             return ResponseEntity.ok(order);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
@@ -119,6 +121,8 @@ public class ActiveOrderController {
         try {
             activeOrderService.addSeatsToActiveOrder(sessionToken, orderId, body.getSeatIds());
             return ResponseEntity.ok(Map.of("message", "Seats added successfully."));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
@@ -142,6 +146,8 @@ public class ActiveOrderController {
             activeOrderService.addStandingAreaToActiveOrder(
                     sessionToken, orderId, body.getAreaId(), body.getQuantity());
             return ResponseEntity.ok(Map.of("message", "Standing area tickets added successfully."));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {

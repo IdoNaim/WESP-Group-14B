@@ -72,12 +72,18 @@ public class HistoryOrderController {
     // GET /api/history
     // Returns all completed orders in the system. Admin only.
     @GetMapping
-    public ResponseEntity<List<HistoryOrderDTO>> getAllOrders(
+    public ResponseEntity<?> getAllOrders(
             @RequestHeader("Authorization") String authHeader) {
 
         SessionToken sessionToken = toSessionToken(authHeader);
-        List<HistoryOrderDTO> orders = historyOrderService.getAllHistoryOrders(sessionToken);
-        return ResponseEntity.ok(orders);
+        try {
+            List<HistoryOrderDTO> orders = historyOrderService.getAllHistoryOrders(sessionToken);
+            return ResponseEntity.ok(orders);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }
     }
 
     private SessionToken toSessionToken(String authHeader) {

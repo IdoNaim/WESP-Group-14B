@@ -452,7 +452,7 @@ public class EventService implements IEventService {
 
     @Override
     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
-        if (quantity <= 0) return true;
+        if (quantity <= 0) return false;
         Event event = eventRepo.findById(eventId);
         if (event == null || event.getSeatingMap() == null) return false;
         StandingArea area = event.getSeatingMap().getArea(areaId);

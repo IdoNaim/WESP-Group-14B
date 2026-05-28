@@ -48,6 +48,12 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new RuntimeException("the session has ended");
         }
 
+        String tokenUser = authenticationService.getUser(sessionToken.getToken());
+        if (!tokenUser.equals(userId)) {
+            logger.error("Cancel order failed: userId " + userId + " does not match authenticated user " + tokenUser);
+            throw new IllegalArgumentException("userId does not match authenticated user");
+        }
+
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
         if (order == null) {
             logger.error("Cancel order failed: Order not found with id: " + orderId);
@@ -77,7 +83,7 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Attempting to retrieve active order info. orderId: " + orderId);
         if(!authenticationService.validate(sessionToken.getToken())){
             logger.error("Session validation failed while retrieving order info for orderId: " + orderId);
-            throw new IllegalArgumentException("Session has ended");
+            throw new RuntimeException("Session has ended");
         }
         String userId = authenticationService.getUser(sessionToken.getToken());
         ActiveOrderItem order = activeOrderRepo.findById(orderId);
@@ -88,7 +94,7 @@ public class ActiveOrderService implements IActiveOrderService {
         ActiveOrderDTO orderDTO = activeOrderHandler.getActiveOrderInfo(userId, order);
         if(orderDTO == null){
             logger.error("User " + userId + " tried seeing a different user's order: " + orderId);
-            throw new IllegalArgumentException("you can only view your own active order");
+            throw new SecurityException("you can only view your own active order");
         }
         logger.info("Successfully retrieved active order info for orderId: " + orderId);
         return orderDTO;
@@ -97,6 +103,11 @@ public class ActiveOrderService implements IActiveOrderService {
     public ActiveOrderItem createPendingOrder(SessionToken sessionToken, String userId, String eventId){
         logger.info("Attempting to create pending order for userId: " + userId + ", eventId: " + eventId);
         if(authenticationService.validate(sessionToken.getToken())){
+            String tokenUser = authenticationService.getUser(sessionToken.getToken());
+            if (!tokenUser.equals(userId)) {
+                logger.error("Create pending order failed: userId " + userId + " does not match authenticated user " + tokenUser);
+                throw new IllegalArgumentException("userId does not match authenticated user");
+            }
             if(activeOrderRepo.findByUserId(userId) != null){
                 logger.warn("Create pending order failed: An active order already exists for user: " + userId);
                 throw new IllegalArgumentException("an active order already exists for this user: "+ userId);
@@ -140,6 +151,11 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.error("Add seats failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
         }
+        String tokenUserSeats = authenticationService.getUser(sessionToken.getToken());
+        if (!order.getUserId().equals(tokenUserSeats)) {
+            logger.error("Add seats failed: User " + tokenUserSeats + " does not own order " + orderId);
+            throw new SecurityException("You don't own this order");
+        }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
         List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(order.getSeatIds(), seatIds);
         boolean reserved = activeOrderPublisher.publishReserveSeats(sessionToken.getToken(), order.getOrderId(), order.getEventId(), seatsToReserve);
@@ -175,6 +191,11 @@ public class ActiveOrderService implements IActiveOrderService {
         if (order == null) {
             logger.error("Add standing area failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
+        }
+        String tokenUserStanding = authenticationService.getUser(sessionToken.getToken());
+        if (!order.getUserId().equals(tokenUserStanding)) {
+            logger.error("Add standing area failed: User " + tokenUserStanding + " does not own order " + orderId);
+            throw new SecurityException("You don't own this order");
         }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
         boolean reserved = activeOrderPublisher.publishReserveStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantity);
