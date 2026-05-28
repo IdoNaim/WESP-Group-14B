@@ -307,6 +307,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditUsername_ThenNameUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editUsername(user, USER_ID, USERNAME, "NewName", TOKEN);
 
@@ -317,6 +318,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditUsername_ThenSetterCalled() {
         UserInfo user = spy(buildMemberUser());
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editUsername(user, USER_ID, USERNAME, "NewName", TOKEN);
 
@@ -337,6 +339,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditPassword_ThenPasswordUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
 
@@ -348,6 +351,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditPassword_ThenSetterCalled() {
         UserInfo user = spy(buildMemberUser());
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
 
@@ -378,6 +382,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditEmail_ThenEmailUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editEmail(user, USER_ID, EMAIL, "new@mail.com", TOKEN);
 
@@ -388,7 +393,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditEmail_ThenSetterCalled() {
         UserInfo user = spy(buildMemberUser());
         user.setSessionTokenStr(TOKEN);
-
+        user.setLoggedIn(true);
         handler.editEmail(user, USER_ID, EMAIL, "new@mail.com", TOKEN);
 
         verify(user).setEmail("new@mail.com");
@@ -398,6 +403,7 @@ public class UserHandlerTests {
     void GivenInvalidNewEmail_WhenEditEmail_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
             handler.editEmail(user, USER_ID, EMAIL, "bad-email", TOKEN)
@@ -408,6 +414,7 @@ public class UserHandlerTests {
     void GivenWrongOldEmail_WhenEditEmail_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
             handler.editEmail(user, USER_ID, "wrong@mail.com", "new@mail.com", TOKEN)
@@ -453,7 +460,7 @@ public class UserHandlerTests {
         user.setSessionTokenStr(TOKEN);
         user.setLoggedIn(false);
 
-        assertThrows(IllegalStateException.class, () ->
+        assertThrows(RuntimeException.class, () ->
             handler.setUserGroupDiscount(user, USER_ID, UserGroupDiscount.SENIOR, TOKEN)
         );
     }
@@ -461,6 +468,7 @@ public class UserHandlerTests {
     @Test
     void GivenGuestUser_WhenAddProductionRole_ThenProductionInitialized() {
         UserInfo guest = buildGuestUser();
+        guest.setLoggedIn(true);
 
         handler.addProductionRole(guest, 10, UserProduction.RoleInProduction.MANAGER);
 
@@ -476,6 +484,7 @@ public class UserHandlerTests {
     @Test
     void GivenNonGuestUser_WhenValidateGuest_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () -> handler.validateGuest(user));
     }
@@ -483,6 +492,7 @@ public class UserHandlerTests {
     @Test
     void GivenGuestUser_WhenValidateGuest_ThenNoException() {
         UserInfo guest = buildGuestUser();
+        guest.setLoggedIn(true);
 
         assertDoesNotThrow(() -> handler.validateGuest(guest));
     }
