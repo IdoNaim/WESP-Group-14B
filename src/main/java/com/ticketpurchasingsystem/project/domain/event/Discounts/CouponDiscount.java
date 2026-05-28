@@ -1,4 +1,5 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Discounts;
+
 
 import java.time.LocalDateTime;
 

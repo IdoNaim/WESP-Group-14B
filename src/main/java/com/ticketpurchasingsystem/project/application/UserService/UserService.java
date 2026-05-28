@@ -170,6 +170,15 @@ public class UserService implements IUserService {
         return userHandler.mapToDTO(userInfo);
     }
 
+    @Override
+    public UserInfo getUserInfo(String userId) {
+        UserInfo userInfo = userRepo.findByID(userId);
+        if (userInfo == null) {
+            throw new RuntimeException("User not found.");
+        }
+        return userInfo;
+    }
+
     public void deleteUser(String userId, String sessionTokenStr) {
         try {
             if (!authenticationService.validate(sessionTokenStr)) {

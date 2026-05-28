@@ -1,6 +1,6 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Discounts;
 
-interface Discount {
+public interface Discount {
     String getDiscountName();
     boolean isApplicable();
     double calculateDiscountAmount();

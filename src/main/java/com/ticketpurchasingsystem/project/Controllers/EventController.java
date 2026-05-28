@@ -23,9 +23,9 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRe
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
-import com.ticketpurchasingsystem.project.domain.event.SeatingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.event.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.StandingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 @RestController
 @RequestMapping("/api/events")
@@ -40,107 +40,116 @@ public class EventController {
         // POST /api/events
         @PostMapping
         public ResponseEntity<Void> createEvent(
-                        @RequestHeader("Authorization") String authHeader,
-                        @RequestBody CreateEventRequestDTO body) {
+                @RequestHeader("Authorization") String authHeader,
+                @RequestBody CreateEventRequestDTO body) {
 
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
-                                .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
+                        .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
 
+                // FIXED: Passed authHeader instead of body.getSessionToken() to centralize auth
                 boolean success = eventService.createEvent(
-                                body.getEvent(),
-                                body.getPurchasePolicy(),
-                                discounts);
+                        authHeader,
+                        body.getEvent(),
+                        body.getPurchasePolicy(),
+                        discounts
+                );
 
                 return success
-                                ? ResponseEntity.status(HttpStatus.CREATED).build()
-                                : ResponseEntity.badRequest().build();
+                        ? ResponseEntity.status(HttpStatus.CREATED).build()
+                        : ResponseEntity.badRequest().build();
         }
 
         // GET /api/events/{eventId}
         @GetMapping("/{eventId}")
         public ResponseEntity<EventDTO> getEvent(
-                        @RequestHeader("Authorization") String authHeader,
-                        @PathVariable String eventId) {
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
 
-                EventDTO result = eventService.searchEvent(eventId);
+                // FIXED: Added authHeader
+                EventDTO result = eventService.searchEvent(authHeader, eventId);
                 return result != null
-                                ? ResponseEntity.ok(result)
-                                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                        ? ResponseEntity.ok(result)
+                        : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
         // GET /api/events?companyId=123
         @GetMapping
         public ResponseEntity<List<EventDTO>> getEventsByCompany(
-                        @RequestHeader("Authorization") String authHeader,
-                        @RequestParam int companyId) {
+                @RequestHeader("Authorization") String authHeader,
+                @RequestParam int companyId) {
 
-                List<EventDTO> events = eventService.searchEventsByCompany(companyId);
+                // FIXED: Added authHeader
+                List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
 
         // PUT /api/events/{eventId}/date
         @PutMapping("/{eventId}/date")
         public ResponseEntity<Void> editEventDate(
-                        @RequestHeader("Authorization") String authHeader,
-                        @PathVariable String eventId,
-                        @RequestBody EditEventDateRequestDTO body) {
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventDateRequestDTO body) {
 
-                boolean success = eventService.editEventDate(eventId, body.getNewDateTime());
+                // FIXED: Added authHeader
+                boolean success = eventService.editEventDate(authHeader, eventId, body.getNewDateTime());
                 return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                        ? ResponseEntity.ok().build()
+                        : ResponseEntity.badRequest().build();
         }
 
         // PUT /api/events/{eventId}/capacity
         @PutMapping("/{eventId}/capacity")
         public ResponseEntity<Void> editEventCapacity(
-                        @RequestHeader("Authorization") String authHeader,
-                        @PathVariable String eventId,
-                        @RequestBody EditEventCapacityRequestDTO body) {
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventCapacityRequestDTO body) {
 
-                boolean success = eventService.editEventInventory(eventId, body.getNewCapacity());
+                // FIXED: Added authHeader
+                boolean success = eventService.editEventInventory(authHeader, eventId, body.getNewCapacity());
                 return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                        ? ResponseEntity.ok().build()
+                        : ResponseEntity.badRequest().build();
         }
 
         // DELETE /api/events/{eventId}
         @DeleteMapping("/{eventId}")
         public ResponseEntity<Void> removeEvent(
-                        @RequestHeader("Authorization") String authHeader,
-                        @PathVariable String eventId) {
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
 
-                boolean success = eventService.removeEvent(eventId);
+                // FIXED: Added authHeader
+                boolean success = eventService.removeEvent(authHeader, eventId);
                 return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                        ? ResponseEntity.ok().build()
+                        : ResponseEntity.badRequest().build();
         }
 
         // PUT /api/events/{eventId}/seating-map
         @PutMapping("/{eventId}/seating-map")
         public ResponseEntity<Void> editSeatingMap(
-                        @RequestHeader("Authorization") String authHeader,
-                        @PathVariable String eventId,
-                        @RequestBody ConfigureSeatingMapRequestDTO body) {
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody ConfigureSeatingMapRequestDTO body) {
 
                 List<SeatingAreaConfig> seatingAreas = body.getSeatingAreas() == null
-                                ? Collections.emptyList()
-                                : body.getSeatingAreas().stream()
-                                                .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(),
-                                                                a.getPrice()))
-                                                .collect(Collectors.toList());
+                        ? Collections.emptyList()
+                        : body.getSeatingAreas().stream()
+                        .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(),
+                                a.getPrice()))
+                        .collect(Collectors.toList());
 
                 List<StandingAreaConfig> standingAreas = body.getStandingAreas() == null
-                                ? Collections.emptyList()
-                                : body.getStandingAreas().stream()
-                                                .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
-                                                .collect(Collectors.toList());
+                        ? Collections.emptyList()
+                        : body.getStandingAreas().stream()
+                        .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
+                        .collect(Collectors.toList());
 
-                SeatingMap seatingMap = eventService.configureSeatingMap(seatingAreas, standingAreas);
-                boolean success = eventService.editEventSeatingMap(eventId, seatingMap);
+                // FIXED: Added authHeader to both configureSeatingMap and editEventSeatingMap
+                SeatingMap seatingMap = eventService.configureSeatingMap(authHeader, seatingAreas, standingAreas);
+                boolean success = eventService.editEventSeatingMap(authHeader, eventId, seatingMap);
                 return success
-                                ? ResponseEntity.ok().build()
-                                : ResponseEntity.badRequest().build();
+                        ? ResponseEntity.ok().build()
+                        : ResponseEntity.badRequest().build();
         }
 
 }
