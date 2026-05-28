@@ -25,4 +25,6 @@ public interface IEventService {
      public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity);
      public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds);
      public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity);
+     public boolean checkSeatAvailability(String eventId, List<String> seatIds);
+     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity);
 }
