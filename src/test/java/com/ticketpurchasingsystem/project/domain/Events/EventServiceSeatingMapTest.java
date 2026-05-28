@@ -1,8 +1,12 @@
 package com.ticketpurchasingsystem.project.domain.Events;
 
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.event.*;
 
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,14 +19,35 @@ import static org.mockito.Mockito.when;
 public class EventServiceSeatingMapTest {
 
     private EventService eventService;
+    private AuthenticationService mockAuthService;
+
+    private final String VALID_TOKEN = "valid-session-token";
+    private final String INVALID_TOKEN = "invalid-session-token";
 
     @BeforeEach
     void setUp() {
+        mockAuthService = mock(AuthenticationService.class);
+
+        // Setup default authentication behavior
+        when(mockAuthService.validate(VALID_TOKEN)).thenReturn(true);
+        when(mockAuthService.validate(INVALID_TOKEN)).thenReturn(false);
+
         eventService = new EventService(
                 mock(IEventRepo.class),
                 mock(EventAggregatePublisher.class),
-                mock(EventAggregateListener.class)
+                mockAuthService
         );
+    }
+
+    // ================= AUTHENTICATION FAILURE TEST =================
+
+    @Test
+    void GivenInvalidToken_WhenConfigureSeatingMap_ThenThrowIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.configureSeatingMap(INVALID_TOKEN, List.of(), List.of());
+        });
+
+        assertEquals("Invalid session token", exception.getMessage());
     }
 
     // ================= BASIC SUCCESS =================
@@ -40,6 +65,7 @@ public class EventServiceSeatingMapTest {
         when(standingConfig.getPrice()).thenReturn(20.0);
 
         SeatingMap map = eventService.configureSeatingMap(
+                VALID_TOKEN,
                 List.of(seatingConfig),
                 List.of(standingConfig)
         );
@@ -48,7 +74,9 @@ public class EventServiceSeatingMapTest {
 
         // seating: 2 * 3 = 6 seats
         // standing: 1 standing area
-        assertEquals(7, map.getPurchaseAreas().size());
+//        assertEquals(7, map.getPurchaseAreas().size());
+        assertEquals(6, map.getSeatIds().size());
+        assertEquals(1,map.getAreaIds().size());
     }
 
     // ================= EMPTY INPUT =================
@@ -57,12 +85,15 @@ public class EventServiceSeatingMapTest {
     void GivenEmptyLists_WhenConfigureSeatingMap_ThenReturnEmptyMap() {
 
         SeatingMap map = eventService.configureSeatingMap(
+                VALID_TOKEN,
                 List.of(),
                 List.of()
         );
 
         assertNotNull(map);
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= INVALID SEATING =================
@@ -77,11 +108,14 @@ public class EventServiceSeatingMapTest {
         when(invalidConfig.getPrice()).thenReturn(50.0);
 
         SeatingMap map = eventService.configureSeatingMap(
+                VALID_TOKEN,
                 List.of(invalidConfig),
                 List.of()
         );
 
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= INVALID STANDING =================
@@ -95,11 +129,14 @@ public class EventServiceSeatingMapTest {
         when(invalidStanding.getPrice()).thenReturn(50.0);
 
         SeatingMap map = eventService.configureSeatingMap(
+                VALID_TOKEN,
                 List.of(),
                 List.of(invalidStanding)
         );
 
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= MULTIPLE AREAS =================
@@ -122,6 +159,7 @@ public class EventServiceSeatingMapTest {
         when(standing.getPrice()).thenReturn(10.0);
 
         SeatingMap map = eventService.configureSeatingMap(
+                VALID_TOKEN,
                 List.of(seating1, seating2),
                 List.of(standing)
         );
@@ -129,6 +167,8 @@ public class EventServiceSeatingMapTest {
         // seating1: 4 seats
         // seating2: 4 seats
         // standing: 1 area
-        assertEquals(9, map.getPurchaseAreas().size());
+//        assertEquals(9, map.getPurchaseAreas().size());
+        assertEquals(8, map.getSeatIds().size());
+        assertEquals(1, map.getAreaIds().size());
     }
 }

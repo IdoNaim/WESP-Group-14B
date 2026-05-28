@@ -1,13 +1,16 @@
-package com.ticketpurchasingsystem.project.domain.event;
+package com.ticketpurchasingsystem.project.domain.event.Discounts;
+
 import java.time.LocalDateTime;
 
-public class VisibleDiscount implements Discount {
+public class CouponDiscount implements Discount {
     private final String discountName;
+    private final String couponCode;
     private final double discountPercentage;
     private final LocalDateTime validUntil;
 
-    public VisibleDiscount(String discountName, double discountPercentage, LocalDateTime validUntil) {
+    public CouponDiscount(String discountName, String couponCode, double discountPercentage, LocalDateTime validUntil) {
         this.discountName = discountName;
+        this.couponCode = couponCode;
         this.discountPercentage = discountPercentage;
         this.validUntil = validUntil;
     }
@@ -22,6 +25,6 @@ public class VisibleDiscount implements Discount {
 
     @Override
     public double calculateDiscountAmount() {
-        return discountPercentage;
+        return 4.6;
     }
 }

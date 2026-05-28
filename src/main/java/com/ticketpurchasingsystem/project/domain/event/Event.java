@@ -1,8 +1,17 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 
 import java.time.LocalDateTime;
+
+import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
 public class Event {
 
@@ -22,6 +31,8 @@ public class Event {
     private EventDiscountPolicy discountPolicy;
 
     private EventPurchasePolicy purchasePolicy;
+
+    private ITicketPurchaseRule ticketPurchasePolicy;
 
     private int version = 0;
 
@@ -70,6 +81,7 @@ public class Event {
         this.discountPolicy = other.discountPolicy;
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
+        this.ticketPurchasePolicy = other.ticketPurchasePolicy;
     }
 
 
@@ -131,7 +143,29 @@ public class Event {
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 
+    public ITicketPurchaseRule getTicketPurchasePolicy() {
+        return ticketPurchasePolicy;
+    }
+
+    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
+        this.ticketPurchasePolicy = ticketPurchasePolicy;
+    }
+
     public EventPurchasePolicy getPurchasePolicy() {
         return purchasePolicy;
+    }
+
+    public void setPurchasePolicy(PurchasePolicyDTO purchasePolicyDTO){
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+        IPurchaseRule minAgeRule = new MinAgeRule(purchasePolicyDTO.minAge());
+        IPurchaseRule maxAgeRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
+        IPurchaseRule minTicketsRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
+        IPurchaseRule maxTicketsRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
+        purchasePolicy.addRule(minAgeRule);
+        purchasePolicy.addRule(maxAgeRule);
+        purchasePolicy.addRule(minTicketsRule);
+        purchasePolicy.addRule(maxTicketsRule);
+        this.purchasePolicy = purchasePolicy;
+
     }
 }

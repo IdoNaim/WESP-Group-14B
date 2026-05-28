@@ -2,13 +2,14 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import org.springframework.stereotype.Repository;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Repository
 public class ActiveOrderMemRepo implements IActiveOrderRepo {
+
 
     private final ConcurrentHashMap<String, ActiveOrderItem> activeOrders = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ReentrantLock> orderLocks = new ConcurrentHashMap<>();
@@ -97,7 +98,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             if (lock == null) {
                 continue;
             }
-            
+
             lock.lock();
             try {
                 ActiveOrderItem order = activeOrders.get(orderId);
@@ -119,7 +120,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         try{
             ActiveOrderItem existing = activeOrders.get(orderId);
             if(existing == null){
-                    throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+                throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
             }
             return existing.markAsProcessing();
         }
@@ -128,4 +129,3 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         }
     }
 }
-

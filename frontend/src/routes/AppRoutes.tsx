@@ -3,6 +3,8 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.tsx';
 import ProductionCompanyPage from '../pages/production-company/ProductionCompanyPage.tsx';
+import EventsPage from "../pages/events/EventsPage.tsx";
+import EventDetailsPage from "../pages/events/EventDetailsPage.tsx";
 
 
 export default function AppRoutes() {
@@ -14,6 +16,8 @@ export default function AppRoutes() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/company/:companyId" element={<ProductionCompanyPage />} />
                 {/* Wildcard: Redirects any unknown paths straight to login */}
+                <Route path="/events" element={<EventsPage />} />
+                <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </BrowserRouter>
