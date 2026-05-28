@@ -153,8 +153,7 @@ class AuthControllerTest {
 
         @Test
         void GivenLoggedInUser_WhenLogout_ThenReturn200WithMessage() throws Exception {
-                doNothing().when(userService).logoutUser(any(), any());
-
+                
                 mockMvc.perform(post("/api/identity/logout")
                                 .header("Authorization", VALID_AUTH)
                                 .contentType(MediaType.APPLICATION_JSON)
