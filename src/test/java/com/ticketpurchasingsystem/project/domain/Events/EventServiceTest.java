@@ -48,7 +48,7 @@ public class EventServiceTest {
     // ================= AUTHENTICATION FAILURE TEST =================
     @Test
     void GivenInvalidToken_WhenAnyMethodCalled_ThenThrowIllegalArgumentException() {
-        EventDTO dto = new EventDTO(1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -61,7 +61,7 @@ public class EventServiceTest {
     // ================= CREATE EVENT =================
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
-        EventDTO dto = new EventDTO(1, "Concert", 100,
+        EventDTO dto = new EventDTO(null,1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -80,7 +80,7 @@ public class EventServiceTest {
 
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
-        EventDTO dto = new EventDTO(1, "Concert", 100,
+        EventDTO dto = new EventDTO(null,1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -98,7 +98,7 @@ public class EventServiceTest {
 
     @Test
     void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnFalse() {
-        EventDTO dto = new EventDTO(1, "Concert", 100,
+        EventDTO dto = new EventDTO(null,1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -116,7 +116,7 @@ public class EventServiceTest {
 
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
-        EventDTO dto = new EventDTO(1, "Concert", 100,
+        EventDTO dto = new EventDTO(null,1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -412,13 +412,13 @@ public class EventServiceTest {
         when(mockRepo.findById("1")).thenReturn(mockEvent);
         when(mockEvent.getSeatingMap()).thenReturn(mockMap);
 
-        // Note: Testing the current logic which uses unbookStandingArea inside reserveStandingArea
-        when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
+        // Note: Testing the current logic which uses bookStandingArea inside reserveStandingArea
+        when(mockMap.bookStandingArea("AREA1",null, 5)).thenReturn(true);
 
         boolean result = eventService.reserveStandingArea(VALID_TOKEN, "1", "AREA1", 5);
 
         assertTrue(result);
-        verify(mockMap).unbookStandingArea("AREA1", 5);
+        verify(mockMap).bookStandingArea("AREA1", null,5);
     }
 
     @Test
