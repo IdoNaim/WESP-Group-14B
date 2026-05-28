@@ -13,6 +13,8 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.notification.INotificationRepo;
 import com.ticketpurchasingsystem.project.domain.notification.Notification;
 
@@ -23,16 +25,19 @@ public class NotificationService implements INotificationService {
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
     private final IProdRepo prodRepo;
+    private final IEventRepo eventRepo;
     private final AtomicLong idCounter = new AtomicLong(0);
 
     public NotificationService(INotificationRepo notificationRepo,
                                AuthenticationService authenticationService,
                                IHistoryOrderRepo historyOrderRepo,
-                               IProdRepo prodRepo) {
+                               IProdRepo prodRepo,
+                               IEventRepo eventRepo) {
         this.notificationRepo = notificationRepo;
         this.authenticationService = authenticationService;
         this.historyOrderRepo = historyOrderRepo;
         this.prodRepo = prodRepo;
+        this.eventRepo = eventRepo;
     }
 
     private String nextId() {
@@ -49,6 +54,12 @@ public class NotificationService implements INotificationService {
         }
     }
 
+    private void requireOwnerOrManager(ProductionCompany company, String callerId) {
+        if (!company.getOwnerIds().contains(callerId) && !company.getManagerTree().containsKey(callerId)) {
+            throw new ForbiddenException("Caller is not an owner or manager of this production company");
+        }
+    }
+
     private NotificationDTO saveFor(String userId, String message) {
         Notification notification = new Notification(nextId(), userId, message);
         notificationRepo.save(notification);
@@ -58,6 +69,9 @@ public class NotificationService implements INotificationService {
     @Override
     public NotificationDTO createNotification(String token, String targetUserId, String message) {
         requireValidToken(token);
+        if (!authenticationService.isAdmin(token)) {
+            throw new ForbiddenException("Only administrators can send targeted notifications");
+        }
         if (targetUserId == null || targetUserId.isBlank()) {
             throw new IllegalArgumentException("Target user ID must not be empty");
         }
@@ -76,6 +90,15 @@ public class NotificationService implements INotificationService {
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("Message must not be empty");
         }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            throw new NotFoundException("Event not found: " + eventId);
+        }
+        ProductionCompany company = prodRepo.findById(event.getCompanyId())
+                .orElseThrow(() -> new NotFoundException("Production company not found: " + event.getCompanyId()));
+        String caller = authenticationService.getUser(token);
+        requireOwnerOrManager(company, caller);
+
         Set<String> userIds = historyOrderRepo.findAllByEventId(eventId).stream()
                 .map(order -> order.getUserId())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -94,6 +117,8 @@ public class NotificationService implements INotificationService {
         }
         ProductionCompany company = prodRepo.findById(companyId)
                 .orElseThrow(() -> new NotFoundException("Production company not found: " + companyId));
+        String caller = authenticationService.getUser(token);
+        requireOwnerOrManager(company, caller);
 
         Set<String> userIds = new LinkedHashSet<>(company.getOwnerIds());
         userIds.addAll(company.getManagerTree().keySet());
@@ -139,8 +164,9 @@ public class NotificationService implements INotificationService {
         if (!notification.getUserId().equals(userId)) {
             throw new ForbiddenException("Access denied: notification belongs to another user");
         }
+        boolean wasAlreadyRead = notification.isRead();
         notification.markAsRead();
-        return true;
+        return !wasAlreadyRead;
     }
 
     @Override

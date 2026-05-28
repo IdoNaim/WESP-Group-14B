@@ -74,6 +74,20 @@ class NotificationControllerTest {
     }
 
     @Test
+    void GivenNonAdminCaller_WhenCreateNotification_ThenReturn403() throws Exception {
+        when(notificationService.createNotification(any(), any(), any()))
+                .thenThrow(new ForbiddenException("Only administrators can send targeted notifications"));
+
+        String body = "{\"targetUserId\":\"alice\",\"message\":\"hi\"}";
+
+        mockMvc.perform(post("/api/notifications")
+                        .header("Authorization", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void GivenInvalidToken_WhenCreateNotification_ThenReturn401() throws Exception {
         when(notificationService.createNotification(any(), any(), any()))
                 .thenThrow(new UnauthorizedException("Invalid session token"));
@@ -192,6 +206,18 @@ class NotificationControllerTest {
     }
 
     @Test
+    void GivenUnauthorizedCaller_WhenNotifyEvent_ThenReturn403() throws Exception {
+        when(notificationService.createNotificationsForEvent(any(), any(), any()))
+                .thenThrow(new ForbiddenException("Caller is not an owner or manager of this production company"));
+
+        mockMvc.perform(post("/api/notifications/event/EVT-1")
+                        .header("Authorization", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Event updated\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void GivenInvalidToken_WhenNotifyEvent_ThenReturn401() throws Exception {
         when(notificationService.createNotificationsForEvent(any(), any(), any()))
                 .thenThrow(new UnauthorizedException("Invalid session token"));
@@ -216,6 +242,18 @@ class NotificationControllerTest {
                         .content("{\"message\":\"Team update\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$[0].id").value(NOTIF_ID));
+    }
+
+    @Test
+    void GivenUnauthorizedCaller_WhenNotifyProduction_ThenReturn403() throws Exception {
+        when(notificationService.createNotificationsForProduction(any(), anyInt(), any()))
+                .thenThrow(new ForbiddenException("Caller is not an owner or manager of this production company"));
+
+        mockMvc.perform(post("/api/notifications/production/42")
+                        .header("Authorization", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Team update\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

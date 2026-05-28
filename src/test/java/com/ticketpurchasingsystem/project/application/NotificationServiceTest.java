@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.notification.INotificationRepo;
 import com.ticketpurchasingsystem.project.domain.notification.Notification;
 
@@ -30,6 +34,9 @@ class NotificationServiceTest {
     @Mock private AuthenticationService authenticationService;
     @Mock private com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo historyOrderRepo;
     @Mock private com.ticketpurchasingsystem.project.domain.Production.IProdRepo prodRepo;
+    @Mock private IEventRepo eventRepo;
+    @Mock private Event mockEvent;
+    @Mock private ProductionCompany mockCompany;
 
     private NotificationService notificationService;
 
@@ -38,17 +45,21 @@ class NotificationServiceTest {
     private static final String USER_ID       = "user-001";
     private static final String OTHER_USER_ID = "user-002";
     private static final String MESSAGE       = "Your ticket is ready";
+    private static final int    COMPANY_ID    = 1;
+    private static final String EVENT_ID      = "EVT-001";
 
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationService(notificationRepo, authenticationService, historyOrderRepo, prodRepo);
+        notificationService = new NotificationService(
+                notificationRepo, authenticationService, historyOrderRepo, prodRepo, eventRepo);
     }
 
     // ── createNotification ──────────────────────────────────────────────────
 
     @Test
-    void GivenValidToken_WhenCreateNotification_ThenReturnDTO() {
+    void GivenAdminToken_WhenCreateNotification_ThenReturnDTO() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(true);
 
         NotificationDTO result = notificationService.createNotification(VALID_TOKEN, USER_ID, MESSAGE);
 
@@ -57,6 +68,16 @@ class NotificationServiceTest {
         assertEquals(MESSAGE, result.getMessage());
         assertFalse(result.isRead());
         verify(notificationRepo, times(1)).save(any(Notification.class));
+    }
+
+    @Test
+    void GivenNonAdminToken_WhenCreateNotification_ThenThrowForbidden() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(false);
+
+        assertThrows(ForbiddenException.class, () ->
+                notificationService.createNotification(VALID_TOKEN, USER_ID, MESSAGE));
+        verify(notificationRepo, never()).save(any());
     }
 
     @Test
@@ -71,6 +92,7 @@ class NotificationServiceTest {
     @Test
     void GivenBlankTargetUserId_WhenCreateNotification_ThenThrow() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 notificationService.createNotification(VALID_TOKEN, "  ", MESSAGE));
@@ -81,11 +103,99 @@ class NotificationServiceTest {
     @Test
     void GivenBlankMessage_WhenCreateNotification_ThenThrow() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 notificationService.createNotification(VALID_TOKEN, USER_ID, ""));
         assertNotNull(ex.getMessage());
         verify(notificationRepo, never()).save(any());
+    }
+
+    // ── createNotificationsForEvent ─────────────────────────────────────────
+
+    @Test
+    void GivenOwnerCaller_WhenNotifyEvent_ThenReturnDTOs() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
+        when(mockEvent.getCompanyId()).thenReturn(COMPANY_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
+        when(mockCompany.getOwnerIds()).thenReturn(List.of(USER_ID));
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of());
+
+        List<NotificationDTO> result = notificationService.createNotificationsForEvent(VALID_TOKEN, EVENT_ID, MESSAGE);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void GivenNonOwnerCaller_WhenNotifyEvent_ThenThrowForbidden() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
+        when(mockEvent.getCompanyId()).thenReturn(COMPANY_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
+        when(mockCompany.getOwnerIds()).thenReturn(List.of());
+        when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
+
+        assertThrows(ForbiddenException.class, () ->
+                notificationService.createNotificationsForEvent(VALID_TOKEN, EVENT_ID, MESSAGE));
+        verify(notificationRepo, never()).save(any());
+    }
+
+    @Test
+    void GivenUnknownEvent_WhenNotifyEvent_ThenThrowNotFound() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(eventRepo.findById(EVENT_ID)).thenReturn(null);
+
+        assertThrows(NotFoundException.class, () ->
+                notificationService.createNotificationsForEvent(VALID_TOKEN, EVENT_ID, MESSAGE));
+        verify(notificationRepo, never()).save(any());
+    }
+
+    @Test
+    void GivenInvalidToken_WhenNotifyEvent_ThenThrow() {
+        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+
+        assertThrows(UnauthorizedException.class, () ->
+                notificationService.createNotificationsForEvent(INVALID_TOKEN, EVENT_ID, MESSAGE));
+    }
+
+    // ── createNotificationsForProduction ────────────────────────────────────
+
+    @Test
+    void GivenOwnerCaller_WhenNotifyProduction_ThenReturnDTOs() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
+        when(mockCompany.getOwnerIds()).thenReturn(List.of(USER_ID));
+        when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
+
+        List<NotificationDTO> result = notificationService.createNotificationsForProduction(VALID_TOKEN, COMPANY_ID, MESSAGE);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void GivenNonOwnerCaller_WhenNotifyProduction_ThenThrowForbidden() {
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
+        when(mockCompany.getOwnerIds()).thenReturn(List.of());
+        when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
+
+        assertThrows(ForbiddenException.class, () ->
+                notificationService.createNotificationsForProduction(VALID_TOKEN, COMPANY_ID, MESSAGE));
+        verify(notificationRepo, never()).save(any());
+    }
+
+    @Test
+    void GivenInvalidToken_WhenNotifyProduction_ThenThrow() {
+        when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
+
+        assertThrows(UnauthorizedException.class, () ->
+                notificationService.createNotificationsForProduction(INVALID_TOKEN, COMPANY_ID, MESSAGE));
     }
 
     // ── getNotificationsForUser ─────────────────────────────────────────────
@@ -160,7 +270,7 @@ class NotificationServiceTest {
     // ── markAsRead ──────────────────────────────────────────────────────────
 
     @Test
-    void GivenOwnerToken_WhenMarkAsRead_ThenReturnTrueAndSetRead() {
+    void GivenUnreadNotification_WhenMarkAsRead_ThenReturnTrue() {
         Notification n = new Notification("NOTIF-1", USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
@@ -169,6 +279,20 @@ class NotificationServiceTest {
         boolean result = notificationService.markAsRead(VALID_TOKEN, "NOTIF-1");
 
         assertTrue(result);
+        assertTrue(n.isRead());
+    }
+
+    @Test
+    void GivenAlreadyReadNotification_WhenMarkAsRead_ThenReturnFalse() {
+        Notification n = new Notification("NOTIF-1", USER_ID, MESSAGE);
+        n.markAsRead();
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+
+        boolean result = notificationService.markAsRead(VALID_TOKEN, "NOTIF-1");
+
+        assertFalse(result);
         assertTrue(n.isRead());
     }
 

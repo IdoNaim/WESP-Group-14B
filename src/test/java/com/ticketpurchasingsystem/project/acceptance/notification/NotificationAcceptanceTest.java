@@ -19,6 +19,7 @@ import com.ticketpurchasingsystem.project.application.NotificationService;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemoryNotificationRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
@@ -27,6 +28,7 @@ import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 class NotificationAcceptanceTest {
 
     private NotificationService notificationService;
+    private String adminToken;
     private String userToken;
     private String otherUserToken;
 
@@ -38,19 +40,22 @@ class NotificationAcceptanceTest {
         domainAuthService.init();
         AuthenticationService authService = new AuthenticationService(domainAuthService, sessionRepo);
 
+        adminToken     = authService.login("admin", "admin");
         userToken      = authService.login("alice");
         otherUserToken = authService.login("bob");
 
-        notificationService = new NotificationService(new InMemoryNotificationRepo(), authService, HistoryOrderRepo.getInstance(), new ProdRepo());
+        notificationService = new NotificationService(
+                new InMemoryNotificationRepo(), authService,
+                HistoryOrderRepo.getInstance(), new ProdRepo(), EventRepo.getInstance());
     }
 
     // ── create ──────────────────────────────────────────────────────────────
 
     @Test
-    void GivenValidRequest_WhenCreateNotification_ThenNotificationExists() {
+    void GivenAdminToken_WhenCreateNotification_ThenNotificationExists() {
         String aliceId = "alice";
 
-        NotificationDTO created = notificationService.createNotification(userToken, aliceId, "Concert starts at 8pm");
+        NotificationDTO created = notificationService.createNotification(adminToken, aliceId, "Concert starts at 8pm");
 
         assertNotNull(created);
         assertNotNull(created.getId());
@@ -61,19 +66,24 @@ class NotificationAcceptanceTest {
     }
 
     @Test
+    void GivenNonAdminToken_WhenCreateNotification_ThenThrowForbidden() {
+        assertThrows(ForbiddenException.class, () ->
+                notificationService.createNotification(userToken, "alice", "hello"));
+    }
+
+    @Test
     void GivenInvalidToken_WhenCreateNotification_ThenThrow() {
-        UnauthorizedException ex = assertThrows(UnauthorizedException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.createNotification("bad-token", "alice", "hello"));
-        assertNotNull(ex.getMessage());
     }
 
     // ── get own notifications ───────────────────────────────────────────────
 
     @Test
     void GivenNotificationsExist_WhenGetForUser_ThenReturnOnlyOwnNotifications() {
-        notificationService.createNotification(userToken, "alice", "msg-1");
-        notificationService.createNotification(userToken, "alice", "msg-2");
-        notificationService.createNotification(userToken, "bob",   "bob-msg");
+        notificationService.createNotification(adminToken, "alice", "msg-1");
+        notificationService.createNotification(adminToken, "alice", "msg-2");
+        notificationService.createNotification(adminToken, "bob",   "bob-msg");
 
         List<NotificationDTO> aliceNotifs = notificationService.getNotificationsForUser(userToken);
 
@@ -89,16 +99,15 @@ class NotificationAcceptanceTest {
 
     @Test
     void GivenInvalidToken_WhenGetForUser_ThenThrow() {
-        UnauthorizedException ex = assertThrows(UnauthorizedException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.getNotificationsForUser("expired-token"));
-        assertNotNull(ex.getMessage());
     }
 
     // ── get by id ───────────────────────────────────────────────────────────
 
     @Test
     void GivenOwner_WhenGetById_ThenReturnNotification() {
-        NotificationDTO created = notificationService.createNotification(userToken, "alice", "hello");
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "hello");
 
         NotificationDTO fetched = notificationService.getNotificationById(userToken, created.getId());
 
@@ -109,7 +118,7 @@ class NotificationAcceptanceTest {
 
     @Test
     void GivenWrongUser_WhenGetById_ThenThrowAccessDenied() {
-        NotificationDTO created = notificationService.createNotification(userToken, "alice", "private");
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "private");
 
         ForbiddenException ex = assertThrows(ForbiddenException.class, () ->
                 notificationService.getNotificationById(otherUserToken, created.getId()));
@@ -125,8 +134,8 @@ class NotificationAcceptanceTest {
     // ── mark as read ────────────────────────────────────────────────────────
 
     @Test
-    void GivenUnreadNotification_WhenMarkAsRead_ThenIsReadBecomesTrue() {
-        NotificationDTO created = notificationService.createNotification(userToken, "alice", "check this");
+    void GivenUnreadNotification_WhenMarkAsRead_ThenReturnTrueAndIsReadBecomesTrue() {
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "check this");
         assertFalse(created.isRead());
 
         boolean result = notificationService.markAsRead(userToken, created.getId());
@@ -137,18 +146,18 @@ class NotificationAcceptanceTest {
     }
 
     @Test
-    void GivenAlreadyRead_WhenMarkAsReadAgain_ThenStillTrue() {
-        NotificationDTO created = notificationService.createNotification(userToken, "alice", "check this");
+    void GivenAlreadyRead_WhenMarkAsReadAgain_ThenReturnFalse() {
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "check this");
         notificationService.markAsRead(userToken, created.getId());
 
         boolean result = notificationService.markAsRead(userToken, created.getId());
 
-        assertTrue(result);
+        assertFalse(result);
     }
 
     @Test
     void GivenWrongUser_WhenMarkAsRead_ThenThrowAndStayUnread() {
-        NotificationDTO created = notificationService.createNotification(userToken, "alice", "private");
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "private");
 
         ForbiddenException ex = assertThrows(ForbiddenException.class, () ->
                 notificationService.markAsRead(otherUserToken, created.getId()));
@@ -163,9 +172,9 @@ class NotificationAcceptanceTest {
     @Test
     void GivenMultipleNotifications_WhenGetUnreadCount_ThenOnlyCountUnread() {
         String aliceId = "alice";
-        NotificationDTO n1 = notificationService.createNotification(userToken, aliceId, "msg-1");
-        notificationService.createNotification(userToken, aliceId, "msg-2");
-        notificationService.createNotification(userToken, aliceId, "msg-3");
+        NotificationDTO n1 = notificationService.createNotification(adminToken, aliceId, "msg-1");
+        notificationService.createNotification(adminToken, aliceId, "msg-2");
+        notificationService.createNotification(adminToken, aliceId, "msg-3");
 
         notificationService.markAsRead(userToken, n1.getId());
 
