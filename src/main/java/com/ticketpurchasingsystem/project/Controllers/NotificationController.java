@@ -28,13 +28,20 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
+    private static String bearerToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return authHeader;
+    }
+
     // POST /api/notifications
     @PostMapping
     public ResponseEntity<?> createNotification(
             @RequestHeader("Authorization") String token,
             @RequestBody CreateNotificationRequestDTO body) {
         try {
-            NotificationDTO created = notificationService.createNotification(token, body.getTargetUserId(), body.getMessage());
+            NotificationDTO created = notificationService.createNotification(bearerToken(token), body.getTargetUserId(), body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -46,7 +53,7 @@ public class NotificationController {
     public ResponseEntity<?> getNotifications(
             @RequestHeader("Authorization") String token) {
         try {
-            List<NotificationDTO> notifications = notificationService.getNotificationsForUser(token);
+            List<NotificationDTO> notifications = notificationService.getNotificationsForUser(bearerToken(token));
             return ResponseEntity.ok(notifications);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
@@ -58,7 +65,7 @@ public class NotificationController {
     public ResponseEntity<?> getUnreadCount(
             @RequestHeader("Authorization") String token) {
         try {
-            long count = notificationService.getUnreadCount(token);
+            long count = notificationService.getUnreadCount(bearerToken(token));
             return ResponseEntity.ok(count);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
@@ -71,7 +78,7 @@ public class NotificationController {
             @RequestHeader("Authorization") String token,
             @PathVariable String id) {
         try {
-            NotificationDTO notification = notificationService.getNotificationById(token, id);
+            NotificationDTO notification = notificationService.getNotificationById(bearerToken(token), id);
             return ResponseEntity.ok(notification);
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage();
@@ -89,7 +96,7 @@ public class NotificationController {
             @PathVariable String eventId,
             @RequestBody BroadcastNotificationRequestDTO body) {
         try {
-            List<NotificationDTO> created = notificationService.createNotificationsForEvent(token, eventId, body.getMessage());
+            List<NotificationDTO> created = notificationService.createNotificationsForEvent(bearerToken(token), eventId, body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -103,7 +110,7 @@ public class NotificationController {
             @PathVariable int companyId,
             @RequestBody BroadcastNotificationRequestDTO body) {
         try {
-            List<NotificationDTO> created = notificationService.createNotificationsForProduction(token, companyId, body.getMessage());
+            List<NotificationDTO> created = notificationService.createNotificationsForProduction(bearerToken(token), companyId, body.getMessage());
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -116,7 +123,7 @@ public class NotificationController {
             @RequestHeader("Authorization") String token,
             @PathVariable String id) {
         try {
-            notificationService.markAsRead(token, id);
+            notificationService.markAsRead(bearerToken(token), id);
             return ResponseEntity.ok("Notification marked as read");
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage();

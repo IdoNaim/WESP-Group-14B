@@ -15,6 +15,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Component
 public class NotificationEventListener {
@@ -22,6 +23,7 @@ public class NotificationEventListener {
     private final INotificationService notificationService;
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
+    private final loggerDef logger = loggerDef.getInstance();
 
     public NotificationEventListener(INotificationService notificationService,
                                      AuthenticationService authenticationService,
@@ -97,7 +99,9 @@ public class NotificationEventListener {
             if (authenticationService.validate(sessionToken)) {
                 return authenticationService.getUser(sessionToken);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.error("Failed to resolve userId for session token: " + e.getMessage());
+        }
         return null;
     }
 }
