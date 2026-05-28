@@ -69,7 +69,6 @@ public class EventServiceTest {
         when(policyDTO.maxTickets()).thenReturn(10);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
 
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
@@ -88,7 +87,6 @@ public class EventServiceTest {
         when(policyDTO.maxTickets()).thenReturn(5);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
 
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
@@ -106,7 +104,6 @@ public class EventServiceTest {
         when(policyDTO.maxTickets()).thenReturn(10);
         when(policyDTO.minAge()).thenReturn(65); // Invalid condition
         when(policyDTO.maxAge()).thenReturn(18);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
 
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
@@ -124,7 +121,6 @@ public class EventServiceTest {
         when(policyDTO.maxTickets()).thenReturn(10);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
-        when(policyDTO.emnptySeatLeft()).thenReturn(false);
 
         doThrow(new RuntimeException()).when(mockRepo).save(any());
 

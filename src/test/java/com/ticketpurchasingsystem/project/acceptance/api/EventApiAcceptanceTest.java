@@ -11,7 +11,6 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -245,14 +244,11 @@ class EventApiAcceptanceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)));
 
-        // FIXED: Added VALID_AUTH as the first parameter
         return eventService.searchEventsByCompany(VALID_AUTH, companyId).stream()
                 .filter(e -> e.eventName().equals(name))
                 .findFirst()
                 .map(e -> {
-                    // get the id of the event from repository
                     for (int id = 1; id <= 100; id++) {
-                        // FIXED: Added VALID_AUTH as the first parameter
                         var found = eventService.searchEvent(VALID_AUTH, String.valueOf(id));
                         if (found != null && name.equals(found.eventName()) && companyId == found.companyId()) {
                             return String.valueOf(id);
