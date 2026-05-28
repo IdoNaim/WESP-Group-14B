@@ -13,7 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.ForbiddenException;
+import com.ticketpurchasingsystem.project.application.NotFoundException;
 import com.ticketpurchasingsystem.project.application.NotificationService;
+import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
@@ -59,7 +62,7 @@ class NotificationAcceptanceTest {
 
     @Test
     void GivenInvalidToken_WhenCreateNotification_ThenThrow() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        UnauthorizedException ex = assertThrows(UnauthorizedException.class, () ->
                 notificationService.createNotification("bad-token", "alice", "hello"));
         assertNotNull(ex.getMessage());
     }
@@ -86,7 +89,7 @@ class NotificationAcceptanceTest {
 
     @Test
     void GivenInvalidToken_WhenGetForUser_ThenThrow() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        UnauthorizedException ex = assertThrows(UnauthorizedException.class, () ->
                 notificationService.getNotificationsForUser("expired-token"));
         assertNotNull(ex.getMessage());
     }
@@ -108,16 +111,15 @@ class NotificationAcceptanceTest {
     void GivenWrongUser_WhenGetById_ThenThrowAccessDenied() {
         NotificationDTO created = notificationService.createNotification(userToken, "alice", "private");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () ->
                 notificationService.getNotificationById(otherUserToken, created.getId()));
         assertTrue(ex.getMessage().contains("Access denied"));
     }
 
     @Test
     void GivenUnknownId_WhenGetById_ThenThrow() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(NotFoundException.class, () ->
                 notificationService.getNotificationById(userToken, "NOTIF-DOES-NOT-EXIST"));
-        assertNotNull(ex.getMessage());
     }
 
     // ── mark as read ────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ class NotificationAcceptanceTest {
     void GivenWrongUser_WhenMarkAsRead_ThenThrowAndStayUnread() {
         NotificationDTO created = notificationService.createNotification(userToken, "alice", "private");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () ->
                 notificationService.markAsRead(otherUserToken, created.getId()));
         assertTrue(ex.getMessage().contains("Access denied"));
 
@@ -178,8 +180,7 @@ class NotificationAcceptanceTest {
 
     @Test
     void GivenInvalidToken_WhenGetUnreadCount_ThenThrow() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 notificationService.getUnreadCount("bad-token"));
-        assertNotNull(ex.getMessage());
     }
 }

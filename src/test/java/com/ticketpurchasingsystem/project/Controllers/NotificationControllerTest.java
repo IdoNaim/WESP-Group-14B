@@ -1,6 +1,7 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -219,7 +220,7 @@ class NotificationControllerTest {
 
     @Test
     void GivenInvalidToken_WhenNotifyProduction_ThenReturn401() throws Exception {
-        when(notificationService.createNotificationsForProduction(any(), any(), any()))
+        when(notificationService.createNotificationsForProduction(any(), anyInt(), any()))
                 .thenThrow(new UnauthorizedException("Invalid session token"));
 
         mockMvc.perform(post("/api/notifications/production/42")
