@@ -8,6 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,6 +113,18 @@ public class UserHandlerTests {
     }
 
     @Test
+    void GivenMemberUser_WhenHandleUserExit_ThenSetterCallsInvoked() {
+        UserInfo user = spy(buildMemberUser());
+        user.setSessionTokenStr("member-token");
+        user.setLoggedIn(true);
+
+        handler.handleUserExit(user);
+
+        verify(user).setSessionTokenStr(null);
+        verify(user).setLoggedIn(false);
+    }
+
+    @Test
     void GivenGuestUser_WhenHandleUserExit_ThenNoChanges() {
         UserInfo guest = buildGuestUser();
         guest.setLoggedIn(true);
@@ -122,6 +138,18 @@ public class UserHandlerTests {
     }
 
     @Test
+    void GivenGuestUser_WhenHandleUserExit_ThenNoSetterCalls() {
+        UserInfo guest = spy(buildGuestUser());
+        guest.setLoggedIn(true);
+        guest.setSessionTokenStr("guest-token");
+
+        handler.handleUserExit(guest);
+
+        verify(guest, never()).setSessionTokenStr(null);
+        verify(guest, never()).setLoggedIn(false);
+    }
+
+    @Test
     void GivenValidCredentials_WhenLoginUser_ThenLoginSucceeds() {
         UserInfo user = buildMemberUser();
 
@@ -129,6 +157,16 @@ public class UserHandlerTests {
 
         assertTrue(user.isLoggedIn());
         assertEquals("new-token", user.getSessionTokenStr());
+    }
+
+    @Test
+    void GivenValidCredentials_WhenLoginUser_ThenSetterCallsInvoked() {
+        UserInfo user = spy(buildMemberUser());
+
+        handler.loginUser(user, PASSWORD, "new-token");
+
+        verify(user).setSessionTokenStr("new-token");
+        verify(user).setLoggedIn(true);
     }
 
     @Test
@@ -167,6 +205,18 @@ public class UserHandlerTests {
 
         assertFalse(user.isLoggedIn());
         assertNull(user.getSessionTokenStr());
+    }
+
+    @Test
+    void GivenLoggedInUser_WhenLogoutUser_ThenSetterCallsInvoked() {
+        UserInfo user = spy(buildMemberUser());
+        user.setLoggedIn(true);
+        user.setSessionTokenStr("token");
+
+        handler.logoutUser(user);
+
+        verify(user).setLoggedIn(false);
+        verify(user).setSessionTokenStr(null);
     }
 
     @Test
@@ -257,10 +307,22 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditUsername_ThenNameUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editUsername(user, USER_ID, USERNAME, "NewName", TOKEN);
 
         assertEquals("NewName", user.getName());
+    }
+
+    @Test
+    void GivenValidInput_WhenEditUsername_ThenSetterCalled() {
+        UserInfo user = spy(buildMemberUser());
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        handler.editUsername(user, USER_ID, USERNAME, "NewName", TOKEN);
+
+        verify(user).setName("NewName");
     }
 
     @Test
@@ -277,11 +339,23 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditPassword_ThenPasswordUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
 
         assertTrue(PasswordEncoderUtil.matches("new-pass", user.getPassword()));
         assertFalse(PasswordEncoderUtil.matches(PASSWORD, user.getPassword()));
+    }
+
+    @Test
+    void GivenValidInput_WhenEditPassword_ThenSetterCalled() {
+        UserInfo user = spy(buildMemberUser());
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
+
+        verify(user).setPassword(anyString());
     }
 
     @Test
@@ -308,6 +382,7 @@ public class UserHandlerTests {
     void GivenValidInput_WhenEditEmail_ThenEmailUpdated() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         handler.editEmail(user, USER_ID, EMAIL, "new@mail.com", TOKEN);
 
@@ -315,9 +390,20 @@ public class UserHandlerTests {
     }
 
     @Test
+    void GivenValidInput_WhenEditEmail_ThenSetterCalled() {
+        UserInfo user = spy(buildMemberUser());
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+        handler.editEmail(user, USER_ID, EMAIL, "new@mail.com", TOKEN);
+
+        verify(user).setEmail("new@mail.com");
+    }
+
+    @Test
     void GivenInvalidNewEmail_WhenEditEmail_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
             handler.editEmail(user, USER_ID, EMAIL, "bad-email", TOKEN)
@@ -328,6 +414,7 @@ public class UserHandlerTests {
     void GivenWrongOldEmail_WhenEditEmail_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
             handler.editEmail(user, USER_ID, "wrong@mail.com", "new@mail.com", TOKEN)
@@ -343,6 +430,17 @@ public class UserHandlerTests {
         handler.setUserGroupDiscount(user, USER_ID, UserGroupDiscount.SENIOR, TOKEN);
 
         assertEquals(UserGroupDiscount.SENIOR, user.getUserGroupDiscount());
+    }
+
+    @Test
+    void GivenLoggedInUser_WhenSetUserGroupDiscount_ThenSetterCalled() {
+        UserInfo user = spy(buildMemberUser());
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        handler.setUserGroupDiscount(user, USER_ID, UserGroupDiscount.SENIOR, TOKEN);
+
+        verify(user).setUserGroupDiscount(UserGroupDiscount.SENIOR);
     }
 
     @Test
@@ -362,7 +460,7 @@ public class UserHandlerTests {
         user.setSessionTokenStr(TOKEN);
         user.setLoggedIn(false);
 
-        assertThrows(IllegalStateException.class, () ->
+        assertThrows(RuntimeException.class, () ->
             handler.setUserGroupDiscount(user, USER_ID, UserGroupDiscount.SENIOR, TOKEN)
         );
     }
@@ -370,6 +468,7 @@ public class UserHandlerTests {
     @Test
     void GivenGuestUser_WhenAddProductionRole_ThenProductionInitialized() {
         UserInfo guest = buildGuestUser();
+        guest.setLoggedIn(true);
 
         handler.addProductionRole(guest, 10, UserProduction.RoleInProduction.MANAGER);
 
@@ -385,6 +484,7 @@ public class UserHandlerTests {
     @Test
     void GivenNonGuestUser_WhenValidateGuest_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () -> handler.validateGuest(user));
     }
@@ -392,6 +492,7 @@ public class UserHandlerTests {
     @Test
     void GivenGuestUser_WhenValidateGuest_ThenNoException() {
         UserInfo guest = buildGuestUser();
+        guest.setLoggedIn(true);
 
         assertDoesNotThrow(() -> handler.validateGuest(guest));
     }

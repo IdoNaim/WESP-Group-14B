@@ -121,8 +121,8 @@ public class AuthController {
         String token = extractToken(authHeader);
         String userId = body.get("userId");
         try {
-            userService.logoutUser(userId, token);
-            return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
+            String newGuestToken = userService.logoutUser(userId, token);
+            return ResponseEntity.ok(Map.of("message", "Logged out successfully.", "token", newGuestToken));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));

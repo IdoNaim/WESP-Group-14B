@@ -31,8 +31,7 @@ public class UserHandler {
             throw new RuntimeException("userInfo cannot be null.");
         }
         if (!userInfo.isGuest()){
-            userInfo.setSessionTokenStr(null);
-            userInfo.setLoggedIn(false);
+            logoutUser(userInfo);
         }
     }
 
@@ -65,15 +64,14 @@ public class UserHandler {
     }
 
     public void validateUserEditingHisAccount(UserInfo userInfo, String userId, String sessionTokenStr) {
-        if (userInfo == null) {
-            throw new RuntimeException("User not found.");
-        }
+        validateUserFound(userInfo);
         if (userInfo.getSessionTokenStr() == null || !userInfo.getSessionTokenStr().equals(sessionTokenStr) || !userInfo.getId().equals(userId)) {
             throw new RuntimeException("Users can only modify their own accounts.");
         }
     }
 
     public void editUsername(UserInfo userInfo, String userId, String oldUsername, String newUsername, String sessionTokenStr) {
+        validateUserLoggedIn(userInfo);
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
         if (!userInfo.getName().equals(oldUsername)) {
             throw new RuntimeException("Old username does not match current username.");
@@ -82,6 +80,7 @@ public class UserHandler {
     }
 
     public void editPassword(UserInfo userInfo, String userId, String oldPassword, String newPassword, String sessionTokenStr) {
+        validateUserLoggedIn(userInfo);
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
         validateNewPassword(newPassword);
         if (!PasswordEncoderUtil.matches(oldPassword, userInfo.getPassword())) {
@@ -91,6 +90,7 @@ public class UserHandler {
     }
 
     public void editEmail(UserInfo userInfo, String userId, String oldEmail, String newEmail, String sessionTokenStr) {
+        validateUserLoggedIn(userInfo);
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
         validateEmailFormat(newEmail);
         if (!userInfo.getEmail().equals(oldEmail)) {
@@ -100,11 +100,14 @@ public class UserHandler {
     }
 
     public void setUserGroupDiscount(UserInfo userInfo, String userId, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
+        validateUserLoggedIn(userInfo);
         validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
         userInfo.setUserGroupDiscount(userGroupDiscount);
     }
 
     public void addProductionRole(UserInfo userInfo, Integer companyId, UserProduction.RoleInProduction role) {
+        validateUserLoggedIn(userInfo);
+        validateUserFound(userInfo);
         if (userInfo.getUserProduction() == null) {
             userInfo.setUserProduction(new UserProduction());
         }
@@ -146,6 +149,12 @@ public class UserHandler {
     private void validateNewPassword(String password) {
         if (password == null || password.isEmpty()) {
             throw new RuntimeException("Password cannot be empty.");
+        }
+    }
+
+    public void validateUserLoggedIn(UserInfo userInfo) {
+        if (!userInfo.isLoggedIn()) {
+            throw new RuntimeException("User must be logged in to perform this action.");
         }
     }
 }
