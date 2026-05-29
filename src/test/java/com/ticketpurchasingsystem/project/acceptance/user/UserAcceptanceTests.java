@@ -1,9 +1,12 @@
 package com.ticketpurchasingsystem.project.acceptance.user;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,18 +78,46 @@ class UserAcceptanceTests {
     private String registerAndLogin() {
         String guestToken = enterAsGuest();
         userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, guestToken);
-        String loginGuestToken = enterAsGuest();
-        return userService.loginUser(USER_ID, USER_PASS, loginGuestToken);
+        return userService.loginUser(USER_ID, USER_PASS, guestToken);
+    }
+
+    // ─── tokenValidation ──────────────────────────────────────────────────────
+    @Test
+    void GivenValidToken_WhenEveryMethodCalled_ThenNotThrowsException() {
+        String token = enterAsGuest();
+        assertDoesNotThrow(() -> userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, token));
+        String sessionToken = userService.loginUser(USER_ID, USER_PASS, token);
+        assertDoesNotThrow(() -> userService.editEmail(USER_ID, USER_EMAIL, "newemail@test.com", sessionToken));
+        assertDoesNotThrow(() -> userService.editPassword(USER_ID, USER_PASS, "newPass", sessionToken));
+        assertDoesNotThrow(() -> userService.editUsername(USER_ID, USER_NAME, "NewName", sessionToken));
+        assertDoesNotThrow(() -> userService.setUserGroupDiscount(USER_ID, UserGroupDiscount.STUDENT, sessionToken));
+        String newGuestToken = userService.logoutUser(USER_ID, sessionToken);
+        assertDoesNotThrow(() -> userService.Exit(newGuestToken));
+    }
+
+    @Test
+    void GivenInvalidToken_WhenEveryMethodCalled_ThenReturnsFalse() {
+        assertThrows(RuntimeException.class, () -> userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.loginUser(USER_ID, USER_PASS, "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.editEmail(USER_ID, USER_EMAIL, "newemail@test.com", "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.editPassword(USER_ID, USER_PASS, "newPass", "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.editUsername(USER_ID, USER_NAME, "NewName", "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.setUserGroupDiscount(USER_ID, UserGroupDiscount.STUDENT, "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.logoutUser(USER_ID, "invalid-token"));
+        assertThrows(RuntimeException.class, () -> userService.Exit("invalid-token"));
     }
 
     // ─── guestEntry ──────────────────────────────────────────────────────────
 
     @Test
     void GivenSystemIsRunning_WhenGuestEntry_ThenAGuestUserExistsInSystem() {
-        enterAsGuest();
+        String guestToken = enterAsGuest();
 
-        boolean guestExists = userRepo.getAllUsers().stream().anyMatch(UserInfo::isGuest);
-        assertTrue(guestExists);
+        String userId = authService.getUser(guestToken);
+        UserInfo guestInfo = userRepo.findByID(userId);
+        assertNotNull(guestInfo);
+        assertTrue(guestInfo.isGuest());
+        assertEquals(guestToken, guestInfo.getSessionTokenStr());
     }
 
     // ─── registerUser ────────────────────────────────────────────────────────
@@ -98,36 +129,45 @@ class UserAcceptanceTests {
         userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, token);
 
         UserDTO user = userService.getUser(USER_ID);
+        assertEquals(USER_ID, user.getUserId());
         assertEquals(USER_NAME, user.getUsername());
         assertEquals(USER_EMAIL, user.getEmail());
     }
 
     @Test
     void GivenExistingUserId_WhenRegisterUser_ThenThrowsException() {
+        int initialUserCount = userRepo.getAllUsers().size();
         String token = enterAsGuest();
+        initialUserCount += 1;
         userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, token);
+        initialUserCount += 1;
+        assertEquals(initialUserCount, userRepo.getAllUsers().size());
 
         String anotherToken = enterAsGuest();
+        initialUserCount += 1;
         assertThrows(RuntimeException.class, () ->
                 userService.registerUser(USER_ID, "Other", USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, anotherToken));
+        initialUserCount += 1;
+        assertNotEquals(initialUserCount, userRepo.getAllUsers().size());
     }
 
     @Test
     void GivenInvalidSession_WhenRegisterUser_ThenThrowsException() {
+        int initialUserCount = userRepo.getAllUsers().size();
         assertThrows(RuntimeException.class, () ->
                 userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, "bad-token"));
-    }
+        assertEquals(initialUserCount, userRepo.getAllUsers().size());
+    }   
 
     // ─── loginUser ───────────────────────────────────────────────────────────
 
     @Test
     void GivenRegisteredUser_WhenLogin_ThenReturnsValidSessionToken() {
-        String guestToken = enterAsGuest();
-        userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, guestToken);
+        int userCountBefore = userRepo.getAllUsers().size();
+        String sessionToken = registerAndLogin(); 
+        int userCountAfter = userRepo.getAllUsers().size();
 
-        String loginToken = enterAsGuest();
-        String sessionToken = userService.loginUser(USER_ID, USER_PASS, loginToken);
-
+        assertEquals(userCountBefore + 1 , userCountAfter);
         assertNotNull(sessionToken);
         assertFalse(sessionToken.isEmpty());
         assertTrue(authService.validate(sessionToken));
@@ -138,42 +178,72 @@ class UserAcceptanceTests {
         String guestToken = enterAsGuest();
         userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, guestToken);
 
-        String loginToken = enterAsGuest();
+        int userCountBeforeLogin = userRepo.getAllUsers().size();
         assertThrows(RuntimeException.class, () ->
-                userService.loginUser(USER_ID, "wrong-password", loginToken));
+                userService.loginUser(USER_ID, "wrong-password", guestToken));
+        int userCountAfterLogin = userRepo.getAllUsers().size();
+        assertEquals(userCountBeforeLogin, userCountAfterLogin); // failed login should not change user count
     }
+
+    @Test
+    void GivenUserId_WhenLogin_ThenThrowsException() {
+        String guestToken = enterAsGuest();
+        userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, guestToken);
+
+        int userCountBeforeLogin = userRepo.getAllUsers().size();
+        assertThrows(RuntimeException.class, () ->
+                userService.loginUser("non-existent-user", USER_PASS, guestToken));
+        int userCountAfterLogin = userRepo.getAllUsers().size();
+        assertEquals(userCountBeforeLogin, userCountAfterLogin); // failed login should not change user count
+    }
+
+
 
     // ─── logoutUser ──────────────────────────────────────────────────────────
 
     @Test
     void GivenLoggedInUser_WhenLogout_ThenUserIsNoLongerLoggedIn() {
         String sessionToken = registerAndLogin();
-
-        userService.logoutUser(USER_ID, sessionToken);
+        int userCountBeforeLogout = userRepo.getAllUsers().size();
+        System.out.println("User count before logout: " + userCountBeforeLogout);
+        String newGuestToken = userService.logoutUser(USER_ID, sessionToken);
+        int userCountAfterLogout = userRepo.getAllUsers().size();
 
         assertFalse(userRepo.findByID(USER_ID).isLoggedIn());
+        assertNotNull(newGuestToken);
+        assertEquals(userCountBeforeLogout, userCountAfterLogout - 1); // for the new guest created during logout
     }
+
+    @Test
+    void GivenUnLoggedInUser_WhenLogout_ThenThrowsException() {
+        String guestToken = enterAsGuest();
+        userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, guestToken);
+        int userCountBefore = userRepo.getAllUsers().size();
+        assertThrows(RuntimeException.class, () ->
+                userService.logoutUser(USER_ID, "invalid-token"));
+        int userCountAfter = userRepo.getAllUsers().size();
+        assertEquals(userCountBefore, userCountAfter); // failed logout should not change user count
+    }
+
 
     // ─── Exit ────────────────────────────────────────────────────────────────
 
     @Test
     void GivenGuestSession_WhenExit_ThenGuestIsRemovedFromSystem() {
         String guestToken = enterAsGuest();
-        String guestId = userRepo.getAllUsers().stream()
-                .filter(UserInfo::isGuest).findFirst().orElseThrow().getId();
+        String guestId = authService.getUser(guestToken);
 
         userService.Exit(guestToken);
-
         assertNull(userRepo.findByID(guestId));
     }
 
     @Test
     void GivenLoggedInMember_WhenExit_ThenMemberIsStoredAsLoggedOut() {
         String sessionToken = registerAndLogin();
-
+        
         userService.Exit(sessionToken);
-
         assertFalse(userRepo.findByID(USER_ID).isLoggedIn());
+        assertNull(userRepo.findByID(USER_ID).getSessionTokenStr());
     }
 
     // ─── getAllUsers ──────────────────────────────────────────────────────────

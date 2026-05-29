@@ -63,6 +63,10 @@ public class AuthController {
 
         String token = extractToken(authHeader);
         try {
+            System.out.println("--- LOGIN ATTEMPT ---");
+            System.out.println("User ID: " + body.getUserId());
+            System.out.println("Password: " + body.getPassword());
+            System.out.println("Guest Token: " + token);
             UserGroupDiscount discount = body.getUserGroupDiscount() != null
                     ? body.getUserGroupDiscount()
                     : UserGroupDiscount.NONE;
@@ -78,6 +82,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("message", "User registered successfully."));
         } catch (Exception e) {
+            System.out.println("--- LOGIN FAILED ---");
+            e.printStackTrace();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -115,8 +121,8 @@ public class AuthController {
         String token = extractToken(authHeader);
         String userId = body.get("userId");
         try {
-            userService.logoutUser(userId, token);
-            return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
+            String newGuestToken = userService.logoutUser(userId, token);
+            return ResponseEntity.ok(Map.of("message", "Logged out successfully.", "token", newGuestToken));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));

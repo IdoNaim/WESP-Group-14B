@@ -1,20 +1,57 @@
 import { useState, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authApi } from '../../api/authApi'; // Make sure this path is correct
 
 export default function LoginPage() {
+    const navigate = useNavigate();
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const handleLoginSubmit = (event: FormEvent) => {
+    const handleLoginSubmit = async (event: FormEvent) => {
         event.preventDefault();
+        console.log('--- [UI START] Login Form Submitted ---');
+        console.log('[UI DATA] Attempting login with Email/ID:', email);
+
         setIsLoading(true);
-        setTimeout(() => {
+        setErrorMessage(null);
+
+        try {
+            // Step 1
+            console.log('[UI STEP 1] Requesting guest token for login flow...');
+            const guestResponse = await authApi.guestEntry();
+            const guestToken = guestResponse.token;
+            console.log('[UI STEP 1 RESULT] Guest token received:', guestToken);
+
+            // Step 2
+            console.log('[UI STEP 2] Submitting login payload to backend...');
+            const result = await authApi.login(guestToken, {
+                userId: email,
+                password: password
+            });
+            console.log('[UI STEP 2 RESULT] Login successful! Backend returned:', result);
+
+            // Step 3
+            console.log('[UI STEP 3] Saving tokens to localStorage and redirecting...');
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('userId', result.userId);
+
+            setEmail('');
+            setPassword('');
+
+            navigate('/dashboard');
+
+        } catch (error: any) {
+            console.error('[UI CATCH BLOCK] Login flow crashed:', error.message);
+            setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
+        } finally {
+            console.log('--- [UI END] Login Process Completed ---');
             setIsLoading(false);
-            console.log("Submitting login:", { email, password, rememberMe });
-        }, 1500);
+        }
     };
 
     return (
@@ -49,6 +86,13 @@ export default function LoginPage() {
                         <div className="absolute -right-[46px] -top-[11px] w-6 h-6 rounded-full bg-[#0b1326] shadow-inner"></div>
                     </div>
 
+                    {/* --- ERROR MESSAGE DISPLAY --- */}
+                    {errorMessage && (
+                        <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-600 text-[11px] font-bold text-center border border-red-200">
+                            {errorMessage}
+                        </div>
+                    )}
+
                     {/* Login Form */}
                     <form onSubmit={handleLoginSubmit} className="space-y-4">
 
@@ -59,12 +103,12 @@ export default function LoginPage() {
                             </label>
                             <div className="relative group">
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8d90a0] group-focus-within:text-[#2563eb] transition-colors">
-                                    alternate_email
+                                alternate_email
                                 </span>
                                 <input
                                     className="w-full bg-[#060e20]/5 border border-[#434655]/20 rounded-xl pl-10 pr-4 py-3 text-[#0b1326] placeholder-[#8d90a0] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 outline-none transition-all"
                                     placeholder="name@event.com"
-                                    type="email"
+                                    type="text"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -79,7 +123,7 @@ export default function LoginPage() {
                             </label>
                             <div className="relative group">
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8d90a0] group-focus-within:text-[#2563eb] transition-colors">
-                                    lock
+                                lock
                                 </span>
                                 <input
                                     className="w-full bg-[#060e20]/5 border border-[#434655]/20 rounded-xl pl-10 pr-10 py-3 text-[#0b1326] placeholder-[#8d90a0] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 outline-none transition-all"
@@ -94,9 +138,9 @@ export default function LoginPage() {
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
-                                    <span className="material-symbols-outlined text-[20px]">
-                                        {showPassword ? 'visibility_off' : 'visibility'}
-                                    </span>
+                                <span className="material-symbols-outlined text-[20px]">
+                                    {showPassword ? 'visibility_off' : 'visibility'}
+                                </span>
                                 </button>
                             </div>
                         </div>

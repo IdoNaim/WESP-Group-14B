@@ -80,9 +80,6 @@ public class EventService implements IEventService {
             purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
         }
 
-        // Preserve your original typo method name 'emnptySeatLeft()' from your DTO
-        purchasePolicy.addRule(new EmptySeatRule(purchasePolicyDTO.emnptySeatLeft()));
-
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
 
         Event event = new Event(
