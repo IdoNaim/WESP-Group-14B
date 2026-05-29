@@ -202,7 +202,7 @@ export default function AccountSettingsPage() {
     try {
       // 3. Step 1: If changing password, call the updated backend endpoint
       if (isChangingPassword) {
-        await authApi.changePassword(token, {
+        await authApi.editPassword(token, {
           currentPassword: currentPassword, 
           newPassword: newPassword
         });
@@ -242,7 +242,8 @@ export default function AccountSettingsPage() {
       // safe fallback redirection
     } finally {
       localStorage.removeItem('token');
-      window.location.reload();
+      navigate('/dashboard');
+      // window.location.reload();
     }
   };
   // const handlePasswordUpdate = async () =>

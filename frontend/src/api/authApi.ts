@@ -179,7 +179,7 @@ export const authApi = {
         return parseResponse(response);
     },
 
-    changePassword: async(token: string, data: PasswordUpdateRequestDTO) : Promise<{message : string}> => {
+    editPassword: async(token: string, data: PasswordUpdateRequestDTO) : Promise<{message : string}> => {
         const response = await fetch(`${BASE_URL}/editPassword`, {
             method: 'PUT',
             headers: getHeaders(token),
