@@ -1,0 +1,1 @@
+const BASE_URl = '/api/history-orders';
