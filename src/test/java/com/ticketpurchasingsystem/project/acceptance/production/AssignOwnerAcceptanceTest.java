@@ -3,7 +3,11 @@ package com.ticketpurchasingsystem.project.acceptance.production;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
@@ -135,5 +139,103 @@ class AssignOwnerAcceptanceTest {
 
         // Assert
         assertFalse(result);
+    }
+
+    // ─── Concurrency Tests ───────────────────────────────────────────────────
+
+    @Test
+    void GivenTwoRegisteredUsers_WhenConcurrentAssignOwner_ThenBothSucceedWithOptimisticRetry() throws Exception {
+        registeredUsers.add("itay");
+        registeredUsers.add("tomer");
+        String founderToken1 = authService.login(FOUNDER);
+        String founderToken2 = authService.login(FOUNDER);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                boolean result = productionService.assignOwner(founderToken1, companyId, "itay");
+                if (result) successCount.incrementAndGet();
+                else failureCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                boolean result = productionService.assignOwner(founderToken2, companyId, "tomer");
+                if (result) successCount.incrementAndGet();
+                else failureCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent assignOwner must complete without deadlock");
+
+        // Optimistic locking with retry ensures both eventually succeed
+        assertEquals(2, successCount.get(), "Both owner assignments must succeed via optimistic-locking retry");
+        Optional<com.ticketpurchasingsystem.project.domain.Production.ProductionCompany> company =
+                prodRepo.findByName("Events Co");
+        assertTrue(company.isPresent());
+        assertTrue(company.get().isOwner("itay"), "itay must be an owner");
+        assertTrue(company.get().isOwner("tomer"), "tomer must be an owner");
+    }
+
+    @Test
+    void GivenNonOwnerAndOwner_WhenConcurrentAssignOwner_ThenOnlyOwnerSucceeds() throws Exception {
+        registeredUsers.add("eden");
+        String founderToken = authService.login(FOUNDER);
+        String nonOwnerToken = authService.login("random-user");
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        // Thread 1: valid founder assigns "eden" — must succeed
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                boolean result = productionService.assignOwner(founderToken, companyId, "eden");
+                if (result) successCount.incrementAndGet();
+                else failureCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        // Thread 2: non-owner tries to assign "eden" — must fail
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                boolean result = productionService.assignOwner(nonOwnerToken, companyId, "eden");
+                if (result) successCount.incrementAndGet();
+                else failureCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent assignOwner must complete without deadlock");
+
+        assertEquals(1, successCount.get(), "Only the founder should successfully assign an owner");
+        assertEquals(1, failureCount.get(), "The non-owner attempt must fail");
     }
 }
