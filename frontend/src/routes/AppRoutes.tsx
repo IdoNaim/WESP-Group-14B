@@ -21,7 +21,7 @@ export default function AppRoutes() {
                 <Route path="/events" element={<EventsPage />} />
                 <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
-                <Route path="/home/" element={<DashboardPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/activeorder/" element={<ActiveOrderPage />} />
                 
             </Routes>
