@@ -325,11 +325,11 @@ export default function DashboardPage() {
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Settings gear — only for members */}
+          {/* Settings gear linked to account settings route */}
           {!isGuest && (
-            <button className="p-2 text-[#5c5f61] hover:text-[#3980f4] transition-colors">
+            <Link to="/accountSettings" className="p-2 text-[#5c5f61] hover:text-[#3980f4] transition-colors">
               <MaterialIcon name="settings" />
-            </button>
+            </Link>
           )}
 
           {/* User name + avatar  OR  guest login link */}
