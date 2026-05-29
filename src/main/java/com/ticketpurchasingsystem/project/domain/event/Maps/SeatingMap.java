@@ -1,26 +1,33 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 public class SeatingMap {
-    private HashMap<String, Bookable> PurchaseAreas;
+    private ConcurrentMap<String,AssignedSeat> seats;
+    private ConcurrentMap<String, StandingArea> standingAreas;
+    //private HashMap<String, Bookable> PurchaseAreas;
     private final AtomicLong areaIDGenerator = new AtomicLong(0);
 
-//add new seating area where holds all the bookable for seats
     public SeatingMap() {
-        this.PurchaseAreas = new HashMap<>();
+        this.seats = new ConcurrentHashMap<>();
+        this.standingAreas = new ConcurrentHashMap<>();
     }
+
     private String generateAreaID() {
         return "" + areaIDGenerator.getAndIncrement();
     }
-    //TODO: add name
+
     public boolean addStandingArea(int capacity, double priceForTicket){
         if(capacity <= 0 || priceForTicket < 0){
             return false;
         }
         String areaID = generateAreaID();
-        PurchaseAreas.put(areaID, new StandingArea(capacity, priceForTicket, areaID));
+        standingAreas.put(areaID, new StandingArea(capacity, priceForTicket, areaID));
         return true;
     }
 
@@ -33,32 +40,32 @@ public class SeatingMap {
             for(int j = 1; j <= seatsPerRow; j++){
                 AssignedSeat seat = new AssignedSeat(areaID, i, j, priceForTicket);
                 String seatID = seat.getId();
-                PurchaseAreas.put(seatID, seat);
+                seats.put(seatID, seat);
             }
         }
         return true;
     }
 
     public boolean bookStandingArea(String areaID, String orderId, int numberOfTickets){
-        if(!PurchaseAreas.containsKey(areaID)){
+        if(!standingAreas.containsKey(areaID)){
             return false;
         }
-        Bookable area = PurchaseAreas.get(areaID);
+        StandingArea area = standingAreas.get(areaID);
         return area.book(orderId, numberOfTickets);
     }
 
     public boolean bookAssignedSeats(List<String> seatIDs, String orderId){
         for(String seatID : seatIDs){
-            if(!PurchaseAreas.containsKey(seatID)){
+            if(!seats.containsKey(seatID)){
                 return false;
             }
-            Bookable seat = PurchaseAreas.get(seatID);
+            AssignedSeat seat = seats.get(seatID);
             if(!seat.book(orderId, 1)){
                 for(String bookedSeatID : seatIDs){
                     if(bookedSeatID.equals(seatID)){
                         break;
                     }
-                    Bookable bookedSeat = PurchaseAreas.get(bookedSeatID);
+                    AssignedSeat bookedSeat = seats.get(bookedSeatID);
                     bookedSeat.unbook(1);
                 }
                 throw new IllegalStateException("Failed to book all seats. Rolled back successfully booked seats.");
@@ -68,22 +75,20 @@ public class SeatingMap {
     }
 
     public boolean unbookStandingArea(String areaID, int numberOfTickets){
-        if(!PurchaseAreas.containsKey(areaID)){
+        if(!standingAreas.containsKey(areaID)){
             return false;
         }
-        Bookable area = PurchaseAreas.get(areaID);
+        StandingArea area = standingAreas.get(areaID);
         return area.unbook(numberOfTickets);
     }
 
-
-    //
     public boolean unbookAssignedSeats(List<String> seatIDs){
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
-            if(!PurchaseAreas.containsKey(seatID)){
+            if(!seats.containsKey(seatID)){
                 throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist");
             }
-            Bookable seat = PurchaseAreas.get(seatID);
+            AssignedSeat seat = seats.get(seatID);
             if(!seat.unbook(1)){
                 failedUnbookSeats.append(seatID).append(", ");
             }
@@ -95,40 +100,62 @@ public class SeatingMap {
     }
 
     public boolean removeArea(String areaID){
-        if(PurchaseAreas.containsKey(areaID)){
-            PurchaseAreas.remove(areaID);
+        if(standingAreas.containsKey(areaID)){
+            standingAreas.remove(areaID);
+            return true;
+        }
+        if(seats.containsKey(areaID)){
+            seats.remove(areaID);
             return true;
         }
         return false;
     }
+
     public boolean editPriceForTicket(String areaID, double newPrice){
-        if(newPrice < 0 || !PurchaseAreas.containsKey(areaID)){
+        if(newPrice < 0){
             return false;
         }
-        Bookable area = PurchaseAreas.get(areaID);
-        area.setPriceForTicket(newPrice);
-        return true;
+        if(standingAreas.containsKey(areaID)){
+            standingAreas.get(areaID).setPriceForTicket(newPrice);
+            return true;
+        }
+        if(seats.containsKey(areaID)){
+            seats.get(areaID).setPriceForTicket(newPrice);
+            return true;
+        }
+        return false;
     }
+
     public double getPriceForTicket(String areaID){
-        if(!PurchaseAreas.containsKey(areaID)){
-            return -1;
+        if(standingAreas.containsKey(areaID)){
+            return standingAreas.get(areaID).getPriceForTicket();
         }
-        Bookable area = PurchaseAreas.get(areaID);
-        return area.getPriceForTicket();
-    }
-    public Bookable getSeat(String seatID){
-        if(!PurchaseAreas.containsKey(seatID)){
-            return null;
+        if(seats.containsKey(areaID)){
+            return seats.get(areaID).getPriceForTicket();
         }
-        return PurchaseAreas.get(seatID);
+        return -1;
     }
 
-    public Bookable getArea(String areaID){
-        return PurchaseAreas.get(areaID);
+    public AssignedSeat getSeat(String seatID){
+        return seats.get(seatID);
     }
 
-    public HashMap<String, Bookable> getPurchaseAreas() {
-        return PurchaseAreas;
+    public StandingArea getArea(String areaID){
+        return standingAreas.get(areaID);
+    }
+
+    public List<String> getSeatIds(){
+        return new ArrayList<>(seats.keySet());
+    }
+
+    public List<String> getAreaIds(){
+        return new ArrayList<>(standingAreas.keySet());
+    }
+
+    public Map<String, Bookable> getPurchaseAreas(){
+        Map<String, Bookable> combined = new HashMap<>(seats);
+        combined.putAll(standingAreas);
+        return combined;
     }
 
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){

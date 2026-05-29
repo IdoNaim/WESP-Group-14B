@@ -71,9 +71,11 @@ public class UserService implements IUserService {
             }
             else {
                 loggerDef.getInstance().warn("Invalid session token provided for exit.");
+                throw new RuntimeException("Invalid session token: " + sessionTokenStr);
             }
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to handle exit: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
  
@@ -131,15 +133,15 @@ public class UserService implements IUserService {
         }
     }
 
-    public void logoutUser(String userId, String sessionToken) {
+    public String logoutUser(String userId, String sessionToken) {
         try {
             if (!authenticationService.validate(sessionToken)) {
                 throw new RuntimeException("Invalid session token.");
             }
-            // 
+
             UserInfo userInfo = userRepo.findByID(userId);
             userHandler.validateUserFound(userInfo);
-
+            userHandler.validateUserLoggedIn(userInfo);
             userHandler.logoutUser(userInfo);
             userRepo.store(userInfo);
             userPublisher.publishUserLoggedOut(userId, sessionToken);
@@ -150,6 +152,7 @@ public class UserService implements IUserService {
             userRepo.store(guest);
             userPublisher.publishGuestEntered(guest.getId(), newGuestSession);
             loggerDef.getInstance().info("User logged out successfully: " + userId);
+            return newGuestSession;
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to log out user: " + e.getMessage());
             throw new RuntimeException(e);
@@ -164,18 +167,14 @@ public class UserService implements IUserService {
 
     public UserDTO getUser(String userId) {
         UserInfo userInfo = userRepo.findByID(userId);
-        if (userInfo == null) {
-            throw new RuntimeException("User not found.");
-        }
+        userHandler.validateUserFound(userInfo);
         return userHandler.mapToDTO(userInfo);
     }
 
     @Override
     public UserInfo getUserInfo(String userId) {
         UserInfo userInfo = userRepo.findByID(userId);
-        if (userInfo == null) {
-            throw new RuntimeException("User not found.");
-        }
+        userHandler.validateUserFound(userInfo);
         return userInfo;
     }
 
@@ -186,7 +185,7 @@ public class UserService implements IUserService {
             }
             UserInfo userInfo = userRepo.findByID(userId);
             userHandler.validateUserEditingHisAccount(userInfo, userId, sessionTokenStr);
-            
+            userHandler.validateUserLoggedIn(userInfo);
             userHandler.logoutUser(userInfo);
             userRepo.delete(userId);
             // User deleted
@@ -260,7 +259,6 @@ public class UserService implements IUserService {
     public void assignProductionRole(String userId, Integer companyId, UserProduction.RoleInProduction role) {
         try {
             UserInfo userInfo = userRepo.findByID(userId);
-            if (userInfo == null) throw new RuntimeException("User not found.");
             userHandler.addProductionRole(userInfo, companyId, role);
             userRepo.store(userInfo);
             loggerDef.getInstance().info("Production role " + role + " assigned successfully to user: " + userId + " for company ID: " + companyId);
@@ -271,5 +269,4 @@ public class UserService implements IUserService {
     public boolean isUserRegistered(String userId){
         return userHandler.isUserRegistered(userRepo.findByID(userId));
     }
-
 }
