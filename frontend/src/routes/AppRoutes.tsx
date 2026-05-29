@@ -20,7 +20,7 @@ export default function AppRoutes() {
                 {/* Wildcard: Redirects any unknown paths straight to login */}
                 <Route path="/events" element={<EventsPage />} />
                 <Route path="/events/:eventId" element={<EventDetailsPage />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/activeorder/" element={<ActiveOrderPage />} />
                 
