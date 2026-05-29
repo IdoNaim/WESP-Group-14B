@@ -151,15 +151,24 @@ class AuthControllerTest {
         // logout
         // POST /api/identity/logout
 
+        // logout should return the session token for the new guest that established after logout for the users
+        // fetch the session token and validate that session token is retrived
         @Test
         void GivenLoggedInUser_WhenLogout_ThenReturn200WithMessage() throws Exception {
-                
+                 // logout should return the session token for the new guest that established after logout for the users
+                // fetch the session token and validate that session token is retrived
+                // do nothing is not good here because logout is returning a new guest session token and do nothing is for void 
+                when(userService.logoutUser(any(), any())).thenReturn("new-guest-token-456");
+                // validate that the new guest token is retrived and valid along with the 200 response
+
+
                 mockMvc.perform(post("/api/identity/logout")
                                 .header("Authorization", VALID_AUTH)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(Map.of("userId", "eden"))))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.message").value("Logged out successfully."));
+                                .andExpect(jsonPath("$.message").value("Logged out successfully."))
+                                .andExpect(jsonPath("$.token").value("new-guest-token-456"));
         }
 
         @Test
