@@ -207,6 +207,7 @@ public class AuthController {
     @GetMapping("/permissions")
     public ResponseEntity<Map<String, Object>> getPermissions(@RequestHeader("Authorization") String authHeader) {
         String token = extractToken(authHeader);
+        System.out.println("Received permissions request with token: " + token);
         try {
             if (!authenticationService.validate(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

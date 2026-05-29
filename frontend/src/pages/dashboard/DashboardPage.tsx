@@ -1,6 +1,7 @@
 // DashboardPage.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authApi, UserPermissionsDTO, UserProfileDTO } from '../../api/authApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,7 +10,7 @@ interface NavItem {
   icon: string;
   href: string;
   active?: boolean;
-  memberOnly?: boolean; // hidden in guest mode
+  memberOnly?: boolean;
 }
 
 interface QuickLinkCard {
@@ -17,14 +18,7 @@ interface QuickLinkCard {
   title: string;
   subtitle: string;
   href: string;
-  memberOnly?: boolean; // hidden in guest mode
-}
-
-interface Permissions {
-  userId: string;
-  state: string;
-  isAdmin: boolean;
-  productionRoles: Record<number, string>; // companyId -> role name
+  memberOnly?: boolean;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -32,11 +26,11 @@ interface Permissions {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home',          icon: 'home',                 href: '/home',   active: true },
   { label: 'Events',        icon: 'event',                href: '/events' },
-  { label: 'My Orders',     icon: 'shopping_cart',        href: '#' },
-  { label: 'Order History', icon: 'history',              href: '#',       memberOnly: true },
-  { label: 'Notifications', icon: 'notifications',        href: '#' },
-  { label: 'My Companies',  icon: 'business',             href: '#',       memberOnly: true },
-  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '#',       memberOnly: true },
+  { label: 'My Order',      icon: 'shopping_cart',        href: '/activeorder/' },
+  { label: 'Order History', icon: 'history',              href: '/orderhistory/',       memberOnly: true },
+  { label: 'Notifications', icon: 'notifications',        href: '/notifications',       memberOnly: true },
+  { label: 'My Companies',  icon: 'business',             href: '/companies',       memberOnly: true },
+  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '/admin',       memberOnly: true },
 ];
 
 const QUICK_LINKS: QuickLinkCard[] = [
@@ -50,33 +44,34 @@ const QUICK_LINKS: QuickLinkCard[] = [
     icon: 'shopping_bag',
     title: 'Active Order',
     subtitle: 'View status of your current pending transactions.',
-    href: '#',
+    href: '/activeorder/',
   },
   {
     icon: 'receipt_long',
     title: 'Order History',
     subtitle: 'Review past purchases and download invoices.',
-    href: '#',
+    href: '/orderhistory/',
     memberOnly: true,
   },
   {
     icon: 'notifications_active',
     title: 'Notifications',
     subtitle: 'Stay updated with real-time event alerts.',
-    href: '#',
+    href: '/notifications',
+    memberOnly: true,
   },
   {
     icon: 'monitoring',
     title: 'My Companies',
     subtitle: 'Manage your production companies and events.',
-    href: '#',
+    href: '/companies',
     memberOnly: true,
   },
   {
     icon: 'admin_panel_settings',
     title: 'Admin Panel',
     subtitle: 'Manage system settings and user permissions.',
-    href: '#',
+    href: '/admin',
     memberOnly: true,
   },
 ];
@@ -138,38 +133,47 @@ function QuickLinkCardComponent({ card }: { card: QuickLinkCard }) {
 
 export default function DashboardPage() {
   const searchRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const [permissions, setPermissions] = useState<Permissions | null>(null);
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/events?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch permissions + username on mount
+  // Fetch permissions + profile on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      // No token → guest mode
       setLoading(false);
       return;
     }
 
-    fetch('http://localhost:8080/api/identity/permissions', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
-      .then((data: Permissions) => {
-        setPermissions(data);
-        // userId is the username per the system's uniqueness constraint
-        setUsername(data.userId);
-      })
-      .catch(() => {
-        // Invalid/expired token → treat as guest
+    const loadUserData = async () => {
+      try {
+        // Run both calls in parallel
+        const [perms, profile] = await Promise.all([
+          authApi.getPermissions(token),
+          authApi.getCurrentUser(token),
+        ]);
+        setPermissions(perms);
+        setUsername(profile.name); // use the display name, not the userId
+      } catch (error: any) {
+        console.error('[Dashboard] Failed to load user data:', error.message);
+        // Invalid/expired token → guest mode
         setPermissions(null);
         setUsername(null);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
   }, []);
 
   const isGuest = !username;
@@ -183,8 +187,8 @@ export default function DashboardPage() {
   );
 
   const visibleQuickLinks = QUICK_LINKS
-    .filter(card => !card.memberOnly || !isGuest)
-    .filter(card => card.title !== 'Admin Panel' || (permissions?.isAdmin ?? false));
+    // .filter(card => !card.memberOnly || !isGuest)
+    // .filter(card => card.title !== 'Admin Panel' || (permissions?.isAdmin ?? false));
 
   // Initials for avatar
   const initials = username
@@ -294,7 +298,10 @@ export default function DashboardPage() {
             <input
               ref={searchRef}
               type="text"
-              placeholder="Search events, orders, or tools..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              placeholder="Search events..."
               className="w-full bg-[#eff4ff] border-none rounded-lg pl-10 pr-16 py-2 focus:ring-2 focus:ring-[#3980f4] outline-none transition-all text-sm"
             />
             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#76777d] bg-[#e5eeff] px-1.5 py-0.5 rounded border border-[#c6c6cd]">
