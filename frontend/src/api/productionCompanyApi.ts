@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8080/api/production';
+const BASE_URL = '/api/production';
 
 function getToken(): string {
     return localStorage.getItem('token') || '';
