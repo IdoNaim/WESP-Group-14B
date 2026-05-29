@@ -13,7 +13,7 @@ public class ActiveOrderItem {
     private List<String> seatIds;
     private HashMap<String, Integer> StandingAreaQuantities;
     private boolean processing;
-    
+
 
     public final static int EXPIRATION_TIME_MINUTES = 15;
 
@@ -28,6 +28,15 @@ public class ActiveOrderItem {
         this.processing = false;
     }
     public ActiveOrderItem(ActiveOrderItem other) {
+        this.orderId = other.getOrderId();
+        this.userId = other.getUserId();
+        this.eventId = other.getEventId();
+        this.createdAt = new Timestamp(other.getCreatedAt().getTime());
+        this.seatIds = new ArrayList<>(other.getSeatIds());
+        this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
+        this.processing = false;
+    }
+    public ActiveOrderItem(ActiveOrderDTO other){
         this.orderId = other.getOrderId();
         this.userId = other.getUserId();
         this.eventId = other.getEventId();
@@ -77,6 +86,11 @@ public class ActiveOrderItem {
             this.seatIds.add(id);
         }
     }
+    public void removeSeatIds(List<String> seatIds) {
+        for (String id : seatIds) {
+            this.seatIds.remove(id);
+        }
+    }
     public void addStandingAreaQuantity(String areaId, int quantity) {
         if(StandingAreaQuantities.containsKey(areaId)){
             int currQuantity = StandingAreaQuantities.get(areaId);
@@ -106,6 +120,8 @@ public class ActiveOrderItem {
         }
         this.seatIds = new ArrayList<>(order.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(order.getStandingAreaQuantities());
+        //added this for tests:
+        this.createdAt = new Timestamp(order.getCreatedAt().getTime());
     }
 
     public void setSeatIds(List<String> seatIds) {
