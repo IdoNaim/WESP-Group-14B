@@ -27,10 +27,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Home',          icon: 'home',                 href: '/home',   active: true },
   { label: 'Events',        icon: 'event',                href: '/events' },
   { label: 'My Order',      icon: 'shopping_cart',        href: '/activeorder/' },
-  { label: 'Order History', icon: 'history',              href: '/orderhistory/',       memberOnly: true },
-  { label: 'Notifications', icon: 'notifications',        href: '/notifications',       memberOnly: true },
-  { label: 'My Companies',  icon: 'business',             href: '/companies',       memberOnly: true },
-  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '/admin',       memberOnly: true },
+  { label: 'Order History', icon: 'history',              href: '#',       memberOnly: true },
+  { label: 'Notifications', icon: 'notifications',        href: '#',       memberOnly: true },
+  { label: 'My Companies',  icon: 'business',             href: '#',       memberOnly: true },
+  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '#',       memberOnly: true },
 ];
 
 const QUICK_LINKS: QuickLinkCard[] = [
@@ -50,28 +50,28 @@ const QUICK_LINKS: QuickLinkCard[] = [
     icon: 'receipt_long',
     title: 'Order History',
     subtitle: 'Review past purchases and download invoices.',
-    href: '/orderhistory/',
+    href: '#',
     memberOnly: true,
   },
   {
     icon: 'notifications_active',
     title: 'Notifications',
     subtitle: 'Stay updated with real-time event alerts.',
-    href: '/notifications',
+    href: '#',
     memberOnly: true,
   },
   {
     icon: 'monitoring',
     title: 'My Companies',
     subtitle: 'Manage your production companies and events.',
-    href: '/companies',
+    href: '#',
     memberOnly: true,
   },
   {
     icon: 'admin_panel_settings',
     title: 'Admin Panel',
     subtitle: 'Manage system settings and user permissions.',
-    href: '/admin',
+    href: '#',
     memberOnly: true,
   },
 ];
@@ -178,6 +178,19 @@ export default function DashboardPage() {
 
   const isGuest = !username;
 
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !permissions?.userId) return;
+    try {
+      await authApi.logout(token, permissions.userId);
+    } catch (e) {
+      // even if the call fails, clear local state and redirect
+    } finally {
+      localStorage.removeItem('token');
+      window.location.reload();    
+    }
+  };
+
   // Filter nav items and quick links based on guest/member mode
   const visibleNavItems = NAV_ITEMS.filter(item => !item.memberOnly || !isGuest);
   
@@ -187,8 +200,8 @@ export default function DashboardPage() {
   );
 
   const visibleQuickLinks = QUICK_LINKS
-    // .filter(card => !card.memberOnly || !isGuest)
-    // .filter(card => card.title !== 'Admin Panel' || (permissions?.isAdmin ?? false));
+    .filter(card => !card.memberOnly || !isGuest)
+    .filter(card => card.title !== 'Admin Panel' || (permissions?.isAdmin ?? false));
 
   // Initials for avatar
   const initials = username
@@ -342,6 +355,13 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-full bg-[#3980f4] flex items-center justify-center text-white font-bold text-sm border border-[#c6c6cd]">
                   {initials}
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-[#5c5f61] hover:text-[#ba1a1a] transition-colors"
+                  title="Logout"
+                >
+                  <MaterialIcon name="logout" />
+                </button>
               </>
             )}
           </div>
