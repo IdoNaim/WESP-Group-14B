@@ -187,7 +187,7 @@ export default function DashboardPage() {
       // even if the call fails, clear local state and redirect
     } finally {
       localStorage.removeItem('token');
-      window.location.reload();    
+      window.location.reload();
     }
   };
 
@@ -325,14 +325,6 @@ export default function DashboardPage() {
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Notification bell — only for members */}
-          {!isGuest && (
-            <button className="p-2 text-[#5c5f61] hover:text-[#3980f4] transition-colors relative">
-              <MaterialIcon name="notifications" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#ba1a1a] rounded-full border-2 border-white" />
-            </button>
-          )}
-
           {/* Settings gear — only for members */}
           {!isGuest && (
             <button className="p-2 text-[#5c5f61] hover:text-[#3980f4] transition-colors">
