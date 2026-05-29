@@ -145,7 +145,7 @@ public class ProductionHandler {
             managerPermissions.put(managerId, company.getManagerPermissions(managerId));
         }
 
-        return new RolesTreeDTO(company.getCompanyId(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
+        return new RolesTreeDTO(company.getCompanyId(), company.getCompanyName(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
     }
 
 

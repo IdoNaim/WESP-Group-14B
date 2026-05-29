@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import org.springframework.stereotype.Service;
@@ -301,6 +303,28 @@ public class ProductionService implements IProductionService {
     @Override
     public String getEventAsCustomer(String eventId) {
         throw new UnsupportedOperationException("Unimplemented method 'getEventAsCustomer'");
+    }
+
+    @Override
+    public List<CompanySummaryDTO> getMyCompanies(String sessionToken) {
+        if (!authenticationService.validate(sessionToken)) {
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+        List<ProductionCompany> companies = prodRepo.findAllByUserId(userId);
+        List<CompanySummaryDTO> result = new ArrayList<>();
+        for (ProductionCompany c : companies) {
+            String role;
+            if (userId.equals(c.getFounderId())) {
+                role = "FOUNDER";
+            } else if (c.isOwner(userId)) {
+                role = "OWNER";
+            } else {
+                role = "MANAGER";
+            }
+            result.add(new CompanySummaryDTO(c.getCompanyId(), c.getCompanyName(), c.getCompanyDescription(), c.getCompanyEmail(), role));
+        }
+        return result;
     }
 
     @Override

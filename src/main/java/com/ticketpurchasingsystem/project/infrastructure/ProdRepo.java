@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -71,5 +73,18 @@ public class ProdRepo implements IProdRepo {
     public Optional<ProductionCompany> findById(Integer companyId) {
         ProductionCompany stored = storage.get(companyId);
         return stored != null ? Optional.of(new ProductionCompany(stored)) : Optional.empty();
+    }
+
+    @Override
+    public List<ProductionCompany> findAllByUserId(String userId) {
+        List<ProductionCompany> result = new ArrayList<>();
+        for (ProductionCompany company : storage.values()) {
+            if (userId.equals(company.getFounderId())
+                    || company.isOwner(userId)
+                    || company.isManager(userId)) {
+                result.add(new ProductionCompany(company));
+            }
+        }
+        return result;
     }
 }

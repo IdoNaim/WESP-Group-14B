@@ -6,6 +6,7 @@ import java.util.Set;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
@@ -38,4 +39,6 @@ public interface IProductionService {
     public boolean removeManager(String sessionToken, Integer companyId, String managerId);
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId);
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule);
+
+    public List<CompanySummaryDTO> getMyCompanies(String sessionToken);
 }

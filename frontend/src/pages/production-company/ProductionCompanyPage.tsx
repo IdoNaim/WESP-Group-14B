@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
 
 
@@ -314,7 +314,15 @@ function ActionsTab({
     onAppointManager: () => void;
     onSwitchToHistory: () => void;
 }) {
-    const actions = [
+    const actions: { icon: string; label: string; desc: string; color: string; bg: string; onClick?: () => void; href?: string; to?: string }[] = [
+        {
+            icon: 'event',
+            label: 'Manage Events',
+            desc: 'Create and manage events for this company',
+            color: 'text-[#00dbe7]',
+            bg: 'bg-[#00dbe7]/10 border-[#00dbe7]/20 hover:border-[#00dbe7]/50',
+            to: `/company/${companyId}/events`,
+        },
         {
             icon: 'person_add',
             label: 'Assign Owner',
@@ -368,6 +376,13 @@ function ActionsTab({
                     <span className="material-symbols-outlined text-gray-600 text-[28px] flex-shrink-0">chevron_right</span>
                 </>;
 
+                if (a.to) {
+                    return (
+                        <Link key={a.label} to={a.to} className={rowClass(i)}>
+                            {content}
+                        </Link>
+                    );
+                }
                 if (a.href) {
                     return (
                         <Link key={a.label} to={`${a.href}/${companyId}`} className={rowClass(i)}>
@@ -390,6 +405,7 @@ function ActionsTab({
 export default function ProductionCompanyPage() {
     const { companyId } = useParams<{ companyId: string }>();
     const numericId = Number(companyId);
+    const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState<Tab>('TEAM');
     const [rolesTree, setRolesTree] = useState<api.RolesTreeDTO | null>(null);
@@ -557,15 +573,28 @@ export default function ProductionCompanyPage() {
 
             {/* Header */}
             <div className="bg-[#eeefff] text-[#171f33] px-6 md:px-10 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <span className="material-symbols-outlined text-[#2563eb] text-3xl">domain</span>
-                        <h1 className="text-2xl font-black tracking-tight text-[#0b1326]">Company #{numericId}</h1>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 font-mono ml-0.5">
-                        <span className="material-symbols-outlined text-[15px]">person</span>
-                        <span className="material-symbols-outlined text-[13px] text-amber-500">workspace_premium</span>
-                        <span>Founder: <strong className="text-[#0b1326]">{rolesTree?.founderId ?? '—'}</strong></span>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[#2563eb] transition-colors"
+                        title="Back to My Companies"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                        <span className="hidden sm:inline tracking-wider">MY COMPANIES</span>
+                    </button>
+                    <div className="w-px h-8 bg-gray-300" />
+                    <div>
+                        <div className="flex items-center gap-2.5 mb-1">
+                            <span className="material-symbols-outlined text-[#2563eb] text-3xl">domain</span>
+                            <h1 className="text-2xl font-black tracking-tight text-[#0b1326]">
+                                {rolesTree?.companyName ?? `Company #${numericId}`}
+                            </h1>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-gray-500 font-mono ml-0.5">
+                            <span className="material-symbols-outlined text-[15px]">person</span>
+                            <span className="material-symbols-outlined text-[13px] text-amber-500">workspace_premium</span>
+                            <span>Founder: <strong className="text-[#0b1326]">{rolesTree?.founderId ?? '—'}</strong></span>
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-2">

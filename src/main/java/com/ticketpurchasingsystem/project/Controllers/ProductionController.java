@@ -20,6 +20,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.AssignOwnerRequestD
 import com.ticketpurchasingsystem.project.Controllers.apidto.ModifyPermissionsRequestDTO;
 import com.ticketpurchasingsystem.project.application.IProductionService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
@@ -31,6 +32,18 @@ public class ProductionController {
 
         public ProductionController(IProductionService productionService) {
                 this.productionService = productionService;
+        }
+
+        // GET /api/production/companies/my
+        @GetMapping("/companies/my")
+        public ResponseEntity<List<CompanySummaryDTO>> getMyCompanies(
+                        @RequestHeader("Authorization") String authHeader) {
+                String token = extractToken(authHeader);
+                List<CompanySummaryDTO> companies = productionService.getMyCompanies(token);
+                if (companies == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                return ResponseEntity.ok(companies);
         }
 
         // POST /api/production/companies

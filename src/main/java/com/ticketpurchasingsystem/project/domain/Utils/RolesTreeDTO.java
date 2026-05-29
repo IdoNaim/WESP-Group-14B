@@ -14,6 +14,7 @@ public class RolesTreeDTO {
     private static final String DIVIDER = "-----------------------";
 
     private Integer companyId;
+    private String companyName;
     private String founderId;
     private Map<String, OwnerDTO> ownershipTree;
     private Map<String, ManagerDTO> managerTree;
@@ -21,11 +22,13 @@ public class RolesTreeDTO {
 
     public RolesTreeDTO(
             Integer companyId,
+            String companyName,
             String founderId,
             Map<String, OwnerDTO> ownershipTree,
             Map<String, ManagerDTO> managerTree,
             Map<String, Set<ManagerPermission>> managerPermissions) {
         this.companyId = companyId;
+        this.companyName = companyName;
         this.founderId = founderId;
         this.ownershipTree = Collections.unmodifiableMap(ownershipTree);
         this.managerTree = Collections.unmodifiableMap(managerTree);
@@ -34,6 +37,10 @@ public class RolesTreeDTO {
 
     public Integer getCompanyId() {
         return companyId;
+    }
+
+    public String getCompanyName() {
+        return companyName;
     }
 
     public String getFounderId() {

@@ -4,6 +4,14 @@ function getToken(): string {
     return localStorage.getItem('token') || '';
 }
 
+export interface CompanySummary {
+    companyId: number;
+    companyName: string;
+    companyDescription: string;
+    companyEmail: string;
+    role: 'FOUNDER' | 'OWNER' | 'MANAGER';
+}
+
 export interface OwnerDTO {
     userId: string;
     appointerId: string | null;
@@ -17,6 +25,7 @@ export interface ManagerDTO {
 
 export interface RolesTreeDTO {
     companyId: number;
+    companyName: string;
     founderId: string;
     ownershipTree: Record<string, OwnerDTO>;
     managerTree: Record<string, ManagerDTO>;
@@ -94,3 +103,9 @@ export const modifyManagerPermissions = (
 
 export const removeManager = (companyId: number, managerId: string): Promise<{ message: string }> =>
     apiRequest('DELETE', `/companies/${companyId}/managers/${managerId}`);
+
+export const getMyCompanies = (): Promise<CompanySummary[]> =>
+    apiRequest('GET', '/companies/my');
+
+export const createCompany = (companyName: string, companyDescription: string, companyEmail: string): Promise<{ message: string; companyId: string }> =>
+    apiRequest('POST', '/companies', { companyName, companyDescription, companyEmail });
