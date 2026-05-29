@@ -43,12 +43,11 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestBody CreateEventRequestDTO body) {
 
-                String token = extractToken(authHeader);
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
                         .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
 
                 boolean success = eventService.createEvent(
-                        token,
+                        authHeader,
                         body.getEvent(),
                         body.getPurchasePolicy(),
                         discounts
@@ -65,8 +64,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                String token = extractToken(authHeader);
-                EventDTO result = eventService.searchEvent(token, eventId);
+                EventDTO result = eventService.searchEvent(authHeader, eventId);
                 return result != null
                         ? ResponseEntity.ok(result)
                         : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -78,8 +76,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
-                String token = extractToken(authHeader);
-                List<EventDTO> events = eventService.searchEventsByCompany(token, companyId);
+                List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
 
@@ -90,8 +87,7 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventDateRequestDTO body) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventDate(token, eventId, body.getNewDateTime());
+                boolean success = eventService.editEventDate(authHeader, eventId, body.getNewDateTime());
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -104,8 +100,7 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventCapacityRequestDTO body) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventInventory(token, eventId, body.getNewCapacity());
+                boolean success = eventService.editEventInventory(authHeader, eventId, body.getNewCapacity());
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -117,8 +112,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.removeEvent(token, eventId);
+                boolean success = eventService.removeEvent(authHeader, eventId);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -131,12 +125,10 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody ConfigureSeatingMapRequestDTO body) {
 
-                String token = extractToken(authHeader);
                 List<SeatingAreaConfig> seatingAreas = body.getSeatingAreas() == null
                         ? Collections.emptyList()
                         : body.getSeatingAreas().stream()
-                        .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(),
-                                a.getPrice()))
+                        .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(), a.getPrice()))
                         .collect(Collectors.toList());
 
                 List<StandingAreaConfig> standingAreas = body.getStandingAreas() == null
@@ -145,18 +137,11 @@ public class EventController {
                         .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
                         .collect(Collectors.toList());
 
-                SeatingMap seatingMap = eventService.configureSeatingMap(token, seatingAreas, standingAreas);
-                boolean success = eventService.editEventSeatingMap(token, eventId, seatingMap);
+                SeatingMap seatingMap = eventService.configureSeatingMap(authHeader, seatingAreas, standingAreas);
+                boolean success = eventService.editEventSeatingMap(authHeader, eventId, seatingMap);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
-        }
-
-        private String extractToken(String authHeader) {
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                        return authHeader.substring(7);
-                }
-                return authHeader;
         }
 
 }
