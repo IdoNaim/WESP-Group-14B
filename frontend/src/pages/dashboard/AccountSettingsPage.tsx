@@ -181,18 +181,45 @@ export default function AccountSettingsPage() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    // 1. Destructure the password form values
+    const { currentPassword, newPassword, confirmNewPassword } = passwordForm;
+    
+    // Check if the user has typed anything into any password field
+    const isChangingPassword = currentPassword || newPassword || confirmNewPassword;
+
+    // 2. Validate password fields if a password change is being attempted
+    if (isChangingPassword) {
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        alert('Please complete all password fields to update your password.');
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        alert('Validation error: New password and confirmation do not match.');
+        return;
+      }
+    }
+
     try {
-      // Execute security mutation payload containing changes
+      // 3. Step 1: If changing password, call the updated backend endpoint
+      if (isChangingPassword) {
+        await authApi.changePassword(token, {
+          currentPassword: currentPassword, 
+          newPassword: newPassword
+        });
+      }
+
+      // 4. Step 2: Update username and email profile details
       await authApi.updateProfile(token, {
         name: tempProfileData.username,
         email: tempProfileData.email
       });
 
-      // Synchronize persistent states
+      // 5. Step 3: Synchronize UI states upon complete success
       setProfileData({ ...tempProfileData });
       setUsername(tempProfileData.username);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
       setIsEditing(false);
+      
       alert('Account changes saved successfully!');
     } catch (error: any) {
       console.error('[Settings] Update failed:', error.message);
@@ -218,7 +245,7 @@ export default function AccountSettingsPage() {
       window.location.reload();
     }
   };
-
+  // const handlePasswordUpdate = async () =>
   // Nav security filters
   const visibleNavItems = NAV_ITEMS.filter(item => !item.memberOnly || !isGuest);
   const visibleNavItemsFiltered = visibleNavItems.filter(item =>

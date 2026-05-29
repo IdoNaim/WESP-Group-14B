@@ -46,7 +46,10 @@ export interface AuthResponse {
     message?: string;
     error?: string;
 }
-
+export interface PasswordUpdateRequestDTO{
+    currentPassword : string;
+    newPassword : string;
+}
 // ==========================================
 // Helper: Header Generator
 // ==========================================
@@ -160,6 +163,7 @@ export const authApi = {
             headers: getHeaders(token),
             body: JSON.stringify(data),
         });
+
         return parseResponse(response);
     },
 
@@ -171,6 +175,15 @@ export const authApi = {
         const response = await fetch(`${BASE_URL}/permissions`, {
             method: 'GET',
             headers: getHeaders(token),
+        });
+        return parseResponse(response);
+    },
+
+    changePassword: async(token: string, data: PasswordUpdateRequestDTO) : Promise<{message : string}> => {
+        const response = await fetch(`${BASE_URL}/editPassword`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body : JSON.stringify(data),
         });
         return parseResponse(response);
     }

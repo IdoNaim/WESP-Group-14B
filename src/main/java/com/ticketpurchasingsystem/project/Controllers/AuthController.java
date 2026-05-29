@@ -1,8 +1,8 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
-import java.util.Map;
-import java.util.HashMap;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticketpurchasingsystem.project.Controllers.apidto.LoginRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.PasswordUpdateRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.ProfileUpdateRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
@@ -240,6 +241,29 @@ public class AuthController {
                     "isAdmin", isAdmin,
                     "productionRoles", productionRoles
             ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+    @PutMapping("/editPassword")
+    public ResponseEntity<Map<String,String>> editPassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody PasswordUpdateRequestDTO body) {
+        System.out.println("Received password update request with token: " + authHeader
+            + " and body: currentPassword=" + body.getCurrentPassword() + ", newPassword=" + body.getNewPassword()
+        );
+        String token = extractToken(authHeader);
+        String currentPassword = body.getCurrentPassword();
+        String newPassword = body.getNewPassword();
+        try {
+            if (!authenticationService.validate(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid or expired session token."));
+            }
+            String userId = authenticationService.getUser(token);
+            userService.editPassword(userId, currentPassword, newPassword, token);
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
