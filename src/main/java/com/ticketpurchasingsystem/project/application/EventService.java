@@ -10,8 +10,10 @@ import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingArea;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -208,6 +210,8 @@ public class EventService implements IEventService {
                 return false;
             }
 
+            String eventName = event.getEventName();
+            eventPublisher.publishEventCancelled(eventId, eventName);
             eventRepo.delete(eventId);
 
             logger.info("Successfully removed event ID: " + eventId);
@@ -430,5 +434,27 @@ public class EventService implements IEventService {
                     + " | Error: " + e.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public boolean checkSeatAvailability(String eventId, List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return true;
+        Event event = eventRepo.findById(eventId);
+        if (event == null || event.getSeatingMap() == null) return false;
+        SeatingMap map = event.getSeatingMap();
+        for (String seatId : seatIds) {
+            AssignedSeat seat = map.getSeat(seatId);
+            if (seat == null || seat.isBooked()) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
+        if (quantity <= 0) return false;
+        Event event = eventRepo.findById(eventId);
+        if (event == null || event.getSeatingMap() == null) return false;
+        StandingArea area = event.getSeatingMap().getArea(areaId);
+        return area != null && area.getAvalibleSeatNumber() >= quantity;
     }
 }

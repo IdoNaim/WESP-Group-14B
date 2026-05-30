@@ -82,14 +82,17 @@ public class HistoryOrderService implements IHistoryOrderService {
     @Override
     // This method is intended for system administrators to retrieve all historical orders in the system. It should only be accessible to users with admin privileges, and it will return a list of HistoryOrderDTO objects representing all historical orders.
     public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken st) {
+        if (!isSessionTokenValid(st)) {
+            throw new RuntimeException("Session has ended");
+        }
+        if (!authenticationService.isAdmin(st.getToken())) {
+            throw new SecurityException("Admin access required");
+        }
         List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
-        if (isSessionTokenValid(st) && authenticationService.isAdmin(st.getToken())) {
-            for (HistoryOrderItem item : historyOrderRepo.findAll()) {
-                historyOrders.add(item.makeDTO());
-            }
+        for (HistoryOrderItem item : historyOrderRepo.findAll()) {
+            historyOrders.add(item.makeDTO());
         }
         return historyOrders;
-
     }
 
     private boolean isSessionTokenValid(SessionToken sessionToken) {

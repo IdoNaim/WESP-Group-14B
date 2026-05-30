@@ -1,71 +1,95 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
-import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.sql.Timestamp;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 @RestController
-@RequestMapping("/api/history-order")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/history")
 public class HistoryOrderController {
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getUserOrders(
-            @PathVariable String userId,
-            @RequestHeader(value = "Authorization", required = false) String token) throws InterruptedException {
+    private final IHistoryOrderService historyOrderService;
 
-        // 1. מצב טעינה (Loading) - הוספת דיליי מלאכותי להמחשה
-        if ("loading".equals(userId)) {
-            Thread.sleep(3000); // 3 שניות של חשיבה
-        } else {
-            Thread.sleep(600); // דיליי טבעי קצר
-        }
-
-        // 2. מצב שגיאה (Error 403 Forbidden)
-        if ("error".equals(userId)) {
-            return ResponseEntity.status(403).body(new ErrorResponse("Access Forbidden"));
-        }
-
-        // 3. מצב ריק (Empty State)
-        if ("empty".equals(userId)) {
-            return ResponseEntity.ok(Arrays.asList());
-        }
-
-        // 4. מצב הצלחה (Success State) - נתוני דמה
-        HashMap<String, Integer> standing1 = new HashMap<>();
-        standing1.put("Standing", 1);
-        HistoryOrderDTO order1 = new HistoryOrderDTO(
-                "ORD-98231", userId, "EVT-ZENITH", 1,
-                new Timestamp(System.currentTimeMillis() - (86400000L * 5)), 150.00,
-                Arrays.asList("A1", "A2"), standing1
-        );
-
-        HashMap<String, Integer> standing2 = new HashMap<>();
-        HistoryOrderDTO order2 = new HistoryOrderDTO(
-                "ORD-77622", userId, "EVT-TECH", 2,
-                new Timestamp(System.currentTimeMillis() - (86400000L * 30)), 499.00,
-                Arrays.asList("V1"), standing2
-        );
-
-        HashMap<String, Integer> standing3 = new HashMap<>();
-        standing3.put("General", 3);
-        HistoryOrderDTO order3 = new HistoryOrderDTO(
-                "ORD-55410", userId, "EVT-ART", 1,
-                new Timestamp(System.currentTimeMillis() - (86400000L * 120)), 45.00,
-                Arrays.asList(), standing3
-        );
-
-        return ResponseEntity.ok(Arrays.asList(order1, order2, order3));
+    public HistoryOrderController(IHistoryOrderService historyOrderService) {
+        this.historyOrderService = historyOrderService;
     }
 
-    // מחלקת עזר פנימית לשליחת שגיאות בפורמט JSON נקי
-    static class ErrorResponse {
-        public String error;
-        public ErrorResponse(String error) { this.error = error; }
+    // GET /api/history/{orderId}
+    // Returns a single completed order by its ID.
+    // Accessible by the order's owner or an admin.
+    @GetMapping("/{orderId}")
+    public ResponseEntity<?> getHistoryOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId) {
+
+        SessionToken sessionToken = toSessionToken(authHeader);
+        HistoryOrderDTO order = historyOrderService.getHistoryOrder(sessionToken, orderId);
+        if (order == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Order not found or access denied."));
+        }
+        return ResponseEntity.ok(order);
+    }
+
+    // GET /api/history?userId={userId}
+    // Returns all completed orders for a specific user.
+    // Accessible by the user themselves or an admin.
+    @GetMapping(params = "userId")
+    public ResponseEntity<List<HistoryOrderDTO>> getOrdersByUser(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam String userId) {
+
+        SessionToken sessionToken = toSessionToken(authHeader);
+        List<HistoryOrderDTO> orders = historyOrderService.getAllHistoryOrdersByUser(sessionToken, userId);
+        return ResponseEntity.ok(orders);
+    }
+
+    // GET /api/history?companyId={companyId}
+    // Returns all completed orders for a specific production company.
+    // Accessible by company owners/founders.
+    @GetMapping(params = "companyId")
+    public ResponseEntity<List<HistoryOrderDTO>> getOrdersByCompany(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam int companyId) {
+
+        SessionToken sessionToken = toSessionToken(authHeader);
+        List<HistoryOrderDTO> orders = historyOrderService.getAllHistoryOrdersByCompany(sessionToken, companyId);
+        return ResponseEntity.ok(orders);
+    }
+
+    // GET /api/history
+    // Returns all completed orders in the system. Admin only.
+    @GetMapping
+    public ResponseEntity<?> getAllOrders(
+            @RequestHeader("Authorization") String authHeader) {
+
+        SessionToken sessionToken = toSessionToken(authHeader);
+        try {
+            List<HistoryOrderDTO> orders = historyOrderService.getAllHistoryOrders(sessionToken);
+            return ResponseEntity.ok(orders);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private SessionToken toSessionToken(String authHeader) {
+        String token = (authHeader != null && authHeader.startsWith("Bearer "))
+                ? authHeader.substring(7)
+                : authHeader;
+        return new SessionToken(token, Long.MAX_VALUE);
     }
 }

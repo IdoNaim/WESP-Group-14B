@@ -63,12 +63,11 @@ public class HistoryOrderServiceGetAllOrdersTests {
     // --- invalid session ---
 
     @Test
-    void GivenInvalidSession_WhenGetAllHistoryOrders_ThenReturnEmptyList() {
+    void GivenInvalidSession_WhenGetAllHistoryOrders_ThenThrowRuntimeException() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(INVALID_SESSION);
-
-        assertTrue(result.isEmpty());
+        assertThrows(RuntimeException.class,
+                () -> historyOrderService.getAllHistoryOrders(INVALID_SESSION));
         verify(historyOrderRepo, never()).findAll();
     }
 
@@ -76,21 +75,19 @@ public class HistoryOrderServiceGetAllOrdersTests {
     void GivenInvalidSession_WhenGetAllHistoryOrders_ThenRepoNeverCalled() {
         when(authenticationService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(INVALID_SESSION);
-
-        assertTrue(result.isEmpty());
+        assertThrows(RuntimeException.class,
+                () -> historyOrderService.getAllHistoryOrders(INVALID_SESSION));
         verify(historyOrderRepo, never()).findAll();
     }
 
     // --- valid session, not admin ---
 
     @Test
-    void GivenValidSessionNotAdmin_WhenGetAllHistoryOrders_ThenReturnEmptyList() {
+    void GivenValidSessionNotAdmin_WhenGetAllHistoryOrders_ThenThrowSecurityException() {
         stubNonAdminSession();
 
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
-
-        assertTrue(result.isEmpty());
+        assertThrows(SecurityException.class,
+                () -> historyOrderService.getAllHistoryOrders(VALID_SESSION));
         verify(historyOrderRepo, never()).findAll();
     }
 
@@ -98,9 +95,8 @@ public class HistoryOrderServiceGetAllOrdersTests {
     void GivenValidSessionNotAdmin_WhenGetAllHistoryOrders_ThenRepoNeverCalled() {
         stubNonAdminSession();
 
-        List<HistoryOrderDTO> result = historyOrderService.getAllHistoryOrders(VALID_SESSION);
-
-        assertTrue(result.isEmpty());
+        assertThrows(SecurityException.class,
+                () -> historyOrderService.getAllHistoryOrders(VALID_SESSION));
         verify(historyOrderRepo, never()).findAll();
     }
 
