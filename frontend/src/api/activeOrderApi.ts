@@ -82,6 +82,13 @@ export const activeOrderApi = {
         return parseResponse(response);
     },
 
+    getActiveOrderByUserId: async (token: string, userId: string): Promise<ActiveOrderDTO> => {
+        const response = await fetch(`${BASE_URL}/user/${userId}`, {
+            method: 'GET',
+            headers: getHeaders(token),
+        });
+        return parseResponse(response);
+    },
     /**
      * GET /api/orders/{orderId}
      * Returns the active order details for the authenticated user.
