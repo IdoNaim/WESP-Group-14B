@@ -5,6 +5,7 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.tsx';
 import ProductionCompanyPage from '../pages/production-company/ProductionCompanyPage.tsx';
 import EventsPage from "../pages/events/EventsPage.tsx";
 import EventDetailsPage from "../pages/events/EventDetailsPage.tsx";
+import OrderHistoryPage from '../pages/orders/OrderHistoryPage.tsx';
 
 
 export default function AppRoutes() {
@@ -19,6 +20,7 @@ export default function AppRoutes() {
                 <Route path="/events" element={<EventsPage />} />
                 <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route path="/history-orders" element={ <OrderHistoryPage/>} />
             </Routes>
         </BrowserRouter>
     );
