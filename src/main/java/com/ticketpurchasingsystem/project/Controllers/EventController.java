@@ -174,7 +174,7 @@ public class EventController {
                 String token = authHeader.startsWith("Bearer ") 
                 ? authHeader.substring(7) 
                 : authHeader;
-                SeatingMap seatingMap = eventService.getEventSeatingMap(token, eventId);
+                SeatingMapDTO seatingMap = eventService.getEventSeatingMap(token, eventId);
                 return seatingMap != null
                         ? ResponseEntity.ok(seatingMap)
                         : ResponseEntity.notFound().build();
