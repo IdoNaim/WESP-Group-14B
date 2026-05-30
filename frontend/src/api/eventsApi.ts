@@ -1,4 +1,4 @@
-// Define your base URL (You can swap this with process.env.REACT_APP_API_URL in production)
+
 const BASE_URL = '/api/events';
 
 // ==========================================

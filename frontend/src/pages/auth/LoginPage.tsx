@@ -43,7 +43,7 @@ export default function LoginPage() {
             setEmail('');
             setPassword('');
 
-            navigate('/home');
+            navigate('/dashboard');
 
         } catch (error: any) {
             console.error('[UI CATCH BLOCK] Login flow crashed:', error.message);

@@ -21,6 +21,7 @@ export default function RegisterPage() {
             console.log('[UI STEP 1] Requesting guest token from API...');
             const guestResponse = await authApi.guestEntry();
             const guestToken = guestResponse.token;
+            console.log('[UI STEP 1 RESULT] Guest token received:', guestResponse.token);
 
             // Step 2: Submit the registration payload
             // Mapping 'email' to 'userId' since your backend requires a userId
@@ -35,13 +36,16 @@ export default function RegisterPage() {
             console.log('[UI STEP 2 RESULT] Registration succeeded!');
 
             // Step 3: Success! Redirect them to the login page so they can sign in
+            console.log('[UI STEP 3] Redirecting user to login page...');
             navigate('/login');
 
         } catch (error: any) {
             // Step 4: Catch and display any errors (e.g., "User already exists")
+            console.error('[UI CATCH BLOCK] Registration flow crashed:', error.message);
             setErrorMessage(error.message || "Failed to register. Please try again.");
         } finally {
             // Step 5: Turn off the loading spinner
+            console.log('--- [UI END] Registration Process Completed ---');
             setIsLoading(false);
         }
     };
@@ -151,7 +155,7 @@ export default function RegisterPage() {
                                 <span className="material-symbols-outlined animate-spin">refresh</span>
                             ) : (
                                 <>
-                                    <span>LETS REGISTER</span>
+                                    <span>GENERATE TICKET</span>
                                     <span className="material-symbols-outlined">confirmation_number</span>
                                 </>
                             )}

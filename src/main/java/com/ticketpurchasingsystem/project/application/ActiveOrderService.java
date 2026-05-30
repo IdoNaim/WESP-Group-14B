@@ -69,6 +69,7 @@ public class ActiveOrderService implements IActiveOrderService {
 
         rollbackOrderReservations(sessionToken.getToken(),new ActiveOrderDTO(order));
         activeOrderRepo.delete(orderId);
+        activeOrderPublisher.publishOrderCancelled(userId, orderId);
         logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
     }
 

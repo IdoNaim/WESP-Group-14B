@@ -74,7 +74,9 @@ public class EventServiceSeatingMapTest {
 
         // seating: 2 * 3 = 6 seats
         // standing: 1 standing area
-        assertEquals(7, map.getPurchaseAreas().size());
+//        assertEquals(7, map.getPurchaseAreas().size());
+        assertEquals(6, map.getSeatIds().size());
+        assertEquals(1,map.getAreaIds().size());
     }
 
     // ================= EMPTY INPUT =================
@@ -89,7 +91,9 @@ public class EventServiceSeatingMapTest {
         );
 
         assertNotNull(map);
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= INVALID SEATING =================
@@ -109,7 +113,9 @@ public class EventServiceSeatingMapTest {
                 List.of()
         );
 
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= INVALID STANDING =================
@@ -128,7 +134,9 @@ public class EventServiceSeatingMapTest {
                 List.of(invalidStanding)
         );
 
-        assertTrue(map.getPurchaseAreas().isEmpty());
+//        assertTrue(map.getPurchaseAreas().isEmpty());
+        assertTrue(map.getSeatIds().isEmpty());
+        assertTrue(map.getAreaIds().isEmpty());
     }
 
     // ================= MULTIPLE AREAS =================
@@ -159,6 +167,8 @@ public class EventServiceSeatingMapTest {
         // seating1: 4 seats
         // seating2: 4 seats
         // standing: 1 area
-        assertEquals(9, map.getPurchaseAreas().size());
+//        assertEquals(9, map.getPurchaseAreas().size());
+        assertEquals(8, map.getSeatIds().size());
+        assertEquals(1, map.getAreaIds().size());
     }
 }
