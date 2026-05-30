@@ -269,4 +269,8 @@ public class UserService implements IUserService {
     public boolean isUserRegistered(String userId){
         return userHandler.isUserRegistered(userRepo.findByID(userId));
     }
+
+    public boolean isGuest(String userId) {
+        return userHandler.isGuest(userRepo.findByID(userId));
+    }
 }
