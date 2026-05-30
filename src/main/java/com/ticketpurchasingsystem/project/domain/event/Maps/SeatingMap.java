@@ -46,7 +46,7 @@ public class SeatingMap {
         return true;
     }
 
-    public boolean bookStandingArea(String areaID, String orderId, int numberOfTickets){
+    public synchronized boolean bookStandingArea(String areaID, String orderId, int numberOfTickets){
         if(!standingAreas.containsKey(areaID)){
             return false;
         }
@@ -54,7 +54,7 @@ public class SeatingMap {
         return area.book(orderId, numberOfTickets);
     }
 
-    public boolean bookAssignedSeats(List<String> seatIDs, String orderId){
+    public synchronized boolean bookAssignedSeats(List<String> seatIDs, String orderId){
         for(String seatID : seatIDs){
             if(!seats.containsKey(seatID)){
                 return false;
@@ -74,7 +74,7 @@ public class SeatingMap {
         return true;
     }
 
-    public boolean unbookStandingArea(String areaID, int numberOfTickets){
+    public synchronized boolean unbookStandingArea(String areaID, int numberOfTickets){
         if(!standingAreas.containsKey(areaID)){
             return false;
         }
@@ -82,7 +82,7 @@ public class SeatingMap {
         return area.unbook(numberOfTickets);
     }
 
-    public boolean unbookAssignedSeats(List<String> seatIDs){
+    public synchronized boolean unbookAssignedSeats(List<String> seatIDs){
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
             if(!seats.containsKey(seatID)){

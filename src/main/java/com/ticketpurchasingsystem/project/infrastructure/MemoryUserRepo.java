@@ -15,7 +15,14 @@ public class MemoryUserRepo implements IUserRepo {
 
     @Override
     public void store(UserInfo userInfo) {
-        users.put(userInfo.getId(), userInfo);
+        UserInfo existing = users.putIfAbsent(userInfo.getId(), userInfo);
+        if (existing != null) {
+            if (existing != userInfo) {
+                throw new IllegalStateException("User already exists");
+            } else {
+                users.put(userInfo.getId(), userInfo);
+            }
+        }
     }
 
     @Override

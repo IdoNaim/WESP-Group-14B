@@ -268,6 +268,7 @@ public class ConcurrencyIntegrationTests {
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
+        AtomicReference<Exception> failureException = new AtomicReference<>();
 
         executor.submit(() -> {
             try {
@@ -276,6 +277,7 @@ public class ConcurrencyIntegrationTests {
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
+                failureException.set(e);
             } finally {
                 endLatch.countDown();
             }
@@ -288,6 +290,7 @@ public class ConcurrencyIntegrationTests {
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
+                failureException.set(e);
             } finally {
                 endLatch.countDown();
             }
@@ -297,8 +300,18 @@ public class ConcurrencyIntegrationTests {
         endLatch.await(5, TimeUnit.SECONDS);
         executor.shutdown();
 
-        // Assert both registration attempts ran
-        assertEquals(2, successCount.get() + failureCount.get(), "Both requests must be processed");
+        // Assert exactly 1 thread succeeded and 1 thread failed
+        assertEquals(1, successCount.get(), "Exactly one registration must succeed");
+        assertEquals(1, failureCount.get(), "Exactly one registration must fail");
+
+        Exception ex = failureException.get();
+        assertNotNull(ex);
+        Throwable rootCause = ex;
+        while (rootCause.getCause() != null && rootCause != rootCause.getCause()) {
+            rootCause = rootCause.getCause();
+        }
+        assertTrue(rootCause instanceof IllegalStateException, "Expected root cause to be IllegalStateException, but got " + rootCause.getClass().getName());
+        assertEquals("User already exists", rootCause.getMessage());
 
         // Assert state consistency (exactly 1 user remains in MemoryUserRepo)
         UserInfo storedUser = userRepo.findByID(sharedUserId);
@@ -308,7 +321,7 @@ public class ConcurrencyIntegrationTests {
 
     // 3. Events (Concurrent Seat Reservations)
     @Test
-    public void testConcurrentSeatReservationsAllowsDoubleBooking() throws Exception {
+    public void testConcurrentSeatReservationsPreventDoubleBooking() throws Exception {
         String userA = "user_a";
         String userB = "user_b";
         userRepo.store(new UserInfo(userA, "User A", "usera@test.com", "pass123", UserGroupDiscount.NONE));
@@ -327,6 +340,7 @@ public class ConcurrencyIntegrationTests {
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
+        AtomicReference<Exception> failureException = new AtomicReference<>();
 
         executor.submit(() -> {
             try {
@@ -336,6 +350,7 @@ public class ConcurrencyIntegrationTests {
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
+                failureException.set(e);
             } finally {
                 endLatch.countDown();
             }
@@ -349,6 +364,7 @@ public class ConcurrencyIntegrationTests {
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
+                failureException.set(e);
             } finally {
                 endLatch.countDown();
             }
@@ -358,8 +374,18 @@ public class ConcurrencyIntegrationTests {
         endLatch.await(5, TimeUnit.SECONDS);
         executor.shutdown();
 
-        int totalProcessed = successCount.get() + failureCount.get();
-        assertEquals(2, totalProcessed);
+        // Exactly one should succeed, and one should fail with IllegalStateException
+        assertEquals(1, successCount.get(), "Exactly one user must successfully reserve the seat");
+        assertEquals(1, failureCount.get(), "Exactly one user must fail to reserve the seat");
+
+        Exception ex = failureException.get();
+        assertNotNull(ex);
+        Throwable rootCause = ex;
+        while (rootCause.getCause() != null && rootCause != rootCause.getCause()) {
+            rootCause = rootCause.getCause();
+        }
+        assertTrue(rootCause instanceof IllegalStateException, "Expected root cause to be IllegalStateException, but got " + rootCause.getClass().getName());
+        assertTrue(rootCause.getMessage().contains("Failed to book all seats"), "Expected rollback message, but got " + rootCause.getMessage());
 
         // Verify the seat was successfully marked as booked in the end
         Event finalEvent = eventRepo.findById(eventId);
