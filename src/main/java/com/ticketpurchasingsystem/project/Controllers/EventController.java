@@ -24,6 +24,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateReques
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
