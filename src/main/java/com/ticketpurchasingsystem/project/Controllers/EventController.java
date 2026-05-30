@@ -166,5 +166,17 @@ public class EventController {
                         ? ResponseEntity.ok(purchasePolicy)
                         : ResponseEntity.notFound().build();
         }
+        @GetMapping("/{eventId}/seating-map")
+        public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                SeatingMap seatingMap = eventService.getEventSeatingMap(token, eventId);
+                return seatingMap != null
+                        ? ResponseEntity.ok(seatingMap)
+                        : ResponseEntity.notFound().build();
+        }
         
 }

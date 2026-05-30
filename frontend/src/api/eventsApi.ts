@@ -50,6 +50,18 @@ export interface SeatingAreaConfig {
     seatsPerRow: number;
     price: number;
 }
+export interface AssignedSeatDTO {
+    id: string;
+    isBooked: boolean;
+    orderId?: string;
+    priceForTicket: number;
+}
+export interface StandingAreaDTO {
+    areaId: string;
+    availableSeats: number;
+    capacity: number;
+    priceForTicket: number;
+}
 
 export interface StandingAreaConfig {
     capacity: number;
@@ -59,6 +71,10 @@ export interface StandingAreaConfig {
 export interface ConfigureSeatingMapRequestDTO {
     seatingAreas?: SeatingAreaConfig[];
     standingAreas?: StandingAreaConfig[];
+}
+export interface SeatingMapDTO {
+    assignedSeats: AssignedSeatDTO[];
+    standingAreas: StandingAreaDTO[];
 }
 
 // ==========================================
@@ -175,5 +191,19 @@ export const eventApi = {
         });
         if (!response.ok) return null;
         return response.json();
+    },
+
+    /**
+     * GET /api/events/{eventId}/seating-map
+     * Retrieves the seating map for a specific event.
+     */
+    getEventSeatingMap: async (token: string, eventId: string | number): Promise<SeatingMapDTO | null> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/seating-map`, {
+            method: 'GET',
+            headers: getHeaders(token),
+        });
+        if (!response.ok) return null;
+        return response.json();
     }
+
 };
