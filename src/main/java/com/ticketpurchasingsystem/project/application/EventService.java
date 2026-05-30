@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
@@ -493,5 +494,17 @@ public class EventService implements IEventService {
             throw new IllegalArgumentException("Invalid EventID");
         }
         return event.getPurchasePolicy().getDTO();
+    }
+    @Override
+    public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot get seating map. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        return event.getSeatingMap().getDTO();
     }
 }
