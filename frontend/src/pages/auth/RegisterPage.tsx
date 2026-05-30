@@ -1,10 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '../../api/authApi'; // Corrected path based on your folder structure
+import { authApi } from '../../api/authApi';
 
 export default function RegisterPage() {
     const navigate = useNavigate();
 
+    // Added explicit userId state
+    const [userId, setUserId] = useState('');
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,34 +19,28 @@ export default function RegisterPage() {
         setErrorMessage(null);
 
         try {
-            // Step 1: Obtain the guest token required by your backend
             console.log('[UI STEP 1] Requesting guest token from API...');
             const guestResponse = await authApi.guestEntry();
             const guestToken = guestResponse.token;
-            console.log('[UI STEP 1 RESULT] Guest token received:', guestResponse.token);
 
-            // Step 2: Submit the registration payload
-            // Mapping 'email' to 'userId' since your backend requires a userId
             console.log('[UI STEP 2] Submitting user registration form payload...');
+            // Now mapping the actual userId instead of doubling up the email
             await authApi.register(guestToken, {
-                userId: email,
+                userId: userId,
                 name: fullName,
                 email: email,
                 password: password,
-                userGroupDiscount: 'NONE' // Optional based on your DTO, but safe to default
+                userGroupDiscount: 'NONE'
             });
             console.log('[UI STEP 2 RESULT] Registration succeeded!');
 
-            // Step 3: Success! Redirect them to the login page so they can sign in
             console.log('[UI STEP 3] Redirecting user to login page...');
             navigate('/login');
 
         } catch (error: any) {
-            // Step 4: Catch and display any errors (e.g., "User already exists")
             console.error('[UI CATCH BLOCK] Registration flow crashed:', error.message);
             setErrorMessage(error.message || "Failed to register. Please try again.");
         } finally {
-            // Step 5: Turn off the loading spinner
             console.log('--- [UI END] Registration Process Completed ---');
             setIsLoading(false);
         }
@@ -52,8 +48,6 @@ export default function RegisterPage() {
 
     return (
         <div className="bg-[#0b1326] text-[#dae2fd] min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-
-            {/* Background Stage Wrapper */}
             <div className="fixed inset-0 z-0">
                 <img
                     alt="Background Arena"
@@ -77,7 +71,6 @@ export default function RegisterPage() {
                         <div className="absolute -right-[46px] -top-[11px] w-6 h-6 rounded-full bg-[#0b1326]"></div>
                     </div>
 
-                    {/* --- ERROR MESSAGE DISPLAY --- */}
                     {errorMessage && (
                         <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-600 text-[11px] font-bold text-center border border-red-200">
                             {errorMessage}
@@ -85,6 +78,26 @@ export default function RegisterPage() {
                     )}
 
                     <form onSubmit={handleRegisterSubmit} className="space-y-4">
+
+                        {/* New ID Input */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#2d3449] ml-1">
+                                Account ID (Required)
+                            </label>
+                            <div className="relative group">
+                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8d90a0] group-focus-within:text-[#2563eb] transition-colors">
+                                  badge
+                                </span>
+                                <input
+                                    className="w-full bg-[#060e20]/5 border border-[#434655]/20 rounded-xl pl-10 pr-4 py-3 text-[#0b1326] placeholder-[#8d90a0] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 outline-none transition-all"
+                                    placeholder="ID Number (e.g., 123456789)"
+                                    type="text"
+                                    value={userId}
+                                    onChange={(e) => setUserId(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </div>
 
                         {/* Name Input */}
                         <div className="space-y-1">
