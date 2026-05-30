@@ -72,6 +72,7 @@ public class AssignedSeat implements Bookable {
     }
     public String getOrderId() {
         return orderId;
+    }
 
 
 }
