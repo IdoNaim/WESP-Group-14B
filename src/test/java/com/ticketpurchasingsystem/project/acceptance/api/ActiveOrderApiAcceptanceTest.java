@@ -103,7 +103,7 @@ class ActiveOrderApiAcceptanceTest {
                 new ActiveOrderController(activeOrderService, paymentGatewayMock)).build();
         objectMapper = new ObjectMapper();
 
-        PurchasePolicyDTO policy = new PurchasePolicyDTO(0, 10, 0, 100, true);
+        PurchasePolicyDTO policy = new PurchasePolicyDTO(0, 10, false, 0, 100, false, false);
         List<DiscountDTO> discounts = Collections.emptyList();
         EventDTO eventDTO = new EventDTO(null, 1, "Test Event", 100,
                 LocalDateTime.now().plusDays(30), true);
@@ -344,7 +344,7 @@ class ActiveOrderApiAcceptanceTest {
     @Test
     void GivenOrderViolatesPurchasePolicy_WhenCheckout_ThenReturn409() throws Exception {
         // Change policy to require min 10 tickets, but order has 2 seats
-        PurchasePolicyDTO strictPolicy = new PurchasePolicyDTO(10, 50, 0, 100, true);
+        PurchasePolicyDTO strictPolicy = new PurchasePolicyDTO(10, 50, false, 0, 100, false, false);
         eventService.editEventPurchasePolicy(userToken, eventId, strictPolicy);
 
         String orderId = createOrder();
