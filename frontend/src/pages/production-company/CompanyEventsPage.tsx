@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { eventApi, EventDTO } from '../../api/eventsApi';
 import { getRolesTree } from '../../api/productionCompanyApi';
+import { getCompanyPolicy } from '../../api/purchasePoliciesApi';
 
 function formatDate(iso: string) {
     try {
@@ -15,15 +16,16 @@ function toDatetimeLocal(iso: string) {
 
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
-function Modal({ title, icon, onClose, onSubmit, loading, error, children }: {
+function Modal({ title, icon, onClose, onSubmit, loading, error, children, wide }: {
     title: string; icon: string; onClose: () => void;
     onSubmit: (e: React.FormEvent) => void;
     loading: boolean; error: string | null; children: React.ReactNode;
+    wide?: boolean;
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-[#171f33] border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+            <div className={`bg-[#171f33] border border-gray-700 rounded-2xl w-full ${wide ? 'max-w-lg' : 'max-w-md'} shadow-2xl max-h-[90vh] flex flex-col`}>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
                     <h3 className="font-black text-white tracking-wide text-sm flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#00dbe7] text-[20px]">{icon}</span>
                         {title}
@@ -32,7 +34,7 @@ function Modal({ title, icon, onClose, onSubmit, loading, error, children }: {
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                     {children}
                     {error && <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                     <button type="submit" disabled={loading}
@@ -46,27 +48,87 @@ function Modal({ title, icon, onClose, onSubmit, loading, error, children }: {
     );
 }
 
+// ─── Shared field styles ──────────────────────────────────────────────────────
+
+const inputCls = 'w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors';
+const labelCls = 'text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400';
+const sectionHeaderCls = 'flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-[#00dbe7] mb-3';
+
+function ToggleRow({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+    return (
+        <label className="flex items-start gap-2.5 cursor-pointer group">
+            <div className="relative mt-0.5 flex-shrink-0">
+                <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
+                <div className={`w-8 h-4 rounded-full transition-colors ${checked ? 'bg-[#00dbe7]' : 'bg-gray-700'}`} />
+                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : ''}`} />
+            </div>
+            <div>
+                <span className="text-xs text-gray-300 group-hover:text-white transition-colors">{label}</span>
+                {hint && <p className="text-[10px] text-gray-600 mt-0.5">{hint}</p>}
+            </div>
+        </label>
+    );
+}
+
 // ─── Create modal ─────────────────────────────────────────────────────────────
 
 function CreateEventModal({ companyId, onClose, onCreated }: {
     companyId: number; onClose: () => void; onCreated: () => void;
 }) {
     const token = localStorage.getItem('token') || '';
+
+    // Event details
     const [eventName, setEventName] = useState('');
     const [capacity, setCapacity] = useState('');
     const [dateTime, setDateTime] = useState('');
+
+    // Quantity policy
     const [minTickets, setMinTickets] = useState('1');
     const [maxTickets, setMaxTickets] = useState('10');
+    const [isQuantityOr, setIsQuantityOr] = useState(false);
+
+    // Age policy
+    const [minAge, setMinAge] = useState('');
+    const [maxAge, setMaxAge] = useState('');
+    const [isAgeOr, setIsAgeOr] = useState(false);
+
+    // Outer composition (age block vs quantity block)
+    const [isAgeAndQuantityOr, setIsAgeAndQuantityOr] = useState(false);
+
+    // Company policy reference
+    const [companyPolicyDesc, setCompanyPolicyDesc] = useState<string | null>(null);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        getCompanyPolicy(companyId)
+            .then(p => setCompanyPolicyDesc(p?.description ?? null))
+            .catch(() => {/* non-critical */ });
+    }, [companyId]);
+
+    const hasAgePolicy = minAge !== '' || maxAge !== '';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true); setError(null);
         try {
             const ok = await eventApi.createEvent(token, {
-                event: { companyId, eventName, eventCapacity: Number(capacity), eventDateTime: new Date(dateTime).toISOString().slice(0, 19) },
-                purchasePolicy: { minTickets: Number(minTickets), maxTickets: Number(maxTickets), isQuantityOr: false, minAge: null, maxAge: null, isAgeOr: false, isAgeAndQuantityOr: false },
+                event: {
+                    companyId,
+                    eventName,
+                    eventCapacity: Number(capacity),
+                    eventDateTime: new Date(dateTime).toISOString().slice(0, 19),
+                },
+                purchasePolicy: {
+                    minTickets: Number(minTickets),
+                    maxTickets: Number(maxTickets),
+                    isQuantityOr,
+                    minAge: minAge !== '' ? Number(minAge) : null,
+                    maxAge: maxAge !== '' ? Number(maxAge) : null,
+                    isAgeOr,
+                    isAgeAndQuantityOr: hasAgePolicy ? isAgeAndQuantityOr : false,
+                },
             });
             if (!ok) throw new Error('Failed to create event');
             onCreated();
@@ -75,34 +137,113 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     };
 
     return (
-        <Modal title="CREATE NEW EVENT" icon="event" onClose={onClose} onSubmit={handleSubmit} loading={loading} error={error}>
-            <div className="space-y-1">
-                <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400">Event Name</label>
-                <input className="w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors"
-                    placeholder="e.g. Summer Music Festival" value={eventName} onChange={e => setEventName(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
-                <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400">Date & Time</label>
-                <input className="w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors"
-                    type="datetime-local" value={dateTime} onChange={e => setDateTime(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
-                <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400">Total Capacity</label>
-                <input className="w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors"
-                    type="number" min={1} placeholder="e.g. 500" value={capacity} onChange={e => setCapacity(e.target.value)} required />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                    <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400">Min Tickets / User</label>
-                    <input className="w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors"
-                        type="number" min={1} value={minTickets} onChange={e => setMinTickets(e.target.value)} required />
-                </div>
-                <div className="space-y-1">
-                    <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400">Max Tickets / User</label>
-                    <input className="w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#00dbe7] transition-colors"
-                        type="number" min={1} value={maxTickets} onChange={e => setMaxTickets(e.target.value)} required />
+        <Modal title="CREATE NEW EVENT" icon="event" onClose={onClose} onSubmit={handleSubmit} loading={loading} error={error} wide>
+            {/* ── Event details ── */}
+            <div>
+                <p className={sectionHeaderCls}>
+                    <span className="material-symbols-outlined text-[14px]">info</span>
+                    Event Details
+                </p>
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <label className={labelCls}>Event Name</label>
+                        <input className={inputCls} placeholder="e.g. Summer Music Festival"
+                            value={eventName} onChange={e => setEventName(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Date & Time</label>
+                        <input className={inputCls} type="datetime-local"
+                            value={dateTime} onChange={e => setDateTime(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Total Capacity</label>
+                        <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
+                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                    </div>
                 </div>
             </div>
+
+            {/* ── Ticket quantity policy ── */}
+            <div className="border-t border-gray-800 pt-4">
+                <p className={sectionHeaderCls}>
+                    <span className="material-symbols-outlined text-[14px]">confirmation_number</span>
+                    Ticket Quantity Policy
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="space-y-1">
+                        <label className={labelCls}>Min Tickets / User</label>
+                        <input className={inputCls} type="number" min={0} placeholder="0 = no limit"
+                            value={minTickets} onChange={e => setMinTickets(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Max Tickets / User</label>
+                        <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
+                            value={maxTickets} onChange={e => setMaxTickets(e.target.value)} />
+                    </div>
+                </div>
+                <ToggleRow
+                    label="Quantity uses OR logic"
+                    checked={isQuantityOr}
+                    onChange={setIsQuantityOr}
+                    hint="OFF = buyer must satisfy BOTH min AND max. ON = satisfying either is enough."
+                />
+            </div>
+
+            {/* ── Age policy ── */}
+            <div className="border-t border-gray-800 pt-4">
+                <p className={sectionHeaderCls}>
+                    <span className="material-symbols-outlined text-[14px]">person</span>
+                    Age Policy <span className="text-gray-600 normal-case font-normal">(optional)</span>
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="space-y-1">
+                        <label className={labelCls}>Min Age</label>
+                        <input className={inputCls} type="number" min={0} max={120} placeholder="e.g. 18"
+                            value={minAge} onChange={e => setMinAge(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Max Age</label>
+                        <input className={inputCls} type="number" min={0} max={120} placeholder="e.g. 65"
+                            value={maxAge} onChange={e => setMaxAge(e.target.value)} />
+                    </div>
+                </div>
+                <ToggleRow
+                    label="Age uses OR logic"
+                    checked={isAgeOr}
+                    onChange={setIsAgeOr}
+                    hint="OFF = buyer must be within BOTH min AND max age. ON = either condition is enough."
+                />
+            </div>
+
+            {/* ── Outer composition (only shown when age fields are set) ── */}
+            {hasAgePolicy && (
+                <div className="border-t border-gray-800 pt-4">
+                    <p className={sectionHeaderCls}>
+                        <span className="material-symbols-outlined text-[14px]">merge</span>
+                        Policy Composition
+                    </p>
+                    <ToggleRow
+                        label="Age OR Quantity (outer)"
+                        checked={isAgeAndQuantityOr}
+                        onChange={setIsAgeAndQuantityOr}
+                        hint="OFF = buyer must pass BOTH age AND quantity rules. ON = passing either block is enough."
+                    />
+                </div>
+            )}
+
+            {/* ── Company policy reference ── */}
+            {companyPolicyDesc && (
+                <div className="border-t border-gray-800 pt-4">
+                    <p className={sectionHeaderCls}>
+                        <span className="material-symbols-outlined text-[14px]">domain</span>
+                        Company Policy (applies to all events)
+                    </p>
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                        <p className="text-xs text-amber-300 font-mono">{companyPolicyDesc}</p>
+                        <p className="text-[10px] text-gray-600 mt-1">Event policy is applied on top of this. Both must be satisfied.</p>
+                    </div>
+                </div>
+            )}
         </Modal>
     );
 }
