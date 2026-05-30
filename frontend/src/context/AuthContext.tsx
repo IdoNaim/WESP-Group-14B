@@ -125,7 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [refreshPermissions]);
 
     const value = useMemo<AuthContextValue>(() => {
-        const isGuest = permissions?.state === 'GUEST';
+        const normalizedState = permissions?.state?.toUpperCase();
+        const isGuest = !permissions || normalizedState === 'GUEST';
         const isMember = !!permissions && !isGuest;
         const isProductionUser = isMember && hasProductionRole(permissions);
         const isAdmin = permissions?.isAdmin === true;

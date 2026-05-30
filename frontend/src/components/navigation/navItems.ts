@@ -1,13 +1,13 @@
-export type navVisibility = "all" | "member" | "production" | "admin";
+export type NavVisibility = "all" | "member" | "production" | "admin";
 
 export type NavItem = {
-    label: string;
-    path: string;
-    visibility: navVisibility;
+  label: string;
+  path: string;
+  visibility: NavVisibility;
 };
 
 export const navItems: NavItem[] = [
-    {
+  {
     label: "Home",
     path: "/dashboard",
     visibility: "all",
