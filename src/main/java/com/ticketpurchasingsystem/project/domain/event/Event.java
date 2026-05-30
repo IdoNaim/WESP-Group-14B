@@ -27,6 +27,7 @@ public class Event {
     private LocalDateTime eventDate;
 
     private SeatingMap seatingMap;
+    private String location;
 
     private EventDiscountPolicy discountPolicy;
 
@@ -42,6 +43,7 @@ public class Event {
             String eventName,
             int eventCapacity,
             LocalDateTime eventDate,
+            String location,
             EventPurchasePolicy purchasePolicy,
             EventDiscountPolicy discountPolicy,
             int version
@@ -67,6 +69,7 @@ public class Event {
         this.discountPolicy = discountPolicy;
         this.isActive = true;
         this.version = version;
+        this.location = location;
     }
 
     // COPY CONSTRUCTOR: Required for Event::new to work in your Streams
@@ -77,6 +80,7 @@ public class Event {
         this.eventCapacity = other.eventCapacity;
         this.isActive = other.isActive;
         this.eventDate = other.eventDate;
+        this.location = other.location;
         this.seatingMap = other.seatingMap;
         this.discountPolicy = other.discountPolicy;
         this.purchasePolicy = other.purchasePolicy;
@@ -123,6 +127,13 @@ public class Event {
 
     public SeatingMap getSeatingMap() {
         return seatingMap;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public void setEventId(String eventId) {

@@ -29,4 +29,5 @@ public interface IEventService {
      public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity);
      public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds);
      public boolean editEventPurchasePolicy(String sessionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO);
+     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
 }

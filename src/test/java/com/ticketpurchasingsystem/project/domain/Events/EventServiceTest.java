@@ -48,7 +48,7 @@ public class EventServiceTest {
     // ================= AUTHENTICATION FAILURE TEST =================
     @Test
     void GivenInvalidToken_WhenAnyMethodCalled_ThenThrowIllegalArgumentException() {
-        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), "test location", true);
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -62,7 +62,7 @@ public class EventServiceTest {
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -80,7 +80,7 @@ public class EventServiceTest {
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(15); // Invalid condition
@@ -97,7 +97,7 @@ public class EventServiceTest {
     @Test
     void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -114,7 +114,7 @@ public class EventServiceTest {
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -149,6 +149,7 @@ public class EventServiceTest {
         assertNotNull(result);
         assertEquals("Concert", result.eventName());
         assertEquals(100, result.eventCapacity());
+        assertEquals("test location", result.location());
     }
 
     @Test

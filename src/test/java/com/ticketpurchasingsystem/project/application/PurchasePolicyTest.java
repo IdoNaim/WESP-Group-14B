@@ -312,6 +312,7 @@ class PurchasePolicyTest {
                 "Rock Concert",
                 100,
                 LocalDateTime.now().plusDays(2),
+                "test location",
                 purchasePolicy,
                 discountPolicy,
                 0

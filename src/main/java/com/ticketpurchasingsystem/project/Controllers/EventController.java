@@ -23,6 +23,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRe
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -153,5 +154,17 @@ public class EventController {
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
         }
-
+        @GetMapping("/{eventId}/purchase-policy")
+        public ResponseEntity<PurchasePolicyDTO> getEventPurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                PurchasePolicyDTO purchasePolicy = eventService.getEventPurchasePolicy(token, eventId);
+                return purchasePolicy != null
+                        ? ResponseEntity.ok(purchasePolicy)
+                        : ResponseEntity.notFound().build();
+        }
+        
 }

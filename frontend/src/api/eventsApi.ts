@@ -162,5 +162,18 @@ export const eventApi = {
             body: JSON.stringify(data),
         });
         return response.ok;
+    },
+
+    /**
+     * GET /api/events/{eventId}/purchase-policy
+     * Retrieves the purchase policy for a specific event.
+     */
+    getEventPurchasePolicy: async (token: string, eventId: string | number): Promise<PurchasePolicyDTO | null> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/purchase-policy`, {
+            method: 'GET',
+            headers: getHeaders(token),
+        });
+        if (!response.ok) return null;
+        return response.json();
     }
 };

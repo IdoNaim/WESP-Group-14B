@@ -49,6 +49,7 @@ public class EventService implements IEventService {
                 "test Event",
                 100,
                 LocalDateTime.now().plusDays(30),
+                "test location",
                 purchasePolicy,
                 new EventDiscountPolicy(new ArrayList<>()),
                 0
@@ -110,6 +111,7 @@ public class EventService implements IEventService {
                 eventDTO.eventName(),
                 eventDTO.eventCapacity(),
                 eventDTO.eventDateTime(),
+                eventDTO.location(),
                 purchasePolicy,
                 discountPolicy,
                 0
@@ -156,6 +158,7 @@ public class EventService implements IEventService {
                 event.getEventName(),
                 event.getEventCapacity(),
                 event.getEventDate(),
+                event.getLocation(),
                 event.isActive()
         );
     }
@@ -176,6 +179,7 @@ public class EventService implements IEventService {
                         event.getEventName(),
                         event.getEventCapacity(),
                         event.getEventDate(),
+                        event.getLocation(),
                         event.isActive()
                 ))
                 .toList();
@@ -477,5 +481,17 @@ public class EventService implements IEventService {
         if (event == null || event.getSeatingMap() == null) return false;
         StandingArea area = event.getSeatingMap().getArea(areaId);
         return area != null && area.getAvalibleSeatNumber() >= quantity;
+    }
+    @Override
+    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot get purchase policy. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        return event.getPurchasePolicy().getDTO();
     }
 }

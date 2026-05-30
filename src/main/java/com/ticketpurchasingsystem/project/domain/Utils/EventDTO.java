@@ -7,5 +7,6 @@ public record EventDTO(
         String eventName,
         Integer eventCapacity,
         LocalDateTime eventDateTime,
+        String location,
         Boolean isActive
 ) {}
