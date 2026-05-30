@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
+import { eventApi, EventDTO } from "../../api/eventsApi";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -334,6 +336,33 @@ export default function ReserveTicketsPage() {
 
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // ── Event data from API ──
+  const { eventId } = useParams<{ eventId: string; userId: string }>();
+  const [event, setEvent] = useState<EventDTO | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
+  const [eventError, setEventError] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) return;
+    const token = localStorage.getItem("token") ?? "";
+    console.log("eventId from URL:", eventId);      // ADD THIS
+    console.log("token from storage:", token);       // ADD THIS
+    setEventLoading(true);
+    setEventError(false);
+    eventApi.getEvent(token, eventId)
+      .then((data) => {
+        console.log("API response:", data);          // ADD THIS
+
+        if (!data) { setEventError(true); return; }
+        setEvent(data);
+      })
+      .catch((err) => { 
+            console.log("API error:", err);              // ADD THIS
+            setEventError(true);
+        })
+      .finally(() => setEventLoading(false));
+  }, [eventId]);
+
   // Compute total selected across everything
   const totalSelected =
     sectionA.filter((s) => s.status === "selected").length +
@@ -566,31 +595,51 @@ export default function ReserveTicketsPage() {
             style={{ backgroundColor: "#fff", borderColor: "#c5c6cd" }}
           >
             {/* Event Header */}
-            <div className="space-y-2">
-              <h1 style={{ fontSize: 28, fontWeight: 700, color: "#0A192F", lineHeight: 1.2 }}>
-                The Grand Symphony Orchestra — Live in London
-              </h1>
-              <div className="flex flex-wrap items-center gap-5 text-sm" style={{ color: "#5d5f5f" }}>
-                <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-                  </svg>
-                  Sept 24, 2024
-                </span>
-                <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-                  </svg>
-                  19:30
-                </span>
-                <span className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path d="M12 21s-8-5.686-8-11A8 8 0 0 1 20 10c0 5.314-8 11-8 11z" /><circle cx="12" cy="10" r="3" />
-                  </svg>
-                  Royal Albert Hall
-                </span>
+            {eventLoading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-8 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-100 rounded w-1/2" />
               </div>
-            </div>
+            ) : eventError || !event ? (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path d="M12 8v4m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0z" />
+                </svg>
+                Could not load event details. Please refresh or try again later.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <h1 style={{ fontSize: 28, fontWeight: 700, color: "#0A192F", lineHeight: 1.2 }}>
+                  {event.eventName}
+                </h1>
+                <div className="flex flex-wrap items-center gap-5 text-sm" style={{ color: "#5d5f5f" }}>
+                  {event.eventDateTime && (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                        {new Date(event.eventDateTime).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+                        </svg>
+                        {new Date(event.eventDateTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </>
+                  )}
+                  {event.location && (
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path d="M12 21s-8-5.686-8-11A8 8 0 0 1 20 10c0 5.314-8 11-8 11z" /><circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {event.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Venue Map */}
             <div
@@ -712,6 +761,27 @@ export default function ReserveTicketsPage() {
               onCheckout={handleCheckout}
             />
 
+            {/* Venue card */}
+            {event?.location && (
+              <div
+                className="p-4 border rounded flex items-center gap-4 bg-white"
+                style={{ borderColor: "#c5c6cd" }}
+              >
+                <div className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center shrink-0">
+                  <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path d="M12 21s-8-5.686-8-11A8 8 0 0 1 20 10c0 5.314-8 11-8 11z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-sm" style={{ color: "#0A192F" }}>
+                    {event.location}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "#5d5f5f" }}>
+                    Event venue
+                  </p>
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       </main>

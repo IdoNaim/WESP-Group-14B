@@ -9,13 +9,20 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingArea;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.*;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
@@ -34,6 +41,20 @@ public class EventService implements IEventService {
         this.authenticationService = authenticationService;
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+        purchasePolicy.addRule(new MinTicketsRule(1));
+        purchasePolicy.addRule(new MinAgeRule(10));
+        Event event = new Event(
+                1,
+                "test Event",
+                100,
+                LocalDateTime.now().plusDays(30),
+                purchasePolicy,
+                new EventDiscountPolicy(new ArrayList<>()),
+                0
+        );
+        Event eventWithId = eventRepo.save(event);
+        logger.info("Created initial event with ID: " + eventWithId.getEventId());
 
         logger.info("EventService initialized");
     }

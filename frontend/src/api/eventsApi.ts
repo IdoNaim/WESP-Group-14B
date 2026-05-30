@@ -6,11 +6,11 @@ const BASE_URL = '/api/events';
 // ==========================================
 
 export interface EventDTO {
-    id?: string | number; // Optional on create, present on fetch
-    title: string;
-    description?: string;
-    capacity: number;
-    date: string; // ISO 8601 string recommended (e.g., "2026-10-24T21:00:00")
+    eventId?: string | number;
+    companyId?: number;
+    eventName: string;
+    eventCapacity?: number;
+    eventDateTime?: string; // ISO 8601 string recommended (e.g., "2026-10-24T21:00:00")
     location?: string;
     isPublished?: boolean;
     // Add any other fields your Java EventDTO contains
