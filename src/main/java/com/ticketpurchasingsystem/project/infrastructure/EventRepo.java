@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,7 @@ public class EventRepo implements IEventRepo {
 
     private final ConcurrentHashMap<String, Event> storage = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
+    private final ConcurrentHashMap<String, ReentrantLock> eventLocks = new ConcurrentHashMap<>();
 
     // Thread-safe Singleton Implementation
     private static volatile EventRepo instance;
@@ -30,6 +32,10 @@ public class EventRepo implements IEventRepo {
         return instance;
     }
 
+    private ReentrantLock getLockFor(String eventId) {
+        return eventLocks.computeIfAbsent(eventId, id -> new ReentrantLock());
+    }
+
     @Override
     public Event save(Event event) {
         // 1. Create a brand new event
@@ -42,39 +48,54 @@ public class EventRepo implements IEventRepo {
             return new Event(event);
         }
 
-        // 2. Update an existing event
-        Event currentStored = storage.get(event.getEventId());
-        if (currentStored == null) {
-            throw new IllegalArgumentException("Event not found for update: " + event.getEventId());
+        ReentrantLock lock = getLockFor(event.getEventId());
+        lock.lock();
+        try {
+            // 2. Update an existing event
+            Event currentStored = storage.get(event.getEventId());
+            if (currentStored == null) {
+                throw new IllegalArgumentException("Event not found for update: " + event.getEventId());
+            }
+
+            // Optimistic Locking Check
+            if (event.getVersion() != currentStored.getVersion()) {
+                throw new OptimisticLockingFailureException(
+                        "Event " + event.getEventId()
+                                + ": version mismatch. Expected " + event.getVersion()
+                                + " but found " + currentStored.getVersion() + " in store.");
+            }
+
+            // Increment version on a copy of the incoming event
+            Event updated = new Event(event);
+            updated.setVersion(event.getVersion() + 1);
+
+            // Atomic replace
+            boolean replaced = storage.replace(event.getEventId(), currentStored, updated);
+            if (!replaced) {
+                throw new OptimisticLockingFailureException(
+                        "Event " + event.getEventId()
+                                + " was modified concurrently. Expected version " + event.getVersion() + ".");
+            }
+
+            return new Event(updated);
+        } finally {
+            lock.unlock();
         }
-
-        // Optimistic Locking Check
-        if (event.getVersion() != currentStored.getVersion()) {
-            throw new OptimisticLockingFailureException(
-                    "Event " + event.getEventId()
-                            + ": version mismatch. Expected " + event.getVersion()
-                            + " but found " + currentStored.getVersion() + " in store.");
-        }
-
-        // Increment version on a copy of the incoming event
-        Event updated = new Event(event);
-        updated.setVersion(event.getVersion() + 1);
-
-        // Atomic replace
-        boolean replaced = storage.replace(event.getEventId(), currentStored, updated);
-        if (!replaced) {
-            throw new OptimisticLockingFailureException(
-                    "Event " + event.getEventId()
-                            + " was modified concurrently. Expected version " + event.getVersion() + ".");
-        }
-
-        return new Event(updated);
     }
 
     @Override
     public Event findById(String eventId) {
-        Event stored = storage.get(eventId);
-        return stored != null ? new Event(stored) : null;
+        if (eventId == null) {
+            return null;
+        }
+        ReentrantLock lock = getLockFor(eventId);
+        lock.lock();
+        try {
+            Event stored = storage.get(eventId);
+            return stored != null ? new Event(stored) : null;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -97,6 +118,20 @@ public class EventRepo implements IEventRepo {
 
     @Override
     public void delete(String eventId) {
-        storage.remove(eventId);
+        if (eventId == null) {
+            return;
+        }
+        ReentrantLock lock = eventLocks.get(eventId);
+        if (lock == null) {
+            storage.remove(eventId);
+            return;
+        }
+        lock.lock();
+        try {
+            storage.remove(eventId);
+            eventLocks.remove(eventId);
+        } finally {
+            lock.unlock();
+        }
     }
 }
