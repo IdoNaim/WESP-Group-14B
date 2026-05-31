@@ -120,6 +120,23 @@ public class ProductionController {
                                                 "Failed to update permissions. You may not have permission or the manager does not exist."));
         }
 
+        // DELETE /api/production/companies/{companyId}/owners/{ownerId}
+        @DeleteMapping("/companies/{companyId}/owners/{ownerId}")
+        public ResponseEntity<Map<String, String>> removeOwner(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId,
+                        @PathVariable String ownerId) {
+
+                String token = extractToken(authHeader);
+                boolean success = productionService.removeOwner(token, companyId, ownerId);
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Owner removed successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to remove owner. You may not have permission, the user is the founder, or does not exist."));
+        }
+
         // DELETE /api/production/companies/{companyId}/managers/{managerId}
         @DeleteMapping("/companies/{companyId}/managers/{managerId}")
         public ResponseEntity<Map<String, String>> removeManager(

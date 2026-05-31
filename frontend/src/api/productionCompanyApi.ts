@@ -104,6 +104,9 @@ export const modifyManagerPermissions = (
 export const removeManager = (companyId: number, managerId: string): Promise<{ message: string }> =>
     apiRequest('DELETE', `/companies/${companyId}/managers/${managerId}`);
 
+export const removeOwner = (companyId: number, ownerId: string): Promise<{ message: string }> =>
+    apiRequest('DELETE', `/companies/${companyId}/owners/${ownerId}`);
+
 export const getMyCompanies = (): Promise<CompanySummary[]> =>
     apiRequest('GET', '/companies/my');
 

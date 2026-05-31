@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
+
+type UserRole = 'FOUNDER' | 'OWNER' | 'MANAGER';
+
+function resolveRole(userId: string, rolesTree: api.RolesTreeDTO): UserRole {
+    if (rolesTree.founderId === userId) return 'FOUNDER';
+    if (rolesTree.ownershipTree[userId]) return 'OWNER';
+    return 'MANAGER';
+}
+
+function myPermissions(userId: string, rolesTree: api.RolesTreeDTO): Set<api.ManagerPermission> {
+    return new Set((rolesTree.managerPermissions[userId] ?? []) as api.ManagerPermission[]);
+}
 import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
 import { authApi } from '../../api/authApi';
 
@@ -128,19 +140,24 @@ function Modal({ title, onClose, onSubmit, loading, error, children }: {
 
 function TeamTab({
     rolesTree,
+    myRole,
     onAssignOwner,
     onAppointManager,
     onEditPerms,
     onRemoveManager,
+    onRemoveOwner,
 }: {
     rolesTree: api.RolesTreeDTO;
+    myRole: UserRole;
     onAssignOwner: () => void;
     onAppointManager: () => void;
     onEditPerms: (managerId: string) => void;
     onRemoveManager: (managerId: string) => void;
+    onRemoveOwner: (ownerId: string) => void;
 }) {
     const owners = Object.values(rolesTree.ownershipTree);
     const managers = Object.values(rolesTree.managerTree);
+    const canManage = myRole === 'FOUNDER' || myRole === 'OWNER';
 
     return (
         <div className="space-y-4">
@@ -162,32 +179,52 @@ function TeamTab({
             <div className="bg-[#171f33] rounded-2xl p-5 border border-gray-800">
                 <div className="flex items-center justify-between mb-3">
                     <SectionHeader icon="group" label="OWNERS" count={owners.length} color="text-[#60a5fa]" />
-                    <button
-                        onClick={onAssignOwner}
-                        className="flex items-center gap-1 text-xs bg-[#2563eb] hover:bg-[#0053db] text-white px-3 py-1.5 rounded-lg font-bold tracking-wider transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[14px]">person_add</span>
-                        ASSIGN
-                    </button>
+                    {canManage && (
+                        <button
+                            onClick={onAssignOwner}
+                            className="flex items-center gap-1 text-xs bg-[#2563eb] hover:bg-[#0053db] text-white px-3 py-1.5 rounded-lg font-bold tracking-wider transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">person_add</span>
+                            ASSIGN
+                        </button>
+                    )}
                 </div>
                 {owners.length === 0 ? (
                     <EmptyState msg="No owners assigned yet" />
                 ) : (
                     <div className="space-y-2">
-                        {owners.map(o => (
-                            <div key={o.userId} className="bg-[#0f1627] rounded-xl px-4 py-3 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[#2563eb]/20 flex items-center justify-center flex-shrink-0">
-                                    <span className="material-symbols-outlined text-[18px] text-[#60a5fa]">manage_accounts</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <span className="text-white font-bold text-sm truncate block">{o.userId}</span>
-                                    {o.appointerId && (
-                                        <p className="text-[10px] font-mono text-gray-500 mt-0.5">Appointed by {o.appointerId}</p>
+                        {owners.map(o => {
+                            const isFounder = o.userId === rolesTree.founderId;
+                            return (
+                                <div key={o.userId} className="bg-[#0f1627] rounded-xl px-4 py-3 flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-[#2563eb]/20 flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-[18px] text-[#60a5fa]">manage_accounts</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-white font-bold text-sm truncate block">{o.userId}</span>
+                                        {o.appointerId && (
+                                            <p className="text-[10px] font-mono text-gray-500 mt-0.5">Appointed by {o.appointerId}</p>
+                                        )}
+                                    </div>
+                                    {isFounder ? (
+                                        <span className="text-[10px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">FOUNDER</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-[10px] font-mono text-[#60a5fa] bg-[#2563eb]/10 px-2 py-0.5 rounded-full">OWNER</span>
+                                            {canManage && (
+                                                <button
+                                                    onClick={() => onRemoveOwner(o.userId)}
+                                                    className="p-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 text-red-400 hover:text-red-300 transition-colors"
+                                                    title="Remove owner"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                                                </button>
+                                            )}
+                                        </>
                                     )}
                                 </div>
-                                <span className="text-[10px] font-mono text-[#60a5fa] bg-[#2563eb]/10 px-2 py-0.5 rounded-full">OWNER</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -196,13 +233,15 @@ function TeamTab({
             <div className="bg-[#171f33] rounded-2xl p-5 border border-gray-800">
                 <div className="flex items-center justify-between mb-3">
                     <SectionHeader icon="supervisor_account" label="MANAGERS" count={managers.length} color="text-[#34d399]" />
-                    <button
-                        onClick={onAppointManager}
-                        className="flex items-center gap-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold tracking-wider transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[14px]">person_add</span>
-                        APPOINT
-                    </button>
+                    {canManage && (
+                        <button
+                            onClick={onAppointManager}
+                            className="flex items-center gap-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold tracking-wider transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">person_add</span>
+                            APPOINT
+                        </button>
+                    )}
                 </div>
                 {managers.length === 0 ? (
                     <EmptyState msg="No managers appointed yet" />
@@ -220,22 +259,24 @@ function TeamTab({
                                             <span className="text-white font-bold text-sm truncate block">{m.userId}</span>
                                             <p className="text-[10px] font-mono text-gray-500 mt-0.5">Appointed by {m.appointerId}</p>
                                         </div>
-                                        <div className="flex gap-1.5">
-                                            <button
-                                                onClick={() => onEditPerms(m.userId)}
-                                                className="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
-                                                title="Edit permissions"
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]">edit</span>
-                                            </button>
-                                            <button
-                                                onClick={() => onRemoveManager(m.userId)}
-                                                className="p-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 text-red-400 hover:text-red-300 transition-colors"
-                                                title="Remove manager"
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]">person_remove</span>
-                                            </button>
-                                        </div>
+                                        {canManage && (
+                                            <div className="flex gap-1.5">
+                                                <button
+                                                    onClick={() => onEditPerms(m.userId)}
+                                                    className="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors"
+                                                    title="Edit permissions"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => onRemoveManager(m.userId)}
+                                                    className="p-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 text-red-400 hover:text-red-300 transition-colors"
+                                                    title="Remove manager"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     {perms.length > 0 && (
                                         <div className="flex flex-wrap gap-1.5 mt-2.5 ml-11">
@@ -421,8 +462,8 @@ function CompanyPolicyModal({ companyId, onClose, onSaved }: {
                                     type="button"
                                     onClick={() => setComposition(opt)}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${composition === opt
-                                            ? 'bg-[#2563eb] border-[#2563eb] text-white'
-                                            : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'
+                                        ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                                        : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'
                                         }`}
                                 >
                                     {opt}
@@ -457,18 +498,25 @@ function CompanyPolicyModal({ companyId, onClose, onSaved }: {
 
 function ActionsTab({
     companyId,
+    myRole,
+    myPerms,
     onAssignOwner,
     onAppointManager,
     onManagePolicies,
     onSwitchToHistory,
 }: {
     companyId: number;
+    myRole: UserRole;
+    myPerms: Set<api.ManagerPermission>;
     onAssignOwner: () => void;
     onAppointManager: () => void;
     onManagePolicies: () => void;
     onSwitchToHistory: () => void;
 }) {
-    const actions: { icon: string; label: string; desc: string; color: string; bg: string; onClick?: () => void; href?: string; to?: string }[] = [
+    const isManager = myRole === 'MANAGER';
+
+    type ActionDef = { icon: string; label: string; desc: string; color: string; bg: string; onClick?: () => void; to?: string; requiredPerm?: api.ManagerPermission; ownerOnly?: boolean };
+    const allActions: ActionDef[] = [
         {
             icon: 'event',
             label: 'Manage Events',
@@ -476,6 +524,7 @@ function ActionsTab({
             color: 'text-[#00dbe7]',
             bg: 'bg-[#00dbe7]/10 border-[#00dbe7]/20 hover:border-[#00dbe7]/50',
             to: `/company/${companyId}/events`,
+            requiredPerm: 'INVENTORY_MANAGEMENT',
         },
         {
             icon: 'person_add',
@@ -484,6 +533,7 @@ function ActionsTab({
             color: 'text-[#60a5fa]',
             bg: 'bg-[#2563eb]/10 border-[#2563eb]/20 hover:border-[#2563eb]/50',
             onClick: onAssignOwner,
+            ownerOnly: true,
         },
         {
             icon: 'manage_accounts',
@@ -492,6 +542,7 @@ function ActionsTab({
             color: 'text-[#34d399]',
             bg: 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/50',
             onClick: onAppointManager,
+            ownerOnly: true,
         },
         {
             icon: 'policy',
@@ -500,6 +551,7 @@ function ActionsTab({
             color: 'text-[#f59e0b]',
             bg: 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/50',
             onClick: onManagePolicies,
+            requiredPerm: 'COMPANY_POLICY_MANAGEMENT',
         },
         {
             icon: 'history',
@@ -508,8 +560,16 @@ function ActionsTab({
             color: 'text-[#a78bfa]',
             bg: 'bg-violet-500/10 border-violet-500/20 hover:border-violet-500/50',
             onClick: onSwitchToHistory,
+            requiredPerm: 'PURCHASE_AND_ORDER_HISTORY_ACCESS',
         },
     ];
+
+    const actions = allActions.filter(a => {
+        if (!isManager) return true;               // founders/owners see everything
+        if (a.ownerOnly) return false;             // managers never see owner-only actions
+        if (a.requiredPerm) return myPerms.has(a.requiredPerm);
+        return true;
+    });
 
     const rowClass = (i: number) =>
         `w-full text-left flex items-center gap-6 px-8 py-7 cursor-pointer transition-colors hover:bg-[#1e2a45] ${i !== actions.length - 1 ? 'border-b border-gray-800' : ''}`;
@@ -532,13 +592,6 @@ function ActionsTab({
                 if (a.to) {
                     return (
                         <Link key={a.label} to={a.to} className={rowClass(i)}>
-                            {content}
-                        </Link>
-                    );
-                }
-                if (a.href) {
-                    return (
-                        <Link key={a.label} to={`${a.href}/${companyId}`} className={rowClass(i)}>
                             {content}
                         </Link>
                     );
@@ -693,6 +746,21 @@ export default function ProductionCompanyPage() {
         }
     };
 
+    const handleRemoveOwner = async (ownerId: string) => {
+        if (!window.confirm(`Remove owner "${ownerId}"?`)) return;
+        try {
+            await api.removeOwner(numericId, ownerId);
+            showToast('Owner removed!');
+            await fetchRoles();
+        } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Failed to remove owner', false);
+        }
+    };
+
+    const currentUserId = localStorage.getItem('userId') ?? '';
+    const myRole: UserRole = rolesTree ? resolveRole(currentUserId, rolesTree) : 'MANAGER';
+    const myPerms: Set<api.ManagerPermission> = rolesTree ? myPermissions(currentUserId, rolesTree) : new Set();
+
     const ownerCount = rolesTree ? Object.keys(rolesTree.ownershipTree).length : 0;
     const managerCount = rolesTree ? Object.keys(rolesTree.managerTree).length : 0;
 
@@ -790,8 +858,8 @@ export default function ProductionCompanyPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 py-3 text-xs font-black tracking-widest flex items-center justify-center gap-2 rounded-xl border transition-all ${activeTab === tab
-                                    ? 'bg-[#2563eb] border-[#2563eb] text-white shadow-lg shadow-[#2563eb]/20'
-                                    : 'bg-[#2a4a82] border-[#3a5fa0] text-[#b8d0f5] hover:bg-[#3356a0] hover:border-[#4a70b8] hover:text-white'
+                                ? 'bg-[#2563eb] border-[#2563eb] text-white shadow-lg shadow-[#2563eb]/20'
+                                : 'bg-[#2a4a82] border-[#3a5fa0] text-[#b8d0f5] hover:bg-[#3356a0] hover:border-[#4a70b8] hover:text-white'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-[18px]">
@@ -808,10 +876,12 @@ export default function ProductionCompanyPage() {
                 {activeTab === 'TEAM' && rolesTree && (
                     <TeamTab
                         rolesTree={rolesTree}
+                        myRole={myRole}
                         onAssignOwner={() => openModal('assignOwner')}
                         onAppointManager={() => openModal('appointManager')}
                         onEditPerms={id => openModal({ type: 'editPerms', managerId: id })}
                         onRemoveManager={handleRemoveManager}
+                        onRemoveOwner={handleRemoveOwner}
                     />
                 )}
                 {activeTab === 'HISTORY' && (
@@ -820,6 +890,8 @@ export default function ProductionCompanyPage() {
                 {activeTab === 'ACTIONS' && (
                     <ActionsTab
                         companyId={numericId}
+                        myRole={myRole}
+                        myPerms={myPerms}
                         onAssignOwner={() => { setActiveTab('TEAM'); openModal('assignOwner'); }}
                         onAppointManager={() => { setActiveTab('TEAM'); openModal('appointManager'); }}
                         onManagePolicies={() => openModal('companyPolicy')}

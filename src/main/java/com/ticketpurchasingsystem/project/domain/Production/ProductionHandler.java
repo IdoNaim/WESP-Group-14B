@@ -129,9 +129,9 @@ public class ProductionHandler {
             loggerDef.getInstance().error("getRolesTree: null or blank arguments");
             return null;
         }
-        if (!company.isOwner(userId) && !company.isFounder(userId)) {
+        if (!company.isOwner(userId) && !company.isFounder(userId) && !company.isManager(userId)) {
             loggerDef.getInstance().error(
-                    "getRolesTree: user " + userId + " is not an owner or founder of company "
+                    "getRolesTree: user " + userId + " is not a member of company "
                             + company.getCompanyId());
             return null;
         }
@@ -148,6 +148,23 @@ public class ProductionHandler {
         return new RolesTreeDTO(company.getCompanyId(), company.getCompanyName(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
     }
 
+
+    public ProductionCompany removeOwner(String requesterId, Integer companyId, String ownerId, ProductionCompany company) {
+        if (isInvalid(requesterId) || companyId == null || isInvalid(ownerId) || company == null) {
+            loggerDef.getInstance().error("removeOwner called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwner(requesterId) && !company.isFounder(requesterId)) {
+            loggerDef.getInstance().error("removeOwner: caller " + requesterId + " is not an owner/founder of company " + companyId);
+            return null;
+        }
+        boolean removed = company.removeOwner(requesterId, ownerId);
+        if (!removed) {
+            loggerDef.getInstance().error("removeOwner: failed to remove " + ownerId + " from company " + companyId);
+            return null;
+        }
+        return company;
+    }
 
     public ProductionCompany removeManager(String ownerId, Integer companyId, String managerId, ProductionCompany company){
         if (isInvalid(ownerId) || companyId == null || isInvalid(managerId) || company == null) {

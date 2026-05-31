@@ -37,6 +37,7 @@ public interface IProductionService {
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
             String managerId, Set<ManagerPermission> permissions);
     public boolean removeManager(String sessionToken, Integer companyId, String managerId);
+    public boolean removeOwner(String sessionToken, Integer companyId, String ownerId);
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId);
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule);
 
