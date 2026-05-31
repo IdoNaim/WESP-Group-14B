@@ -54,7 +54,10 @@ public class EventService implements IEventService {
         logger.info("Creating event: " + eventDTO.eventName());
 
         // --- VALIDATION LAYER ---
-        // Retain the logical checks that used to live in your old value object constructor
+        if (eventDTO.eventDateTime() != null && eventDTO.eventDateTime().isBefore(LocalDateTime.now())) {
+            logger.error("Failed to create event: event date cannot be in the past");
+            return false;
+        }
 
         if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
@@ -68,25 +71,42 @@ public class EventService implements IEventService {
         }
 
         // --- COMPOSITE RULE CONSTRUCTION ---
-        // Initialize the composite container
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
 
-        // Dynamically add your rules if they are specified in the DTO
-        if (purchasePolicyDTO.minTickets() != null) {
-            purchasePolicy.addRule(new MinTicketsRule(purchasePolicyDTO.minTickets()));
+        // Build age sub-rule respecting isAgeOr flag
+        IPurchaseRule ageRule = null;
+        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null) {
+            IPurchaseRule minA = new MinAgeRule(purchasePolicyDTO.minAge());
+            IPurchaseRule maxA = new MaxAgeRule(purchasePolicyDTO.maxAge());
+            ageRule = purchasePolicyDTO.isAgeOr() ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
+        } else if (purchasePolicyDTO.minAge() != null) {
+            ageRule = new MinAgeRule(purchasePolicyDTO.minAge());
+        } else if (purchasePolicyDTO.maxAge() != null) {
+            ageRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
         }
 
-        // REUSE: Use your colleague's production rule right here!
-        if (purchasePolicyDTO.maxTickets() != null) {
-            purchasePolicy.addRule(new MaxTicketsRule(purchasePolicyDTO.maxTickets()));
+        // Build quantity sub-rule respecting isQuantityOr flag
+        IPurchaseRule quantityRule = null;
+        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null) {
+            IPurchaseRule minT = new MinTicketsRule(purchasePolicyDTO.minTickets());
+            IPurchaseRule maxT = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
+            quantityRule = purchasePolicyDTO.isQuantityOr() ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
+        } else if (purchasePolicyDTO.minTickets() != null) {
+            quantityRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
+        } else if (purchasePolicyDTO.maxTickets() != null) {
+            quantityRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
         }
 
-        if (purchasePolicyDTO.minAge() != null) {
-            purchasePolicy.addRule(new MinAgeRule(purchasePolicyDTO.minAge()));
-        }
-
-        if (purchasePolicyDTO.maxAge() != null) {
-            purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
+        // Combine age and quantity rules respecting isAgeAndQuantityOr flag
+        if (ageRule != null && quantityRule != null) {
+            IPurchaseRule combined = purchasePolicyDTO.isAgeAndQuantityOr()
+                    ? new OrRule(ageRule, quantityRule)
+                    : new AndRule(ageRule, quantityRule);
+            purchasePolicy.addRule(combined);
+        } else if (ageRule != null) {
+            purchasePolicy.addRule(ageRule);
+        } else if (quantityRule != null) {
+            purchasePolicy.addRule(quantityRule);
         }
 
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
@@ -190,6 +210,11 @@ public class EventService implements IEventService {
 
             if (event == null) {
                 logger.warn("Cannot edit date. Event not found: " + eventId);
+                return false;
+            }
+
+            if (newDateTime == null || newDateTime.isBefore(LocalDateTime.now())) {
+                logger.warn("Cannot edit date: new date cannot be in the past");
                 return false;
             }
 
@@ -463,6 +488,14 @@ public class EventService implements IEventService {
     public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO){
         if(!authenticationService.validate(extractToken(sesssionToken))){
             throw new IllegalArgumentException("Invalid session token");
+        }
+        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+                && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
+            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets");
+        }
+        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+                && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
+            throw new IllegalArgumentException("minAge cannot be greater than maxAge");
         }
         Event event = eventRepo.findById(eventId);
         if(event == null){

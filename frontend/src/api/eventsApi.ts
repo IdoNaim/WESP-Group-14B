@@ -17,8 +17,8 @@ export interface EventDTO {
 }
 
 export interface PurchasePolicyDTO {
-    minTickets: number;
-    maxTickets: number;
+    minTickets?: number | null;
+    maxTickets?: number | null;
     isQuantityOr: boolean;
     minAge?: number | null;
     maxAge?: number | null;

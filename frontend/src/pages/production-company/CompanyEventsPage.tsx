@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { eventApi, EventDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { getRolesTree, getPurchaseHistory, HistoryOrderItem } from '../../api/productionCompanyApi';
@@ -75,55 +75,102 @@ function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, ch
     );
 }
 
-// ─── Toggle row ───────────────────────────────────────────────────────────────
+// ─── Policy Builder ───────────────────────────────────────────────────────────
 
-function ToggleRow({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
-    return (
-        <label className="flex items-start gap-2.5 cursor-pointer group">
-            <div className="relative mt-0.5 flex-shrink-0">
-                <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
-                <div className={`w-8 h-4 rounded-full transition-colors ${checked ? 'bg-[#00dbe7]' : 'bg-gray-700'}`} />
-                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : ''}`} />
-            </div>
-            <div>
-                <span className="text-xs text-gray-300 group-hover:text-white transition-colors">{label}</span>
-                {hint && <p className="text-[10px] text-gray-600 mt-0.5">{hint}</p>}
-            </div>
-        </label>
+type PolicyKey = 'minTickets' | 'maxTickets' | 'minAge' | 'maxAge';
+interface PolicyGroup { id: string; type: 'AND' | 'OR'; keys: PolicyKey[]; }
+
+const POLICY_META: { key: PolicyKey; label: string }[] = [
+    { key: 'minTickets', label: 'Min Tickets / User' },
+    { key: 'maxTickets', label: 'Max Tickets / User' },
+    { key: 'minAge',     label: 'Min Age'            },
+    { key: 'maxAge',     label: 'Max Age'            },
+];
+
+function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => void }) {
+    const [minTickets, setMinTickets] = useState('');
+    const [maxTickets, setMaxTickets] = useState('');
+    const [minAge,     setMinAge]     = useState('');
+    const [maxAge,     setMaxAge]     = useState('');
+    const [groups,     setGroups]     = useState<PolicyGroup[]>([]);
+    const [groupCombine, setGroupCombine] = useState<'AND' | 'OR'>('AND');
+
+    const vals: Record<PolicyKey, string> = { minTickets, maxTickets, minAge, maxAge };
+
+    const available = useMemo(
+        () => POLICY_META.filter(m => vals[m.key] !== ''),
+        [minTickets, maxTickets, minAge, maxAge]
     );
-}
 
-// ─── Policy section (reused in create + edit) ─────────────────────────────────
+    const assignedKeys = useMemo(
+        () => new Set(groups.flatMap(g => g.keys)),
+        [groups]
+    );
 
-function PolicySection({
-    minTickets, setMinTickets,
-    maxTickets, setMaxTickets,
-    isQuantityOr, setIsQuantityOr,
-    minAge, setMinAge,
-    maxAge, setMaxAge,
-    isAgeOr, setIsAgeOr,
-    isAgeAndQuantityOr, setIsAgeAndQuantityOr,
-}: {
-    minTickets: string; setMinTickets: (v: string) => void;
-    maxTickets: string; setMaxTickets: (v: string) => void;
-    isQuantityOr: boolean; setIsQuantityOr: (v: boolean) => void;
-    minAge: string; setMinAge: (v: string) => void;
-    maxAge: string; setMaxAge: (v: string) => void;
-    isAgeOr: boolean; setIsAgeOr: (v: boolean) => void;
-    isAgeAndQuantityOr: boolean; setIsAgeAndQuantityOr: (v: boolean) => void;
-}) {
-    const hasAge = minAge !== '' || maxAge !== '';
+    useEffect(() => {
+        const orKeys  = new Set(groups.filter(g => g.type === 'OR').flatMap(g => g.keys));
+        const usedKeys = new Set(groups.flatMap(g => g.keys));
+
+        const minT = usedKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
+        const maxT = usedKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
+        const minA = usedKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
+        const maxA = usedKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
+
+        const hasTickets = minT !== null || maxT !== null;
+        const hasAge     = minA !== null || maxA !== null;
+
+        onChange({
+            minTickets: minT,
+            maxTickets: maxT,
+            isQuantityOr: orKeys.has('minTickets') || orKeys.has('maxTickets'),
+            minAge: minA,
+            maxAge: maxA,
+            isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
+            isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
+        });
+    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
+
+    const addGroup = (type: 'AND' | 'OR') => {
+        if (groups.some(g => g.type === type)) return;
+        setGroups(prev => [...prev, { id: `${type}-${Date.now()}`, type, keys: [] }]);
+    };
+    const removeGroup = (id: string) => setGroups(prev => prev.filter(g => g.id !== id));
+    const toggleKey = (groupId: string, key: PolicyKey) => {
+        const inOther = assignedKeys.has(key) && !groups.find(g => g.id === groupId)?.keys.includes(key);
+        if (inOther) return;
+        setGroups(prev => prev.map(g => {
+            if (g.id !== groupId) return g;
+            const has = g.keys.includes(key);
+            return { ...g, keys: has ? g.keys.filter(k => k !== key) : [...g.keys, key] };
+        }));
+    };
+
+    function groupWarning(group: PolicyGroup): string | null {
+        if (group.type !== 'AND') return null;
+        if (group.keys.includes('minTickets') && group.keys.includes('maxTickets')
+            && minTickets !== '' && maxTickets !== '' && Number(minTickets) > Number(maxTickets))
+            return `Min tickets (${minTickets}) > Max tickets (${maxTickets}) — AND would always fail.`;
+        if (group.keys.includes('minAge') && group.keys.includes('maxAge')
+            && minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge))
+            return `Min age (${minAge}) > Max age (${maxAge}) — AND would always fail.`;
+        return null;
+    }
+
+    const hasAnd = groups.some(g => g.type === 'AND');
+    const hasOr  = groups.some(g => g.type === 'OR');
+
     return (
         <>
-            <div className="border-t border-gray-800 pt-4">
+            {/* Step 1 — values */}
+            <div className="border-t border-gray-800 pt-4 space-y-3">
                 <p className={sectionHdr}>
-                    <span className="material-symbols-outlined text-[14px]">confirmation_number</span>
-                    Ticket Quantity Policy
+                    <span className="material-symbols-outlined text-[14px]">tune</span>
+                    Step 1 — Set Policy Values
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                         <label className={labelCls}>Min Tickets / User</label>
-                        <input className={inputCls} type="number" min={0} placeholder="0 = no limit"
+                        <input className={inputCls} type="number" min={0} placeholder="no limit"
                             value={minTickets} onChange={e => setMinTickets(e.target.value)} />
                     </div>
                     <div className="space-y-1">
@@ -131,17 +178,6 @@ function PolicySection({
                         <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
                             value={maxTickets} onChange={e => setMaxTickets(e.target.value)} />
                     </div>
-                </div>
-                <ToggleRow label="Quantity uses OR logic" checked={isQuantityOr} onChange={setIsQuantityOr}
-                    hint="OFF = buyer must satisfy BOTH min AND max. ON = satisfying either is enough." />
-            </div>
-
-            <div className="border-t border-gray-800 pt-4">
-                <p className={sectionHdr}>
-                    <span className="material-symbols-outlined text-[14px]">person</span>
-                    Age Policy <span className="text-gray-600 normal-case font-normal ml-1">(optional)</span>
-                </p>
-                <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="space-y-1">
                         <label className={labelCls}>Min Age</label>
                         <input className={inputCls} type="number" min={0} max={120} placeholder="e.g. 18"
@@ -153,20 +189,122 @@ function PolicySection({
                             value={maxAge} onChange={e => setMaxAge(e.target.value)} />
                     </div>
                 </div>
-                <ToggleRow label="Age uses OR logic" checked={isAgeOr} onChange={setIsAgeOr}
-                    hint="OFF = buyer must be within BOTH min AND max age. ON = either condition is enough." />
             </div>
 
-            {hasAge && (
-                <div className="border-t border-gray-800 pt-4">
-                    <p className={sectionHdr}>
-                        <span className="material-symbols-outlined text-[14px]">merge</span>
-                        Policy Composition
+            {/* Step 2 — groups */}
+            <div className="border-t border-gray-800 pt-4 space-y-3">
+                <p className={sectionHdr}>
+                    <span className="material-symbols-outlined text-[14px]">account_tree</span>
+                    Step 2 — Assign Values to AND / OR Groups
+                </p>
+
+                {groups.length === 0 && (
+                    <p className="text-[11px] text-gray-600 font-mono">
+                        Add a group below, then pick which values belong to it.
+                        A rule is only active when assigned to a group.
                     </p>
-                    <ToggleRow label="Age OR Quantity (outer)" checked={isAgeAndQuantityOr} onChange={setIsAgeAndQuantityOr}
-                        hint="OFF = buyer must pass BOTH age AND quantity rules. ON = passing either block is enough." />
-                </div>
-            )}
+                )}
+
+                {groups.map(group => {
+                    const warn = groupWarning(group);
+                    return (
+                        <div key={group.id} className={`rounded-xl border p-3.5 space-y-2.5 ${
+                            group.type === 'AND' ? 'border-[#00dbe7]/25' : 'border-amber-400/25'
+                        }`}>
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-black tracking-widest px-2.5 py-1 rounded-md ${
+                                    group.type === 'AND'
+                                        ? 'bg-[#00dbe7]/15 text-[#00dbe7]'
+                                        : 'bg-amber-400/15 text-amber-300'
+                                }`}>{group.type} GROUP</span>
+                                <button type="button" onClick={() => removeGroup(group.id)}
+                                    className="text-gray-600 hover:text-red-400 transition-colors">
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+                            <p className="text-[10px] font-mono text-gray-600">
+                                {group.type === 'AND'
+                                    ? 'All checked rules must pass.'
+                                    : 'At least one checked rule must pass.'}
+                            </p>
+                            <div className="space-y-2">
+                                {available.length === 0 && (
+                                    <p className="text-[11px] text-gray-500">Fill in values in Step 1 first.</p>
+                                )}
+                                {available.map(({ key, label }) => {
+                                    const inThis  = group.keys.includes(key);
+                                    const inOther = !inThis && assignedKeys.has(key);
+                                    return (
+                                        <label key={key} className={`flex items-center gap-2.5 select-none ${
+                                            inOther ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'
+                                        }`}>
+                                            <input type="checkbox"
+                                                className="w-3.5 h-3.5 rounded"
+                                                style={{ accentColor: group.type === 'AND' ? '#00dbe7' : '#fbbf24' }}
+                                                checked={inThis}
+                                                disabled={inOther}
+                                                onChange={() => toggleKey(group.id, key)} />
+                                            <span className="text-xs text-gray-300">
+                                                {label}
+                                                <span className="text-gray-500 ml-1.5 font-mono">({vals[key]})</span>
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {warn && (
+                                <p className="text-amber-300 text-xs bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                                    <span className="material-symbols-outlined text-[13px] mt-0.5 flex-shrink-0">warning</span>
+                                    {warn}
+                                </p>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {available.length > 0 && (
+                    <div className="flex gap-2">
+                        <button type="button" disabled={hasAnd} onClick={() => addGroup('AND')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors flex items-center justify-center gap-1.5 ${
+                                hasAnd
+                                    ? 'opacity-30 cursor-not-allowed border-gray-800 text-gray-700'
+                                    : 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20'
+                            }`}>
+                            <span className="material-symbols-outlined text-[15px]">add</span>
+                            Add AND Group
+                        </button>
+                        <button type="button" disabled={hasOr} onClick={() => addGroup('OR')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors flex items-center justify-center gap-1.5 ${
+                                hasOr
+                                    ? 'opacity-30 cursor-not-allowed border-gray-800 text-gray-700'
+                                    : 'bg-amber-400/10 border-amber-400/30 text-amber-300 hover:bg-amber-400/20'
+                            }`}>
+                            <span className="material-symbols-outlined text-[15px]">add</span>
+                            Add OR Group
+                        </button>
+                    </div>
+                )}
+
+                {groups.length === 2 && (
+                    <div className="space-y-2 pt-1">
+                        <p className={labelCls}>Combine both groups with</p>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setGroupCombine('AND')}
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                                    groupCombine === 'AND'
+                                        ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]'
+                                        : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'
+                                }`}>AND — must pass both groups</button>
+                            <button type="button" onClick={() => setGroupCombine('OR')}
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                                    groupCombine === 'OR'
+                                        ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                                        : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'
+                                }`}>OR — passing either group is enough</button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </>
     );
 }
@@ -184,17 +322,16 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     const [location, setLocation] = useState('');
     const [ticketPrice, setTicketPrice] = useState('');
 
-    const [minTickets, setMinTickets] = useState('1');
-    const [maxTickets, setMaxTickets] = useState('10');
-    const [isQuantityOr, setIsQuantityOr] = useState(false);
-    const [minAge, setMinAge] = useState('');
-    const [maxAge, setMaxAge] = useState('');
-    const [isAgeOr, setIsAgeOr] = useState(false);
-    const [isAgeAndQuantityOr, setIsAgeAndQuantityOr] = useState(false);
+    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
 
     const [companyPolicyDesc, setCompanyPolicyDesc] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const minDateTime = (() => { const d = new Date(); d.setSeconds(0, 0); return d.toISOString().slice(0, 16); })();
+    const dateError = dateTime !== '' && new Date(dateTime) < new Date()
+        ? 'This date is already in the past. Please choose a future date and time.'
+        : null;
 
     useEffect(() => {
         getCompanyPolicy(companyId)
@@ -204,6 +341,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (dateError) { setError(dateError); return; }
         setLoading(true); setError(null);
         try {
             const ok = await eventApi.createEvent(token, {
@@ -215,15 +353,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     eventLocation: location || null,
                     ticketPrice: ticketPrice !== '' ? Number(ticketPrice) : null,
                 },
-                purchasePolicy: {
-                    minTickets: Number(minTickets),
-                    maxTickets: Number(maxTickets),
-                    isQuantityOr,
-                    minAge: minAge !== '' ? Number(minAge) : null,
-                    maxAge: maxAge !== '' ? Number(maxAge) : null,
-                    isAgeOr,
-                    isAgeAndQuantityOr: (minAge !== '' || maxAge !== '') ? isAgeAndQuantityOr : false,
-                },
+                purchasePolicy: policyDTO,
             });
             if (!ok) throw new Error('Failed to create event');
             onCreated();
@@ -253,8 +383,15 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     </div>
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
-                        <input className={inputCls} type="datetime-local"
+                        <input className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
+                            type="datetime-local" min={minDateTime}
                             value={dateTime} onChange={e => setDateTime(e.target.value)} required />
+                        {dateError && (
+                            <p className="text-red-400 text-xs flex items-center gap-1.5 mt-1">
+                                <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                {dateError}
+                            </p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
@@ -271,15 +408,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                 </div>
             </div>
 
-            <PolicySection
-                minTickets={minTickets} setMinTickets={setMinTickets}
-                maxTickets={maxTickets} setMaxTickets={setMaxTickets}
-                isQuantityOr={isQuantityOr} setIsQuantityOr={setIsQuantityOr}
-                minAge={minAge} setMinAge={setMinAge}
-                maxAge={maxAge} setMaxAge={setMaxAge}
-                isAgeOr={isAgeOr} setIsAgeOr={setIsAgeOr}
-                isAgeAndQuantityOr={isAgeAndQuantityOr} setIsAgeAndQuantityOr={setIsAgeAndQuantityOr}
-            />
+            <PolicyBuilder onChange={setPolicyDTO} />
 
             {companyPolicyDesc && (
                 <div className="border-t border-gray-800 pt-4">
@@ -309,20 +438,22 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [location, setLocation] = useState(event.eventLocation ?? '');
     const [ticketPrice, setTicketPrice] = useState(event.ticketPrice != null ? String(event.ticketPrice) : '');
 
-    const [minTickets, setMinTickets] = useState('1');
-    const [maxTickets, setMaxTickets] = useState('10');
-    const [isQuantityOr, setIsQuantityOr] = useState(false);
-    const [minAge, setMinAge] = useState('');
-    const [maxAge, setMaxAge] = useState('');
-    const [isAgeOr, setIsAgeOr] = useState(false);
-    const [isAgeAndQuantityOr, setIsAgeAndQuantityOr] = useState(false);
+    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
     const [updatePolicy, setUpdatePolicy] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const minDateTime = (() => { const d = new Date(); d.setSeconds(0, 0); return d.toISOString().slice(0, 16); })();
+    const dateError = dateTime !== '' && new Date(dateTime) < new Date()
+        ? 'This date is already in the past. Please choose a future date and time.'
+        : null;
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) {
+            setError(dateError); return;
+        }
         setLoading(true); setError(null);
         try {
             const eventId = event.eventId!;
@@ -342,18 +473,8 @@ function EditEventModal({ event, onClose, onSaved }: {
             if (newPrice !== (event.ticketPrice ?? null))
                 ops.push(eventApi.editEventPrice(token, eventId, newPrice));
 
-            if (updatePolicy) {
-                const policy: PurchasePolicyDTO = {
-                    minTickets: Number(minTickets),
-                    maxTickets: Number(maxTickets),
-                    isQuantityOr,
-                    minAge: minAge !== '' ? Number(minAge) : null,
-                    maxAge: maxAge !== '' ? Number(maxAge) : null,
-                    isAgeOr,
-                    isAgeAndQuantityOr: (minAge !== '' || maxAge !== '') ? isAgeAndQuantityOr : false,
-                };
-                ops.push(eventApi.editEventPolicy(token, eventId, policy));
-            }
+            if (updatePolicy)
+                ops.push(eventApi.editEventPolicy(token, eventId, policyDTO));
 
             if (ops.length === 0) { onClose(); return; }
 
@@ -382,8 +503,15 @@ function EditEventModal({ event, onClose, onSaved }: {
                     </div>
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
-                        <input className={inputCls} type="datetime-local"
+                        <input className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
+                            type="datetime-local" min={minDateTime}
                             value={dateTime} onChange={e => setDateTime(e.target.value)} required />
+                        {dateError && (
+                            <p className="text-red-400 text-xs flex items-center gap-1.5 mt-1">
+                                <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                {dateError}
+                            </p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
@@ -413,15 +541,7 @@ function EditEventModal({ event, onClose, onSaved }: {
 
                 {updatePolicy && (
                     <div className="mt-3">
-                        <PolicySection
-                            minTickets={minTickets} setMinTickets={setMinTickets}
-                            maxTickets={maxTickets} setMaxTickets={setMaxTickets}
-                            isQuantityOr={isQuantityOr} setIsQuantityOr={setIsQuantityOr}
-                            minAge={minAge} setMinAge={setMinAge}
-                            maxAge={maxAge} setMaxAge={setMaxAge}
-                            isAgeOr={isAgeOr} setIsAgeOr={setIsAgeOr}
-                            isAgeAndQuantityOr={isAgeAndQuantityOr} setIsAgeAndQuantityOr={setIsAgeAndQuantityOr}
-                        />
+                        <PolicyBuilder onChange={setPolicyDTO} />
                     </div>
                 )}
             </div>

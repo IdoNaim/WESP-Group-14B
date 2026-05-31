@@ -78,6 +78,10 @@ public class PurchasePolicyController {
         }
         switch (req.getType().toUpperCase()) {
             case "AGE":
+                if (req.getMinAge() != null && req.getMaxAge() != null && req.getMinAge() > req.getMaxAge()) {
+                    throw new IllegalArgumentException(
+                            "minAge (" + req.getMinAge() + ") cannot be greater than maxAge (" + req.getMaxAge() + ")");
+                }
                 IPurchaseRule ageRule;
                 if (req.getMinAge() != null && req.getMaxAge() != null) {
                     ageRule = new AndRule(new MinAgeRule(req.getMinAge()), new MaxAgeRule(req.getMaxAge()));
@@ -102,6 +106,27 @@ public class PurchasePolicyController {
             case "AND":
                 if (req.getSubPolicies() == null) {
                     throw new IllegalArgumentException("subPolicies are required for AND composition");
+                }
+                // Cross-validate direct children for logically impossible constraints
+                Integer andMinTickets = null, andMaxTickets = null, andMinAge = null, andMaxAge = null;
+                for (PolicyRequest sub : req.getSubPolicies()) {
+                    if (sub.getType() == null) continue;
+                    switch (sub.getType().toUpperCase()) {
+                        case "MIN_TICKETS": andMinTickets = sub.getMinTickets(); break;
+                        case "MAX_TICKETS": andMaxTickets = sub.getMaxTickets(); break;
+                        case "AGE":
+                            if (sub.getMinAge() != null) andMinAge = sub.getMinAge();
+                            if (sub.getMaxAge() != null) andMaxAge = sub.getMaxAge();
+                            break;
+                    }
+                }
+                if (andMinTickets != null && andMaxTickets != null && andMinTickets > andMaxTickets) {
+                    throw new IllegalArgumentException(
+                            "In AND rule: minTickets (" + andMinTickets + ") cannot be greater than maxTickets (" + andMaxTickets + ")");
+                }
+                if (andMinAge != null && andMaxAge != null && andMinAge > andMaxAge) {
+                    throw new IllegalArgumentException(
+                            "In AND rule: minAge (" + andMinAge + ") cannot be greater than maxAge (" + andMaxAge + ")");
                 }
                 List<ITicketPurchaseRule> andAdapters = new ArrayList<>();
                 List<IPurchaseRule> andTeammateRules = new ArrayList<>();
