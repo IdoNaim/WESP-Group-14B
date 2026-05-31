@@ -1,12 +1,12 @@
 const BASE_URL = '/api/orders';
 
 export interface ActiveOrderDTO {
-    orderId: string;
-    userId: string;
-    eventId: string;
-    createdAt: string; // ISO 8601 format
-    seatIds : string[]; // List of seat IDs associated with the order
-    standingAreaQuantities: StandingAreaTicketsDTO[]; // List of standing area quantities
+  orderId: string;
+  userId: string;
+  eventId: string;
+  createdAt: string;
+  seatIds: string[];
+  StandingAreaQuantities: Record<string, number>; // capital S, plain object not array
 }
 export interface StandingAreaTicketsDTO{
     areaId: string;

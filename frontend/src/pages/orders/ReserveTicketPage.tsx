@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
 import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO } from "../../api/eventsApi";
+import { authApi } from "../../api/authApi";
+import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,6 @@ function getZonePrefix(id: string): string {
   return id.split("_")[0] ?? id;
 }
 
-// Parses id = String.format("%s_%d_%d", zone, row, number)
 function parseSeatId(id: string): { zone: string; row: number; number: number } | null {
   const match = id.match(/^(.+)_(\d+)_(\d+)$/);
   if (!match) return null;
@@ -67,8 +67,12 @@ function parseSeatId(id: string): { zone: string; row: number; number: number } 
 }
 
 function buildZonesFromSeatingMap(
-  dto: SeatingMapDTO
+  dto: SeatingMapDTO,
+  activeOrder: ActiveOrderDTO | null
 ): { zones: ZoneData[]; standing: StandingZone[] } {
+  // Build a set of seat IDs already in the active order for quick lookup
+  const activeSeatIds = new Set(activeOrder?.seatIds ?? []);
+
   const zoneMap = new Map<string, AssignedSeatDTO[]>();
   for (const seat of dto.assignedSeats) {
     const zone = getZonePrefix(seat.id);
@@ -81,12 +85,18 @@ function buildZonesFromSeatingMap(
     const seats: Seat[] = seatDTOs.flatMap((s) => {
       const p = parseSeatId(s.id);
       if (!p) return [];
+      // If the seat is in the active order → "selected", if booked by someone else → "taken"
+      const status: SeatStatus = activeSeatIds.has(s.id)
+        ? "selected"
+        : s.isBooked
+        ? "taken"
+        : "available";
       return [
         {
           id: s.id,
           row: p.row,
           number: p.number,
-          status: (s.isBooked ? "taken" : "available") as SeatStatus,
+          status,
           price: s.priceForTicket,
           section: zone,
         },
@@ -97,16 +107,62 @@ function buildZonesFromSeatingMap(
     zones.push({ zone, seats, cols });
   }
 
+  // Build standing zones, pre-populating selected quantity from active order
+  const activeStandingMap = new Map(
+    Object.entries(activeOrder?.StandingAreaQuantities ?? {})
+  );
+
   const standing: StandingZone[] = dto.standingAreas.map((a) => ({
     id: a.areaId,
     name: a.areaId,
     available: a.availableSeats,
     capacity: a.capacity,
     price: a.priceForTicket,
-    selected: 0,
+    selected: activeStandingMap.get(a.areaId) ?? 0,
   }));
 
   return { zones, standing };
+}
+
+// Builds the initial OrderItems list from an existing active order + seating map
+function buildOrderItemsFromActiveOrder(
+  activeOrder: ActiveOrderDTO,
+  zones: ZoneData[],
+  standingZones: StandingZone[]
+): OrderItem[] {
+  const items: OrderItem[] = [];
+
+  // Seated tickets
+  for (const seatId of activeOrder.seatIds) {
+    const parsed = parseSeatId(seatId);
+    if (!parsed) continue;
+    const zoneData = zones.find((z) => z.zone === parsed.zone);
+    const seat = zoneData?.seats.find((s) => s.id === seatId);
+    if (!seat) continue;
+    items.push({
+      id: seatId,
+      label: `Zone ${parsed.zone}`,
+      detail: `Row ${parsed.row}, Seat ${parsed.number} • Qty 1`,
+      qty: 1,
+      unitPrice: seat.price,
+    });
+  }
+
+  // Standing tickets
+for (const [areaId, quantity] of Object.entries(activeOrder.StandingAreaQuantities ?? {})) {
+    if (quantity <= 0) continue;
+    const zone = standingZones.find((z) => z.id === areaId);
+    if (!zone) continue;
+    items.push({
+      id: areaId,
+      label: zone.name,
+      detail: "Standing • General Admission",
+      qty: quantity,
+      unitPrice: zone.price,
+    });
+  }
+
+  return items;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -256,7 +312,6 @@ function ActiveOrderPanel({
 
   return (
     <div className="bg-[#0A192F] text-white rounded-lg shadow-xl overflow-hidden flex flex-col border border-white/10">
-      {/* Header */}
       <div className="p-5 border-b border-white/10 flex justify-between items-center">
         <h2 className="text-lg font-bold">Your Active Order</h2>
         {items.length > 0 && !isExpired && (
@@ -275,7 +330,6 @@ function ActiveOrderPanel({
         )}
       </div>
 
-      {/* Body */}
       {isExpired ? (
         <div className="p-6 flex flex-col items-center gap-4 text-center">
           <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -329,8 +383,6 @@ function ActiveOrderPanel({
               </div>
             ))}
           </div>
-
-          {/* Summary */}
           <div className="p-5 bg-white/5 border-t border-white/10 space-y-4">
             <div className="flex justify-between text-sm text-white/60">
               <span>Subtotal</span>
@@ -366,52 +418,78 @@ export default function ReserveTicketsPage() {
 
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // ── Event data from API ──
-  const { eventId } = useParams<{ eventId: string; userId: string }>();
+  // ── Data from API ──
   const [event, setEvent] = useState<EventDTO | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
   const [eventError, setEventError] = useState(false);
 
-  // ── Seating map from API ──
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState(false);
 
+  // ── Bootstrap: token → user → activeOrder → eventId → event + seatingMap ──
   useEffect(() => {
-    if (!eventId) return;
     const token = localStorage.getItem("token") ?? "";
-    setEventLoading(true);
-    setEventError(false);
-    eventApi.getEvent(token, eventId)
-      .then((data) => {
-        if (!data) { setEventError(true); return; }
-        setEvent(data);
-      })
-      .catch(() => setEventError(true))
-      .finally(() => setEventLoading(false));
-  }, [eventId]);
 
-  useEffect(() => {
-    if (!eventId) return;
-    const token = localStorage.getItem("token") ?? "";
-    setMapLoading(true);
-    setMapError(false);
-    eventApi.getEventSeatingMap(token, eventId)
-      .then((data) => {
-        if (!data) { setMapError(true); return; }
-        const { zones: z, standing } = buildZonesFromSeatingMap(data);
-        setZones(z);
-        setStandingZones(standing);
+    // Step 1: get userId from token
+    authApi.getCurrentUser(token)
+      .then((user) => {
+        // Step 2: get active order for this user
+        return activeOrderApi.getActiveOrderByUserId(token, user.userId);
       })
-      .catch(() => setMapError(true))
-      .finally(() => setMapLoading(false));
-  }, [eventId]);
+      .then((activeOrder) => {
+        if (!activeOrder) {
+          // No active order — show empty state, still load nothing
+          setEventLoading(false);
+          setMapLoading(false);
+          return;
+        }
+
+        const { eventId } = activeOrder;
+
+        // Step 3a: fetch event details
+        eventApi.getEvent(token, eventId)
+          .then((data) => {
+            if (!data) { setEventError(true); return; }
+            setEvent(data);
+          })
+          .catch(() => setEventError(true))
+          .finally(() => setEventLoading(false));
+
+        // Step 3b: fetch seating map, then pre-populate order from activeOrder
+        eventApi.getEventSeatingMap(token, eventId)
+          .then((mapData) => {
+            console.log("seating map response:", mapData);   
+            if (!mapData) { setMapError(true); return; }
+            const { zones: z, standing } = buildZonesFromSeatingMap(mapData, activeOrder);
+            console.log("parsed zones:", z, "standing:", standing);  
+            setZones(z);
+            setStandingZones(standing);
+            // Pre-populate order items from the active order
+            const items = buildOrderItemsFromActiveOrder(activeOrder, z, standing);
+            setOrderItems(items);
+            // Start the timer if there are already items in the order
+            if (items.length > 0) setTimerActive(true);
+          })
+          .catch((err) => {    
+              console.log("seating map error:", err);   // ADD THIS
+              setMapError(true);
+            })
+          .finally(() => setMapLoading(false));
+      })
+      .catch(() => {
+        setEventError(true);
+        setMapError(true);
+        setEventLoading(false);
+        setMapLoading(false);
+      });
+  }, []); // runs once on mount
 
   // Compute total selected across all zones + standing
   const totalSelected =
     zones.reduce((acc, z) => acc + z.seats.filter((s) => s.status === "selected").length, 0) +
     standingZones.reduce((acc, z) => acc + z.selected, 0);
 
-  // Timer
+  // Timer countdown
   useEffect(() => {
     if (!timerActive) return;
     if (timeLeft <= 0) return;
@@ -457,12 +535,7 @@ export default function ReserveTicketsPage() {
         setZones((prev) =>
           prev.map((z) =>
             z.zone === seat.section
-              ? {
-                  ...z,
-                  seats: z.seats.map((s) =>
-                    s.id === seat.id ? { ...s, status: "available" as SeatStatus } : s
-                  ),
-                }
+              ? { ...z, seats: z.seats.map((s) => s.id === seat.id ? { ...s, status: "available" as SeatStatus } : s) }
               : z
           )
         );
@@ -478,12 +551,7 @@ export default function ReserveTicketsPage() {
       setZones((prev) =>
         prev.map((z) =>
           z.zone === seat.section
-            ? {
-                ...z,
-                seats: z.seats.map((s) =>
-                  s.id === seat.id ? { ...s, status: "selected" as SeatStatus } : s
-                ),
-              }
+            ? { ...z, seats: z.seats.map((s) => s.id === seat.id ? { ...s, status: "selected" as SeatStatus } : s) }
             : z
         )
       );
@@ -513,14 +581,12 @@ export default function ReserveTicketsPage() {
       if (!zone || zone.selected >= zone.available) return;
 
       setStandingZones((prev) =>
-        prev.map((z) =>
-          z.id === zoneId ? { ...z, selected: z.selected + 1 } : z
-        )
+        prev.map((z) => z.id === zoneId ? { ...z, selected: z.selected + 1 } : z)
       );
       setOrderItems((prev) => {
         const existing = prev.find((i) => i.id === zoneId);
         if (existing) {
-          return prev.map((i) => (i.id === zoneId ? { ...i, qty: i.qty + 1 } : i));
+          return prev.map((i) => i.id === zoneId ? { ...i, qty: i.qty + 1 } : i);
         }
         return [
           ...prev,
@@ -540,15 +606,13 @@ export default function ReserveTicketsPage() {
 
   const handleStandingRemove = useCallback((zoneId: string) => {
     setStandingZones((prev) =>
-      prev.map((z) =>
-        z.id === zoneId && z.selected > 0 ? { ...z, selected: z.selected - 1 } : z
-      )
+      prev.map((z) => z.id === zoneId && z.selected > 0 ? { ...z, selected: z.selected - 1 } : z)
     );
     setOrderItems((prev) => {
       const existing = prev.find((i) => i.id === zoneId);
       if (!existing) return prev;
       if (existing.qty <= 1) return prev.filter((i) => i.id !== zoneId);
-      return prev.map((i) => (i.id === zoneId ? { ...i, qty: i.qty - 1 } : i));
+      return prev.map((i) => i.id === zoneId ? { ...i, qty: i.qty - 1 } : i);
     });
   }, []);
 
@@ -558,13 +622,11 @@ export default function ReserveTicketsPage() {
     setZones((prev) =>
       prev.map((z) => ({
         ...z,
-        seats: z.seats.map((s) =>
-          s.id === id ? { ...s, status: "available" as SeatStatus } : s
-        ),
+        seats: z.seats.map((s) => s.id === id ? { ...s, status: "available" as SeatStatus } : s),
       }))
     );
     setStandingZones((prev) =>
-      prev.map((z) => (z.id === id ? { ...z, selected: 0 } : z))
+      prev.map((z) => z.id === id ? { ...z, selected: 0 } : z)
     );
   }, []);
 
@@ -707,20 +769,14 @@ export default function ReserveTicketsPage() {
                     { color: "#3b82f6", label: "Selected" },
                   ].map((leg) => (
                     <span key={leg.label} className="flex items-center gap-1.5">
-                      <span
-                        className="w-3.5 h-3.5 rounded-sm inline-block"
-                        style={{ backgroundColor: leg.color }}
-                      />
+                      <span className="w-3.5 h-3.5 rounded-sm inline-block" style={{ backgroundColor: leg.color }} />
                       {leg.label}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div
-                className="bg-white border p-6 rounded shadow-sm overflow-x-auto"
-                style={{ borderColor: "#c5c6cd" }}
-              >
+              <div className="bg-white border p-6 rounded shadow-sm overflow-x-auto" style={{ borderColor: "#c5c6cd" }}>
                 {mapLoading ? (
                   <div className="flex justify-center items-center py-16">
                     <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
@@ -738,7 +794,6 @@ export default function ReserveTicketsPage() {
                   </div>
                 ) : (
                   <div className="min-w-[650px] flex flex-col items-center gap-8">
-                    {/* Stage */}
                     <div
                       className="w-1/2 h-10 flex items-center justify-center rounded text-white text-xs font-bold uppercase tracking-widest shadow-sm"
                       style={{ backgroundColor: "#0A192F" }}
@@ -746,27 +801,16 @@ export default function ReserveTicketsPage() {
                       STAGE
                     </div>
 
-                    {/* Seated sections */}
                     {zones.length > 0 && (
                       <div className="flex justify-center items-start w-full gap-8 flex-wrap">
                         {zones.map(({ zone, seats, cols }) => (
                           <div key={zone} className="flex flex-col items-center gap-2">
-                            <span
-                              className="text-[11px] uppercase font-semibold tracking-wider"
-                              style={{ color: "#5d5f5f" }}
-                            >
+                            <span className="text-[11px] uppercase font-semibold tracking-wider" style={{ color: "#5d5f5f" }}>
                               Zone {zone}
                             </span>
-                            <div
-                              className="grid gap-1.5"
-                              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-                            >
+                            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
                               {seats.map((seat) => (
-                                <SeatDot
-                                  key={seat.id}
-                                  seat={seat}
-                                  onClick={handleSeatClick}
-                                />
+                                <SeatDot key={seat.id} seat={seat} onClick={handleSeatClick} />
                               ))}
                             </div>
                           </div>
@@ -774,12 +818,10 @@ export default function ReserveTicketsPage() {
                       </div>
                     )}
 
-                    {/* Divider between seated and standing */}
                     {zones.length > 0 && standingZones.length > 0 && (
                       <div className="w-full h-px" style={{ backgroundColor: "#c5c6cd" }} />
                     )}
 
-                    {/* Standing zones */}
                     {standingZones.length > 0 && (
                       <div className="w-full flex flex-col md:flex-row gap-6">
                         {standingZones.map((zone) => (
@@ -798,25 +840,20 @@ export default function ReserveTicketsPage() {
               </div>
             </div>
 
-            {/* Purchase Rules */}
             <PurchaseRules />
 
-            {/* Policy validation hint */}
             {totalSelected >= MAX_TICKETS && (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
                 You've reached the maximum of <strong>{MAX_TICKETS} tickets</strong> per order as per purchase policy.
               </p>
             )}
 
-            {/* Reserve CTA */}
             <div className="flex justify-end pt-2">
               <button
                 disabled={totalSelected === 0 || timeLeft === 0}
                 className="px-12 py-4 text-sm font-bold uppercase tracking-widest rounded shadow transition-all hover:brightness-110 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#FFB400", color: "#0A192F" }}
-                onClick={() =>
-                  showBanner("success", "All selected tickets have been reserved in your active order.")
-                }
+                onClick={() => showBanner("success", "All selected tickets have been reserved in your active order.")}
               >
                 Reserve Tickets
               </button>
@@ -832,24 +869,16 @@ export default function ReserveTicketsPage() {
               onCheckout={handleCheckout}
             />
 
-            {/* Venue card */}
             {event?.location && (
-              <div
-                className="p-4 border rounded flex items-center gap-4 bg-white"
-                style={{ borderColor: "#c5c6cd" }}
-              >
+              <div className="p-4 border rounded flex items-center gap-4 bg-white" style={{ borderColor: "#c5c6cd" }}>
                 <div className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center shrink-0">
                   <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path d="M12 21s-8-5.686-8-11A8 8 0 0 1 20 10c0 5.314-8 11-8 11z" /><circle cx="12" cy="10" r="3" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: "#0A192F" }}>
-                    {event.location}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "#5d5f5f" }}>
-                    Event venue
-                  </p>
+                  <p className="font-semibold text-sm" style={{ color: "#0A192F" }}>{event.location}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#5d5f5f" }}>Event venue</p>
                 </div>
               </div>
             )}
@@ -857,28 +886,15 @@ export default function ReserveTicketsPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer
-        className="w-full mt-auto border-t"
-        style={{ borderColor: "#c5c6cd", backgroundColor: "#fff" }}
-      >
-        <div
-          className="flex flex-col md:flex-row justify-between items-center px-12 py-8 gap-3 mx-auto"
-          style={{ maxWidth: 1280 }}
-        >
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#1b1b1d" }}>
-            EliteTickets Global
-          </span>
+      <footer className="w-full mt-auto border-t" style={{ borderColor: "#c5c6cd", backgroundColor: "#fff" }}>
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-8 gap-3 mx-auto" style={{ maxWidth: 1280 }}>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#1b1b1d" }}>EliteTickets Global</span>
           <div className="flex gap-6">
             {["Privacy Policy", "Terms of Service", "Cookie Settings", "Contact Us"].map((t) => (
-              <a key={t} href="#" className="text-xs hover:text-gray-800 transition-colors" style={{ color: "#5d5f5f" }}>
-                {t}
-              </a>
+              <a key={t} href="#" className="text-xs hover:text-gray-800 transition-colors" style={{ color: "#5d5f5f" }}>{t}</a>
             ))}
           </div>
-          <span className="text-xs" style={{ color: "#5d5f5f" }}>
-            © 2024 EliteTickets Global. All rights reserved.
-          </span>
+          <span className="text-xs" style={{ color: "#5d5f5f" }}>© 2024 EliteTickets Global. All rights reserved.</span>
         </div>
       </footer>
     </div>
