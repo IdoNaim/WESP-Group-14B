@@ -420,11 +420,10 @@ function CompanyPolicyModal({ companyId, onClose, onSaved }: {
                                     key={opt}
                                     type="button"
                                     onClick={() => setComposition(opt)}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${
-                                        composition === opt
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${composition === opt
                                             ? 'bg-[#2563eb] border-[#2563eb] text-white'
                                             : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'
-                                    }`}
+                                        }`}
                                 >
                                     {opt}
                                 </button>
@@ -767,6 +766,13 @@ export default function ProductionCompanyPage() {
                         <StatCard label="ORDERS" value={history.length} color="text-[#00c896]" />
                     </div>
                     <button
+                        onClick={() => navigate('/profile')} //TODO: CONNECT TO THE PROFILE PAGE
+                        className="flex items-center gap-2 border border-gray-400 hover:border-[#2563eb] text-gray-500 hover:text-[#2563eb] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                        MY PROFILE
+                    </button>
+                    <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 border border-gray-400 hover:border-red-400 text-gray-500 hover:text-red-500 px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
                     >
@@ -782,11 +788,10 @@ export default function ProductionCompanyPage() {
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-3.5 text-xs font-black tracking-widest flex items-center justify-center gap-2 transition-colors ${
-                            activeTab === tab
+                        className={`flex-1 py-3.5 text-xs font-black tracking-widest flex items-center justify-center gap-2 transition-colors ${activeTab === tab
                                 ? 'bg-[#2563eb] text-white'
                                 : 'text-gray-500 hover:text-gray-200 hover:bg-[#151e35]'
-                        }`}
+                            }`}
                     >
                         <span className="material-symbols-outlined text-[18px]">
                             {tab === 'TEAM' ? 'group' : tab === 'HISTORY' ? 'history' : 'bolt'}

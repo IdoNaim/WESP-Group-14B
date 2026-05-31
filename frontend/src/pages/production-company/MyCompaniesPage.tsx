@@ -183,6 +183,13 @@ export default function MyCompaniesPage() {
                         NEW COMPANY
                     </button>
                     <button
+                        onClick={() => navigate('/profile')}
+                        className="flex items-center gap-2 border border-gray-400 hover:border-[#2563eb] text-gray-500 hover:text-[#2563eb] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                        MY PROFILE
+                    </button>
+                    <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 border border-gray-400 hover:border-red-400 text-gray-500 hover:text-red-500 px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
                     >
