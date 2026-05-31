@@ -21,6 +21,9 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMap
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -116,6 +119,39 @@ public class EventController {
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/location
+        @PutMapping("/{eventId}/location")
+        public ResponseEntity<Void> editEventLocation(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventLocationRequestDTO body) {
+
+                boolean success = eventService.editEventLocation(authHeader, eventId, body.getNewLocation());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/price
+        @PutMapping("/{eventId}/price")
+        public ResponseEntity<Void> editEventPrice(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventPriceRequestDTO body) {
+
+                boolean success = eventService.editEventPrice(authHeader, eventId, body.getNewPrice());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/policy
+        @PutMapping("/{eventId}/policy")
+        public ResponseEntity<Void> editEventPolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody PurchasePolicyDTO body) {
+
+                boolean success = eventService.editEventPurchasePolicy(authHeader, eventId, body);
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
         // PUT /api/events/{eventId}/seating-map

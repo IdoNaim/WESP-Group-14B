@@ -98,6 +98,8 @@ public class EventService implements IEventService {
                 discountPolicy,
                 0
         );
+        event.setEventLocation(eventDTO.eventLocation());
+        event.setTicketPrice(eventDTO.ticketPrice());
 
         try {
             // Save the event and capture the returned object (which includes the newly generated eventId)
@@ -140,7 +142,9 @@ public class EventService implements IEventService {
                 event.getEventName(),
                 event.getEventCapacity(),
                 event.getEventDate(),
-                event.isActive()
+                event.isActive(),
+                event.getEventLocation(),
+                event.getTicketPrice()
         );
     }
 
@@ -160,7 +164,9 @@ public class EventService implements IEventService {
                         event.getEventName(),
                         event.getEventCapacity(),
                         event.getEventDate(),
-                        event.isActive()
+                        event.isActive(),
+                        event.getEventLocation(),
+                        event.getTicketPrice()
                 ))
                 .toList();
 
@@ -417,6 +423,39 @@ public class EventService implements IEventService {
         return reservedSeatIds;
     }
     @Override
+    public boolean editEventLocation(String sessionToken, String eventId, String newLocation) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setEventLocation(newLocation);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event location for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean editEventPrice(String sessionToken, String eventId, Double newPrice) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setTicketPrice(newPrice);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event price for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO){
         if(!authenticationService.validate(extractToken(sesssionToken))){
             throw new IllegalArgumentException("Invalid session token");
