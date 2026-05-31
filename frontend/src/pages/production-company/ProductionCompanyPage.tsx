@@ -783,22 +783,24 @@ export default function ProductionCompanyPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex bg-[#0d1525] border-b border-gray-800">
-                {(['TEAM', 'HISTORY', 'ACTIONS'] as Tab[]).map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-3.5 text-xs font-black tracking-widest flex items-center justify-center gap-2 transition-colors ${activeTab === tab
-                                ? 'bg-[#2563eb] text-white'
-                                : 'text-gray-500 hover:text-gray-200 hover:bg-[#151e35]'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-[18px]">
-                            {tab === 'TEAM' ? 'group' : tab === 'HISTORY' ? 'history' : 'bolt'}
-                        </span>
-                        {tab}
-                    </button>
-                ))}
+            <div className="px-4 md:px-6 py-3 bg-[#0d1525] border-b border-gray-800">
+                <div className="flex gap-2 max-w-4xl mx-auto">
+                    {(['TEAM', 'HISTORY', 'ACTIONS'] as Tab[]).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-3 text-xs font-black tracking-widest flex items-center justify-center gap-2 rounded-xl border transition-all ${activeTab === tab
+                                    ? 'bg-[#2563eb] border-[#2563eb] text-white shadow-lg shadow-[#2563eb]/20'
+                                    : 'bg-[#2a4a82] border-[#3a5fa0] text-[#b8d0f5] hover:bg-[#3356a0] hover:border-[#4a70b8] hover:text-white'
+                                }`}
+                        >
+                            <span className="material-symbols-outlined text-[18px]">
+                                {tab === 'TEAM' ? 'group' : tab === 'HISTORY' ? 'history' : 'bolt'}
+                            </span>
+                            {tab}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Tab Content */}
