@@ -77,9 +77,10 @@ public class EventController {
         public ResponseEntity<List<EventDTO>> getEventsByCompany(
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
+                String token  = (authHeader != null && authHeader.startsWith("Bearer ")) ? authHeader.substring(7) : authHeader;
 
                 // FIXED: Added authHeader
-                List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
+                List<EventDTO> events = eventService.searchEventsByCompany(token, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
 

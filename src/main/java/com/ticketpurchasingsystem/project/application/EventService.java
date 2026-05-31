@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +33,24 @@ public class EventService implements IEventService {
         this.authenticationService = authenticationService;
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
-
+        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+        purchasePolicy.addRule( new MinTicketsRule(1));
+        purchasePolicy.addRule( new MaxTicketsRule(10));
+        Event event = new Event(
+                1,
+                "testEvent",
+                100,
+                LocalDateTime.now().plusDays(30),
+                purchasePolicy,
+                new EventDiscountPolicy(new ArrayList<>()),
+                0
+        );
+        SeatingMap seatingMap = new SeatingMap();
+        seatingMap.addSeatingArea(5, 9, 50.0);
+        seatingMap.addStandingArea(20, 30.0);
+        event.setSeatingMap(seatingMap);
+        Event eventWithId = eventRepo.save(event);
+        logger.info("Created initail event with ID: "+ eventWithId.getEventId());
         logger.info("EventService initialized");
     }
 
