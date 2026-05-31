@@ -55,6 +55,11 @@ public class EventService implements IEventService {
                 new EventDiscountPolicy(new ArrayList<>()),
                 0
         );
+        SeatingMap seatingMap = new SeatingMap();
+        seatingMap.addSeatingArea(5, 9, 50.0);
+        seatingMap.addStandingArea(20, 30.0);
+        event.setSeatingMap(seatingMap);
+
         Event eventWithId = eventRepo.save(event);
         logger.info("Created initial event with ID: " + eventWithId.getEventId());
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { eventApi, EventDTO } from "../../api/eventsApi";
+import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO } from "../../api/eventsApi";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +13,12 @@ interface Seat {
   status: SeatStatus;
   price: number;
   section: string;
+}
+
+interface ZoneData {
+  zone: string;
+  seats: Seat[];
+  cols: number;
 }
 
 interface StandingZone {
@@ -34,40 +40,8 @@ interface OrderItem {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const RESERVATION_SECONDS = 10 * 60; // 10 minutes
+const RESERVATION_SECONDS = 10 * 60;
 const MAX_TICKETS = 4;
-
-const SECTION_A_SEATS: Seat[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `A-${i}`,
-  row: Math.floor(i / 4) + 1,
-  number: (i % 4) + 1,
-  status: (Math.random() > 0.4 ? "available" : "taken") as SeatStatus,
-  price: 120,
-  section: "Section A",
-}));
-
-const CENTER_STALLS_SEATS: Seat[] = Array.from({ length: 50 }, (_, i) => ({
-  id: `C-${i}`,
-  row: Math.floor(i / 10) + 1,
-  number: (i % 10) + 1,
-  status: (Math.random() < 0.3 ? "taken" : "available") as SeatStatus,
-  price: 150,
-  section: "Center Stalls",
-}));
-
-const SECTION_B_SEATS: Seat[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `B-${i}`,
-  row: Math.floor(i / 4) + 1,
-  number: (i % 4) + 1,
-  status: (Math.random() > 0.5 ? "available" : "taken") as SeatStatus,
-  price: 120,
-  section: "Section B",
-}));
-
-const INITIAL_STANDING: StandingZone[] = [
-  { id: "floor-ga", name: "Floor GA", available: 142, capacity: 200, price: 65, selected: 0 },
-  { id: "balcony", name: "Balcony Standing", available: 58, capacity: 100, price: 45, selected: 0 },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -75,6 +49,64 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = (seconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+function getZonePrefix(id: string): string {
+  return id.split("_")[0] ?? id;
+}
+
+// Parses id = String.format("%s_%d_%d", zone, row, number)
+function parseSeatId(id: string): { zone: string; row: number; number: number } | null {
+  const match = id.match(/^(.+)_(\d+)_(\d+)$/);
+  if (!match) return null;
+  return {
+    zone: match[1],
+    row: parseInt(match[2], 10),
+    number: parseInt(match[3], 10),
+  };
+}
+
+function buildZonesFromSeatingMap(
+  dto: SeatingMapDTO
+): { zones: ZoneData[]; standing: StandingZone[] } {
+  const zoneMap = new Map<string, AssignedSeatDTO[]>();
+  for (const seat of dto.assignedSeats) {
+    const zone = getZonePrefix(seat.id);
+    if (!zoneMap.has(zone)) zoneMap.set(zone, []);
+    zoneMap.get(zone)!.push(seat);
+  }
+
+  const zones: ZoneData[] = [];
+  for (const [zone, seatDTOs] of zoneMap) {
+    const seats: Seat[] = seatDTOs.flatMap((s) => {
+      const p = parseSeatId(s.id);
+      if (!p) return [];
+      return [
+        {
+          id: s.id,
+          row: p.row,
+          number: p.number,
+          status: (s.isBooked ? "taken" : "available") as SeatStatus,
+          price: s.priceForTicket,
+          section: zone,
+        },
+      ];
+    });
+    seats.sort((a, b) => a.row - b.row || a.number - b.number);
+    const cols = seats.length > 0 ? Math.max(...seats.map((s) => s.number)) : 1;
+    zones.push({ zone, seats, cols });
+  }
+
+  const standing: StandingZone[] = dto.standingAreas.map((a) => ({
+    id: a.areaId,
+    name: a.areaId,
+    available: a.availableSeats,
+    capacity: a.capacity,
+    price: a.priceForTicket,
+    selected: 0,
+  }));
+
+  return { zones, standing };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -94,7 +126,7 @@ function SeatDot({
   const cursor = seat.status === "taken" ? "cursor-not-allowed" : "cursor-pointer";
   return (
     <div
-      title={`${seat.section} Row ${seat.row}, Seat ${seat.number} — $${seat.price}`}
+      title={`Zone ${seat.section} Row ${seat.row}, Seat ${seat.number} — $${seat.price}`}
       className={`w-5 h-5 rounded-sm transition-transform hover:scale-110 ${cursor}`}
       style={{ backgroundColor: colorMap[seat.status] }}
       onClick={() => seat.status !== "taken" && onClick(seat)}
@@ -325,10 +357,8 @@ function ActiveOrderPanel({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ReserveTicketsPage() {
-  const [sectionA, setSectionA] = useState<Seat[]>(SECTION_A_SEATS);
-  const [centerStalls, setCenterStalls] = useState<Seat[]>(CENTER_STALLS_SEATS);
-  const [sectionB, setSectionB] = useState<Seat[]>(SECTION_B_SEATS);
-  const [standingZones, setStandingZones] = useState<StandingZone[]>(INITIAL_STANDING);
+  const [zones, setZones] = useState<ZoneData[]>([]);
+  const [standingZones, setStandingZones] = useState<StandingZone[]>([]);
 
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [timeLeft, setTimeLeft] = useState<number>(RESERVATION_SECONDS);
@@ -342,32 +372,43 @@ export default function ReserveTicketsPage() {
   const [eventLoading, setEventLoading] = useState(true);
   const [eventError, setEventError] = useState(false);
 
+  // ── Seating map from API ──
+  const [mapLoading, setMapLoading] = useState(true);
+  const [mapError, setMapError] = useState(false);
+
   useEffect(() => {
     if (!eventId) return;
     const token = localStorage.getItem("token") ?? "";
-    console.log("eventId from URL:", eventId);      // ADD THIS
-    console.log("token from storage:", token);       // ADD THIS
     setEventLoading(true);
     setEventError(false);
     eventApi.getEvent(token, eventId)
       .then((data) => {
-        console.log("API response:", data);          // ADD THIS
-
         if (!data) { setEventError(true); return; }
         setEvent(data);
       })
-      .catch((err) => { 
-            console.log("API error:", err);              // ADD THIS
-            setEventError(true);
-        })
+      .catch(() => setEventError(true))
       .finally(() => setEventLoading(false));
   }, [eventId]);
 
-  // Compute total selected across everything
+  useEffect(() => {
+    if (!eventId) return;
+    const token = localStorage.getItem("token") ?? "";
+    setMapLoading(true);
+    setMapError(false);
+    eventApi.getEventSeatingMap(token, eventId)
+      .then((data) => {
+        if (!data) { setMapError(true); return; }
+        const { zones: z, standing } = buildZonesFromSeatingMap(data);
+        setZones(z);
+        setStandingZones(standing);
+      })
+      .catch(() => setMapError(true))
+      .finally(() => setMapLoading(false));
+  }, [eventId]);
+
+  // Compute total selected across all zones + standing
   const totalSelected =
-    sectionA.filter((s) => s.status === "selected").length +
-    centerStalls.filter((s) => s.status === "selected").length +
-    sectionB.filter((s) => s.status === "selected").length +
+    zones.reduce((acc, z) => acc + z.seats.filter((s) => s.status === "selected").length, 0) +
     standingZones.reduce((acc, z) => acc + z.selected, 0);
 
   // Timer
@@ -387,14 +428,13 @@ export default function ReserveTicketsPage() {
   useEffect(() => {
     if (timeLeft === 0 && orderItems.length > 0) {
       setOrderItems([]);
-      setSectionA((prev) =>
-        prev.map((s) => (s.status === "selected" ? { ...s, status: "available" } : s))
-      );
-      setCenterStalls((prev) =>
-        prev.map((s) => (s.status === "selected" ? { ...s, status: "available" } : s))
-      );
-      setSectionB((prev) =>
-        prev.map((s) => (s.status === "selected" ? { ...s, status: "available" } : s))
+      setZones((prev) =>
+        prev.map((z) => ({
+          ...z,
+          seats: z.seats.map((s) =>
+            s.status === "selected" ? { ...s, status: "available" as SeatStatus } : s
+          ),
+        }))
       );
       setStandingZones((prev) => prev.map((z) => ({ ...z, selected: 0 })));
     }
@@ -410,13 +450,21 @@ export default function ReserveTicketsPage() {
 
   // ── Seat click ──
   const handleSeatClick = useCallback(
-    (seat: Seat, setFn: React.Dispatch<React.SetStateAction<Seat[]>>) => {
+    (seat: Seat) => {
       if (timeLeft === 0) return;
 
       if (seat.status === "selected") {
-        // Deselect
-        setFn((prev) =>
-          prev.map((s) => (s.id === seat.id ? { ...s, status: "available" } : s))
+        setZones((prev) =>
+          prev.map((z) =>
+            z.zone === seat.section
+              ? {
+                  ...z,
+                  seats: z.seats.map((s) =>
+                    s.id === seat.id ? { ...s, status: "available" as SeatStatus } : s
+                  ),
+                }
+              : z
+          )
         );
         setOrderItems((prev) => prev.filter((i) => i.id !== seat.id));
         return;
@@ -427,15 +475,23 @@ export default function ReserveTicketsPage() {
         return;
       }
 
-      // Simulate async reservation
-      setFn((prev) =>
-        prev.map((s) => (s.id === seat.id ? { ...s, status: "selected" } : s))
+      setZones((prev) =>
+        prev.map((z) =>
+          z.zone === seat.section
+            ? {
+                ...z,
+                seats: z.seats.map((s) =>
+                  s.id === seat.id ? { ...s, status: "selected" as SeatStatus } : s
+                ),
+              }
+            : z
+        )
       );
       setOrderItems((prev) => [
         ...prev,
         {
           id: seat.id,
-          label: seat.section,
+          label: `Zone ${seat.section}`,
           detail: `Row ${seat.row}, Seat ${seat.number} • Qty 1`,
           qty: 1,
           unitPrice: seat.price,
@@ -453,36 +509,33 @@ export default function ReserveTicketsPage() {
         showBanner("error", `Max ${MAX_TICKETS} tickets per order as per purchase policy.`);
         return;
       }
+      const zone = standingZones.find((z) => z.id === zoneId);
+      if (!zone || zone.selected >= zone.available) return;
+
       setStandingZones((prev) =>
         prev.map((z) =>
-          z.id === zoneId && z.selected < z.available
-            ? { ...z, selected: z.selected + 1 }
-            : z
+          z.id === zoneId ? { ...z, selected: z.selected + 1 } : z
         )
       );
-      setStandingZones((zones) => {
-        const zone = zones.find((z) => z.id === zoneId)!;
-        setOrderItems((prev) => {
-          const existing = prev.find((i) => i.id === zoneId);
-          if (existing) {
-            return prev.map((i) => i.id === zoneId ? { ...i, qty: i.qty + 1 } : i);
-          }
-          return [
-            ...prev,
-            {
-              id: zone.id,
-              label: zone.name,
-              detail: `Standing • General Admission`,
-              qty: 1,
-              unitPrice: zone.price,
-            },
-          ];
-        });
-        return zones;
+      setOrderItems((prev) => {
+        const existing = prev.find((i) => i.id === zoneId);
+        if (existing) {
+          return prev.map((i) => (i.id === zoneId ? { ...i, qty: i.qty + 1 } : i));
+        }
+        return [
+          ...prev,
+          {
+            id: zone.id,
+            label: zone.name,
+            detail: "Standing • General Admission",
+            qty: 1,
+            unitPrice: zone.price,
+          },
+        ];
       });
       showBanner("success", "Ticket reserved! Added to your active order.");
     },
-    [totalSelected, showBanner]
+    [totalSelected, showBanner, standingZones]
   );
 
   const handleStandingRemove = useCallback((zoneId: string) => {
@@ -495,21 +548,20 @@ export default function ReserveTicketsPage() {
       const existing = prev.find((i) => i.id === zoneId);
       if (!existing) return prev;
       if (existing.qty <= 1) return prev.filter((i) => i.id !== zoneId);
-      return prev.map((i) => i.id === zoneId ? { ...i, qty: i.qty - 1 } : i);
+      return prev.map((i) => (i.id === zoneId ? { ...i, qty: i.qty - 1 } : i));
     });
   }, []);
 
   // ── Remove from order ──
   const handleRemoveItem = useCallback((id: string) => {
     setOrderItems((prev) => prev.filter((i) => i.id !== id));
-    setSectionA((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "available" } : s))
-    );
-    setCenterStalls((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "available" } : s))
-    );
-    setSectionB((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "available" } : s))
+    setZones((prev) =>
+      prev.map((z) => ({
+        ...z,
+        seats: z.seats.map((s) =>
+          s.id === id ? { ...s, status: "available" as SeatStatus } : s
+        ),
+      }))
     );
     setStandingZones((prev) =>
       prev.map((z) => (z.id === id ? { ...z, selected: 0 } : z))
@@ -669,61 +721,80 @@ export default function ReserveTicketsPage() {
                 className="bg-white border p-6 rounded shadow-sm overflow-x-auto"
                 style={{ borderColor: "#c5c6cd" }}
               >
-                <div className="min-w-[650px] flex flex-col items-center gap-8">
-                  {/* Stage */}
-                  <div
-                    className="w-1/2 h-10 flex items-center justify-center rounded text-white text-xs font-bold uppercase tracking-widest shadow-sm"
-                    style={{ backgroundColor: "#0A192F" }}
-                  >
-                    STAGE
+                {mapLoading ? (
+                  <div className="flex justify-center items-center py-16">
+                    <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
                   </div>
+                ) : mapError ? (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M12 8v4m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0z" />
+                    </svg>
+                    Could not load seating map. Please refresh or try again later.
+                  </div>
+                ) : zones.length === 0 && standingZones.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-gray-400">
+                    No seating map has been configured for this event.
+                  </div>
+                ) : (
+                  <div className="min-w-[650px] flex flex-col items-center gap-8">
+                    {/* Stage */}
+                    <div
+                      className="w-1/2 h-10 flex items-center justify-center rounded text-white text-xs font-bold uppercase tracking-widest shadow-sm"
+                      style={{ backgroundColor: "#0A192F" }}
+                    >
+                      STAGE
+                    </div>
 
-                  {/* Seated sections */}
-                  <div className="flex justify-center items-start w-full gap-8">
-                    {[
-                      { label: "Section A", seats: sectionA, setFn: setSectionA, cols: 4 },
-                      { label: "Center Stalls", seats: centerStalls, setFn: setCenterStalls, cols: 10 },
-                      { label: "Section B", seats: sectionB, setFn: setSectionB, cols: 4 },
-                    ].map(({ label, seats, setFn, cols }) => (
-                      <div key={label} className="flex flex-col items-center gap-2">
-                        <span
-                          className="text-[11px] uppercase font-semibold tracking-wider"
-                          style={{ color: label === "Center Stalls" ? "#0A192F" : "#5d5f5f" }}
-                        >
-                          {label}
-                        </span>
-                        <div
-                          className="grid gap-1.5"
-                          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-                        >
-                          {seats.map((seat) => (
-                            <SeatDot
-                              key={seat.id}
-                              seat={seat}
-                              onClick={(s) => handleSeatClick(s, setFn)}
-                            />
-                          ))}
-                        </div>
+                    {/* Seated sections */}
+                    {zones.length > 0 && (
+                      <div className="flex justify-center items-start w-full gap-8 flex-wrap">
+                        {zones.map(({ zone, seats, cols }) => (
+                          <div key={zone} className="flex flex-col items-center gap-2">
+                            <span
+                              className="text-[11px] uppercase font-semibold tracking-wider"
+                              style={{ color: "#5d5f5f" }}
+                            >
+                              Zone {zone}
+                            </span>
+                            <div
+                              className="grid gap-1.5"
+                              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                            >
+                              {seats.map((seat) => (
+                                <SeatDot
+                                  key={seat.id}
+                                  seat={seat}
+                                  onClick={handleSeatClick}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  {/* Divider */}
-                  <div className="w-full h-px" style={{ backgroundColor: "#c5c6cd" }} />
+                    {/* Divider between seated and standing */}
+                    {zones.length > 0 && standingZones.length > 0 && (
+                      <div className="w-full h-px" style={{ backgroundColor: "#c5c6cd" }} />
+                    )}
 
-                  {/* Standing zones */}
-                  <div className="w-full flex flex-col md:flex-row gap-6">
-                    {standingZones.map((zone) => (
-                      <StandingZoneCard
-                        key={zone.id}
-                        zone={zone}
-                        onAdd={handleStandingAdd}
-                        onRemove={handleStandingRemove}
-                        totalSelected={totalSelected}
-                      />
-                    ))}
+                    {/* Standing zones */}
+                    {standingZones.length > 0 && (
+                      <div className="w-full flex flex-col md:flex-row gap-6">
+                        {standingZones.map((zone) => (
+                          <StandingZoneCard
+                            key={zone.id}
+                            zone={zone}
+                            onAdd={handleStandingAdd}
+                            onRemove={handleStandingRemove}
+                            totalSelected={totalSelected}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
