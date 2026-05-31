@@ -6,6 +6,7 @@ import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith; // Added
 import org.mockito.InjectMocks;
@@ -70,6 +71,11 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem order = new ActiveOrderItem(ORDER_ID, userId, EVENT_ID);
         order.addSeatIds(List.of("seat-1", "seat-2"));
         return order;
+    }
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -160,12 +166,12 @@ public class ActiveOrderServiceUnitTest {
     // getActiveOrderInfo
     //------------------------------------------------------------------------------------------------------------------
     @Test
-    void GivenInvalidSession_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+    void GivenInvalidSession_WhenGetActiveOrderInfo_ThenThrowRuntimeException() {
         // Arrange
         when(authenticationServiceMock.validate(INVALID_TOKEN)).thenReturn(false);
 
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(RuntimeException.class, () ->
                 activeOrderService.getActiveOrderInfo(INVALID_SESSION, ORDER_ID)
         );
 
@@ -188,7 +194,7 @@ public class ActiveOrderServiceUnitTest {
     }
 
     @Test
-    void GivenOrderBelongsToOtherUser_WhenGetActiveOrderInfo_ThenThrowIllegalArgumentException() {
+    void GivenOrderBelongsToOtherUser_WhenGetActiveOrderInfo_ThenThrowSecurityException() {
         // Arrange
         ActiveOrderItem wrongUsersOrder = orderForUser(OTHER_USER_ID);
 
@@ -199,7 +205,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.getActiveOrderInfo(USER_ID, wrongUsersOrder)).thenReturn(null);
 
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(SecurityException.class, () ->
                 activeOrderService.getActiveOrderInfo(VALID_SESSION, ORDER_ID)
         );
     }
@@ -244,6 +250,7 @@ public class ActiveOrderServiceUnitTest {
     void GivenValidOrderDetails_WhenCreatePendingOrder_ThenReturnCorrectOrderDetails() {
         // Arrange
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         // Assuming your internal isValidEventID method depends on this publisher call:
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
@@ -263,6 +270,7 @@ public class ActiveOrderServiceUnitTest {
     void GivenValidOrderDetails_WhenCreatePendingOrder_ThenOrderIsSavedInRepo() {
         // Arrange
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
@@ -341,9 +349,13 @@ public class ActiveOrderServiceUnitTest {
                 authenticationServiceMock, barcodeGatewayMock
         );
 
-        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        lenient().when(authenticationServiceMock.validate(anyString())).thenReturn(true);
+        lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
+
+        SessionToken sessionA = new SessionToken("userA", 9999999999L);
+        SessionToken sessionB = new SessionToken("userB", 9999999999L);
 
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(2);
@@ -354,7 +366,7 @@ public class ActiveOrderServiceUnitTest {
         new Thread(() -> {
             try {
                 startLatch.await();
-                results.add(service.createPendingOrder(VALID_SESSION, "userA", EVENT_ID));
+                results.add(service.createPendingOrder(sessionA, "userA", EVENT_ID));
             } catch (Exception e) {
                 errors.add(e);
             } finally {
@@ -366,7 +378,7 @@ public class ActiveOrderServiceUnitTest {
         new Thread(() -> {
             try {
                 startLatch.await();
-                results.add(service.createPendingOrder(VALID_SESSION, "userB", EVENT_ID));
+                results.add(service.createPendingOrder(sessionB, "userB", EVENT_ID));
             } catch (Exception e) {
                 errors.add(e);
             } finally {
@@ -429,7 +441,8 @@ public class ActiveOrderServiceUnitTest {
                 authenticationServiceMock, barcodeGatewayMock
         );
 
-        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        lenient().when(authenticationServiceMock.validate(anyString())).thenReturn(true);
+        lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
 
@@ -444,7 +457,7 @@ public class ActiveOrderServiceUnitTest {
             executor.submit(() -> {
                 try {
                     startLatch.await();
-                    results.add(service.createPendingOrder(VALID_SESSION, multiUserId, EVENT_ID));
+                    results.add(service.createPendingOrder(new SessionToken(multiUserId, 9999999999L), multiUserId, EVENT_ID));
                 } catch (Exception e) { errors.add(e); }
                 finally { doneLatch.countDown(); }
             });
@@ -874,6 +887,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
+        when(authenticationServiceMock.getUser("valid-token")).thenReturn("userA");
         when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
@@ -928,6 +942,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         lenient().when(activeOrderHandlerMock.isUsersOrder(anyString(), any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
+        when(authenticationServiceMock.getUser("valid-token")).thenReturn("userB");
         ActiveOrderItem order = service.createPendingOrder(VALID_SESSION, "userB", EVENT_ID);
         String liveOrderId = order.getOrderId();
 
@@ -973,7 +988,8 @@ public class ActiveOrderServiceUnitTest {
 
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
-        when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
+        lenient().when(authenticationServiceMock.validate(anyString())).thenReturn(true);
+        lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
         when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
@@ -983,7 +999,8 @@ public class ActiveOrderServiceUnitTest {
 
         List<String> generatedOrderIds = Collections.synchronizedList(new ArrayList<>());
         for (int i = 0; i < orderCount; i++) {
-            ActiveOrderItem o = service.createPendingOrder(VALID_SESSION, "user" + i, EVENT_ID);
+            final String userId = "user" + i;
+            ActiveOrderItem o = service.createPendingOrder(new SessionToken(userId, 9999999999L), userId, EVENT_ID);
             generatedOrderIds.add(o.getOrderId());
         }
 

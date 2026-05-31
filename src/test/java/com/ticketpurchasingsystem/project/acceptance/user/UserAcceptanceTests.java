@@ -25,6 +25,12 @@ import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class UserAcceptanceTests {
 
@@ -388,5 +394,160 @@ class UserAcceptanceTests {
 
         assertThrows(RuntimeException.class, () ->
                 userService.editPassword(USER_ID, USER_PASS, "", sessionToken));
+    }
+
+    // ─── Concurrency Tests ───────────────────────────────────────────────────
+
+    @Test
+    void GivenSameUserId_WhenConcurrentRegister_ThenAtMostOneSucceedsAndNoDuplicateExists() throws Exception {
+        String itayToken = enterAsGuest();
+        String edenToken = enterAsGuest();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                userService.registerUser("tomer", "Tomer", "pass1", "tomer@test.com",
+                        UserGroupDiscount.NONE, itayToken);
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                userService.registerUser("tomer", "Tomer2", "pass2", "tomer2@test.com",
+                        UserGroupDiscount.NONE, edenToken);
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent register must complete without deadlock");
+
+        assertNotNull(userRepo.findByID("tomer"), "User tomer must exist after at least one registration");
+        assertEquals(1, userRepo.getAllUsers().stream()
+                        .filter(u -> "tomer".equals(u.getId())).count(),
+                "Exactly one user entry must exist for the contested userId — no duplicates allowed");
+    }
+
+    @Test
+    void GivenMultipleGuests_WhenConcurrentGuestEntry_ThenAllGetUniqueValidTokens() throws Exception {
+        int threadCount = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CopyOnWriteArrayList<String> tokens = new CopyOnWriteArrayList<>();
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    tokens.add(userService.guestEntry());
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS), "Concurrent guest entry must complete without deadlock");
+        executor.shutdown();
+
+        assertEquals(0, errorCount.get(), "No errors should occur during concurrent guest entries");
+        assertEquals(threadCount, tokens.size(), "Each thread must receive a token");
+        assertEquals(threadCount, tokens.stream().distinct().count(), "All issued tokens must be unique");
+        for (String token : tokens) {
+            assertTrue(authService.validate(token), "Every issued token must be valid");
+        }
+    }
+
+    @Test
+    void GivenLoggedInUser_WhenConcurrentDelete_ThenUserIsRemovedWithoutDeadlock() throws Exception {
+        String guestToken = enterAsGuest();
+        userService.registerUser("itay", "Itay", "pass", "itay@test.com",
+                UserGroupDiscount.NONE, guestToken);
+        String sessionToken = userService.loginUser("itay", "pass", guestToken);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    userService.deleteUser("itay", sessionToken);
+                    successCount.incrementAndGet();
+                } catch (Exception ignored) {
+                    // expected for the second thread when user is already deleted
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent delete must complete without deadlock");
+        assertNull(userRepo.findByID("itay"), "User itay must be deleted after concurrent delete");
+    }
+
+    @Test
+    void GivenInvalidAndValidSession_WhenConcurrentRegister_ThenOnlyValidSessionSucceeds() throws Exception {
+        String edenToken = enterAsGuest();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                userService.registerUser("eden", "Eden", "pass", "eden@test.com",
+                        UserGroupDiscount.NONE, edenToken);
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                userService.registerUser("tomer", "Tomer", "pass", "tomer@test.com",
+                        UserGroupDiscount.NONE, "invalid-token");
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent register must complete without deadlock");
+
+        assertEquals(1, successCount.get(), "Only the thread with a valid session should succeed");
+        assertEquals(1, failureCount.get(), "The thread with an invalid session must fail");
+        assertNotNull(userRepo.findByID("eden"), "eden must be registered");
+        assertNull(userRepo.findByID("tomer"), "tomer must not be registered due to invalid session");
     }
 }

@@ -14,7 +14,15 @@ public class BarCodeGateway implements IBarCodeGateway {
 
     @Override
     public List<BarcodeDTO> issueBarcodes(ActiveOrderDTO activeOrder) {
-        //TODO: implement
-        return null;
+        List<BarcodeDTO> barcodes = new java.util.ArrayList<>();
+        for (String seatId : activeOrder.getSeatIds()) {
+            barcodes.add(new BarcodeDTO(activeOrder.getOrderId() + "-" + seatId));
+        }
+        activeOrder.getStandingAreaQuantities().forEach((areaId, qty) -> {
+            for (int i = 0; i < qty; i++) {
+                barcodes.add(new BarcodeDTO(activeOrder.getOrderId() + "-" + areaId + "-" + i));
+            }
+        });
+        return barcodes;
     }
 }
