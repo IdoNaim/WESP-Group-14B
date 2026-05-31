@@ -16,6 +16,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 public class ProdRepo implements IProdRepo {
 
     private final ConcurrentHashMap<Integer, ProductionCompany> storage = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> nameToId = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
 
     private static ProdRepo instance;
@@ -30,9 +31,15 @@ public class ProdRepo implements IProdRepo {
     @Override
     public ProductionCompany save(ProductionCompany company) {
         if (company.getCompanyId() == null) {
-            company.setCompanyId(idGenerator.getAndIncrement());
+            int newId = idGenerator.getAndIncrement();
+            String normalizedName = company.getCompanyName().toLowerCase();
+            Integer conflict = nameToId.putIfAbsent(normalizedName, newId);
+            if (conflict != null) {
+                throw new IllegalStateException("Company name already exists: " + company.getCompanyName());
+            }
+            company.setCompanyId(newId);
             company.setVersion(0);
-            storage.put(company.getCompanyId(), company);
+            storage.put(newId, company);
             return new ProductionCompany(company);
         }
 
