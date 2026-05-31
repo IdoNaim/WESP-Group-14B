@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO } from "../../api/eventsApi";
 import { authApi } from "../../api/authApi";
 import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
+import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,10 +41,11 @@ interface OrderItem {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const RESERVATION_SECONDS = 10 * 60;
+const RESERVATION_MINUTES = 15
+const RESERVATION_SECONDS = RESERVATION_MINUTES * 60;
 const MAX_TICKETS = 4;
-
+const checkoutWindowURL = "/checkout";
+const dashboardURL = "/dashboard";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTime(seconds: number): string {
@@ -409,7 +411,7 @@ function ActiveOrderPanel({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ReserveTicketsPage() {
-  // NEW: State to hold the fetched active order
+  const navigate = useNavigate(); 
   const [currentOrder, setCurrentOrder] = useState<ActiveOrderDTO | null>(null);
 
   const [zones, setZones] = useState<ZoneData[]>([]);
@@ -449,7 +451,13 @@ export default function ReserveTicketsPage() {
 
         // NEW: Save the fetched active order to state
         setCurrentOrder(activeOrder);
+        // Sync timer with createdAt
+        const createdTime = new Date(activeOrder.createdAt).getTime();
+        const expiresAtTime = createdTime + (RESERVATION_MINUTES * 60 * 1000); // createdAt + 15 mins
+        const remainingSeconds = Math.floor((expiresAtTime - Date.now()) / 1000); // Time left from right now
         
+        // If the time has already passed, it sets it to 0, otherwise sets the remaining seconds
+        setTimeLeft(Math.max(0, remainingSeconds));
         const { eventId } = activeOrder;
 
         // Step 3a: fetch event details
@@ -635,9 +643,9 @@ export default function ReserveTicketsPage() {
   }, []);
 
   // ── NEW: Handle Reserving Tickets via API ──
-  const handleReserveTickets = async () => {
-    if (!currentOrder) return;
-    
+  const handleReserveTickets = async (): Promise<boolean> => {
+    if (!currentOrder) return false;
+
     const token = localStorage.getItem("token") ?? "";
     
     // Extract currently selected standard seat IDs
@@ -665,18 +673,30 @@ export default function ReserveTicketsPage() {
       const success = await activeOrderApi.updateActiveOrder(token, currentOrder.orderId, updatedOrder);
       if (success) {
         showBanner("success", "Tickets successfully reserved in your active order!");
+        return true;
       } else {
         showBanner("error", "Failed to reserve tickets. They might no longer be available.");
+        return false;
       }
     } catch (error) {
       showBanner("error", "An error occurred while reserving tickets. Please try again.");
+      return false;
     }
   };
 
   // ── Checkout ──
-  const handleCheckout = useCallback(() => {
-    alert("Proceeding to checkout…");
-  }, []);
+  const handleCheckout = async() => {
+    const isSuccess = await handleReserveTickets();
+    if(isSuccess){
+      alert("Proceeding to checkout…");
+      navigate(checkoutWindowURL);
+      console.log("got here");
+    }
+    else{
+      alert("Unable to reserve tickets for checkout. Please review your selection and try again.");
+      window.location.reload();
+    }
+  };
 
   // ── Render ──
   return (
@@ -712,6 +732,15 @@ export default function ReserveTicketsPage() {
             ))}
           </div>
           <div className="flex items-center gap-4">
+            {/* NEW: Dashboard Button */}
+            <button
+              onClick={() => navigate(dashboardURL)}
+              className="bg-white px-4 py-1.5 text-sm font-bold rounded-full transition-colors hover:bg-gray-100" 
+              style={{ color: "#0A192F", border: "1px solid #c5c6cd" }}
+            >
+              Dashboard
+            </button>
+            
             <svg className="w-5 h-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
