@@ -164,9 +164,7 @@ public class NotificationService implements INotificationService {
         if (!notification.getUserId().equals(userId)) {
             throw new ForbiddenException("Access denied: notification belongs to another user");
         }
-        boolean wasAlreadyRead = notification.isRead();
-        notification.markAsRead();
-        return !wasAlreadyRead;
+        return notification.markAsRead();
     }
 
     @Override
