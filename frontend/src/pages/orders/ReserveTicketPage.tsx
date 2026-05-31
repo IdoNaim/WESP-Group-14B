@@ -409,6 +409,9 @@ function ActiveOrderPanel({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ReserveTicketsPage() {
+  // NEW: State to hold the fetched active order
+  const [currentOrder, setCurrentOrder] = useState<ActiveOrderDTO | null>(null);
+
   const [zones, setZones] = useState<ZoneData[]>([]);
   const [standingZones, setStandingZones] = useState<StandingZone[]>([]);
 
@@ -444,6 +447,9 @@ export default function ReserveTicketsPage() {
           return;
         }
 
+        // NEW: Save the fetched active order to state
+        setCurrentOrder(activeOrder);
+        
         const { eventId } = activeOrder;
 
         // Step 3a: fetch event details
@@ -565,7 +571,6 @@ export default function ReserveTicketsPage() {
           unitPrice: seat.price,
         },
       ]);
-      showBanner("success", "Ticket reserved! Added to your active order.");
     },
     [totalSelected, timeLeft, showBanner]
   );
@@ -599,7 +604,6 @@ export default function ReserveTicketsPage() {
           },
         ];
       });
-      showBanner("success", "Ticket reserved! Added to your active order.");
     },
     [totalSelected, showBanner, standingZones]
   );
@@ -629,6 +633,45 @@ export default function ReserveTicketsPage() {
       prev.map((z) => z.id === id ? { ...z, selected: 0 } : z)
     );
   }, []);
+
+  // ── NEW: Handle Reserving Tickets via API ──
+  const handleReserveTickets = async () => {
+    if (!currentOrder) return;
+    
+    const token = localStorage.getItem("token") ?? "";
+    
+    // Extract currently selected standard seat IDs
+    const selectedSeatIds = zones
+      .flatMap((z) => z.seats)
+      .filter((s) => s.status === "selected")
+      .map((s) => s.id);
+
+    // Extract currently selected standing area quantities
+    const standingQuantities: Record<string, number> = {};
+    standingZones.forEach((z) => {
+      if (z.selected > 0) {
+        standingQuantities[z.id] = z.selected;
+      }
+    });
+
+    // Build the updated DTO to send to the server
+    const updatedOrder: ActiveOrderDTO = {
+      ...currentOrder,
+      seatIds: selectedSeatIds,
+      StandingAreaQuantities: standingQuantities,
+    };
+
+    try {
+      const success = await activeOrderApi.updateActiveOrder(token, currentOrder.orderId, updatedOrder);
+      if (success) {
+        showBanner("success", "Tickets successfully reserved in your active order!");
+      } else {
+        showBanner("error", "Failed to reserve tickets. They might no longer be available.");
+      }
+    } catch (error) {
+      showBanner("error", "An error occurred while reserving tickets. Please try again.");
+    }
+  };
 
   // ── Checkout ──
   const handleCheckout = useCallback(() => {
@@ -850,10 +893,11 @@ export default function ReserveTicketsPage() {
 
             <div className="flex justify-end pt-2">
               <button
-                disabled={totalSelected === 0 || timeLeft === 0}
+                disabled={totalSelected === 0 || timeLeft === 0 || !currentOrder}
                 className="px-12 py-4 text-sm font-bold uppercase tracking-widest rounded shadow transition-all hover:brightness-110 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#FFB400", color: "#0A192F" }}
-                onClick={() => showBanner("success", "All selected tickets have been reserved in your active order.")}
+                // NEW: Use our async function instead of the inline alert
+                onClick={handleReserveTickets}
               >
                 Reserve Tickets
               </button>
