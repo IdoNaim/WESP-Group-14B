@@ -112,3 +112,16 @@ export const getMyCompanies = (): Promise<CompanySummary[]> =>
 
 export const createCompany = (companyName: string, companyDescription: string, companyEmail: string): Promise<{ message: string; companyId: string }> =>
     apiRequest('POST', '/companies', { companyName, companyDescription, companyEmail });
+
+export interface MemberInfo {
+    role: 'FOUNDER' | 'OWNER' | 'MANAGER';
+    permissions: ManagerPermission[];
+    companyName: string;
+    founderId: string;
+    ownershipTree: Record<string, OwnerDTO>;
+    managerTree: Record<string, ManagerDTO>;
+    managerPermissions: Record<string, ManagerPermission[]>;
+}
+
+export const getMyMemberInfo = (companyId: number): Promise<MemberInfo> =>
+    apiRequest('GET', `/companies/${companyId}/my-role`);

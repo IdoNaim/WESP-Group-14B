@@ -15,6 +15,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPubli
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import org.springframework.stereotype.Service;
@@ -354,6 +355,40 @@ public class ProductionService implements IProductionService {
             result.add(new CompanySummaryDTO(c.getCompanyId(), c.getCompanyName(), c.getCompanyDescription(), c.getCompanyEmail(), role));
         }
         return result;
+    }
+
+    @Override
+    public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) return null;
+        String userId = authenticationService.getUser(sessionToken);
+        Optional<ProductionCompany> opt = prodRepo.findById(companyId);
+        if (opt.isEmpty()) return null;
+        ProductionCompany company = opt.get();
+
+        String role;
+        Set<ManagerPermission> perms = java.util.Collections.emptySet();
+        if (company.isFounder(userId)) {
+            role = "FOUNDER";
+        } else if (company.isOwner(userId)) {
+            role = "OWNER";
+        } else if (company.isManager(userId)) {
+            role = "MANAGER";
+            perms = company.getManagerPermissions(userId);
+        } else {
+            return null;
+        }
+
+        // Build per-manager permissions map
+        java.util.Map<String, Set<ManagerPermission>> managerPerms = new java.util.LinkedHashMap<>();
+        for (String mid : company.getManagerTree().keySet()) {
+            managerPerms.put(mid, company.getManagerPermissions(mid));
+        }
+
+        return new MemberInfoDTO(role, perms, company.getCompanyName(),
+                company.getFounderId(),
+                company.getOwnershipTree(),
+                company.getManagerTree(),
+                managerPerms);
     }
 
     @Override

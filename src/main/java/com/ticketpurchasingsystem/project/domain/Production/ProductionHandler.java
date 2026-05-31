@@ -129,9 +129,9 @@ public class ProductionHandler {
             loggerDef.getInstance().error("getRolesTree: null or blank arguments");
             return null;
         }
-        if (!company.isOwner(userId) && !company.isFounder(userId) && !company.isManager(userId)) {
+        if (!company.isOwner(userId) && !company.isFounder(userId)) {
             loggerDef.getInstance().error(
-                    "getRolesTree: user " + userId + " is not a member of company "
+                    "getRolesTree: user " + userId + " is not an owner or founder of company "
                             + company.getCompanyId());
             return null;
         }

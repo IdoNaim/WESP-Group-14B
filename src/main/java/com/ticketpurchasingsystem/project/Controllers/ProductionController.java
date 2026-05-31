@@ -21,6 +21,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ModifyPermissionsRe
 import com.ticketpurchasingsystem.project.application.IProductionService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
@@ -152,6 +153,19 @@ public class ProductionController {
                 return ResponseEntity.badRequest()
                                 .body(Map.of("error",
                                                 "Failed to remove manager. You may not have permission or the manager does not exist."));
+        }
+
+        // GET /api/production/companies/{companyId}/my-role
+        @GetMapping("/companies/{companyId}/my-role")
+        public ResponseEntity<MemberInfoDTO> getMyMemberInfo(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId) {
+
+                String token = extractToken(authHeader);
+                MemberInfoDTO result = productionService.getMyMemberInfo(token, companyId);
+                return result != null
+                                ? ResponseEntity.ok(result)
+                                : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         // GET /api/production/companies/{companyId}/roles

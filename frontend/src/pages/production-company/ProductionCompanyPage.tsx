@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
+import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
+import { authApi } from '../../api/authApi';
 
 type UserRole = 'FOUNDER' | 'OWNER' | 'MANAGER';
 
@@ -13,8 +15,6 @@ function resolveRole(userId: string, rolesTree: api.RolesTreeDTO): UserRole {
 function myPermissions(userId: string, rolesTree: api.RolesTreeDTO): Set<api.ManagerPermission> {
     return new Set((rolesTree.managerPermissions[userId] ?? []) as api.ManagerPermission[]);
 }
-import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
-import { authApi } from '../../api/authApi';
 
 
 type Tab = 'TEAM' | 'HISTORY' | 'ACTIONS';
@@ -624,6 +624,7 @@ export default function ProductionCompanyPage() {
 
     const [activeTab, setActiveTab] = useState<Tab>('TEAM');
     const [rolesTree, setRolesTree] = useState<api.RolesTreeDTO | null>(null);
+    const [memberInfo, setMemberInfo] = useState<api.MemberInfo | null>(null);
     const [history, setHistory] = useState<api.HistoryOrderItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -647,8 +648,15 @@ export default function ProductionCompanyPage() {
             const tree = await api.getRolesTree(numericId);
             setRolesTree(tree);
             setPageError(null);
-        } catch (e) {
-            setPageError(e instanceof Error ? e.message : 'Failed to load company data');
+        } catch {
+            // Founder/owner-only endpoint — try the member-level fallback for managers
+            try {
+                const info = await api.getMyMemberInfo(numericId);
+                setMemberInfo(info);
+                setPageError(null);
+            } catch (e) {
+                setPageError(e instanceof Error ? e.message : 'Failed to load company data');
+            }
         }
     }, [numericId]);
 
@@ -758,11 +766,27 @@ export default function ProductionCompanyPage() {
     };
 
     const currentUserId = localStorage.getItem('userId') ?? '';
-    const myRole: UserRole = rolesTree ? resolveRole(currentUserId, rolesTree) : 'MANAGER';
-    const myPerms: Set<api.ManagerPermission> = rolesTree ? myPermissions(currentUserId, rolesTree) : new Set();
 
-    const ownerCount = rolesTree ? Object.keys(rolesTree.ownershipTree).length : 0;
-    const managerCount = rolesTree ? Object.keys(rolesTree.managerTree).length : 0;
+    // Build an effective roles-tree from memberInfo when the manager-restricted endpoint is unavailable
+    const effectiveRolesTree: api.RolesTreeDTO | null = rolesTree ?? (memberInfo ? {
+        companyId: numericId,
+        companyName: memberInfo.companyName,
+        founderId: memberInfo.founderId,
+        ownershipTree: memberInfo.ownershipTree,
+        managerTree: memberInfo.managerTree,
+        managerPermissions: memberInfo.managerPermissions,
+    } : null);
+
+    const myRole: UserRole = effectiveRolesTree
+        ? resolveRole(currentUserId, effectiveRolesTree)
+        : (memberInfo?.role ?? 'MANAGER');
+    const myPerms: Set<api.ManagerPermission> = effectiveRolesTree
+        ? myPermissions(currentUserId, effectiveRolesTree)
+        : new Set((memberInfo?.permissions ?? []) as api.ManagerPermission[]);
+    const companyDisplayName = effectiveRolesTree?.companyName ?? `Company #${numericId}`;
+
+    const ownerCount = effectiveRolesTree ? Object.keys(effectiveRolesTree.ownershipTree).length : 0;
+    const managerCount = effectiveRolesTree ? Object.keys(effectiveRolesTree.managerTree).length : 0;
 
     if (isLoading) {
         return (
@@ -817,13 +841,13 @@ export default function ProductionCompanyPage() {
                         <div className="flex items-center gap-2.5 mb-1">
                             <span className="material-symbols-outlined text-[#2563eb] text-3xl">domain</span>
                             <h1 className="text-2xl font-black tracking-tight text-[#0b1326]">
-                                {rolesTree?.companyName ?? `Company #${numericId}`}
+                                {companyDisplayName}
                             </h1>
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-gray-500 font-mono ml-0.5">
                             <span className="material-symbols-outlined text-[15px]">person</span>
                             <span className="material-symbols-outlined text-[13px] text-amber-500">workspace_premium</span>
-                            <span>Founder: <strong className="text-[#0b1326]">{rolesTree?.founderId ?? '—'}</strong></span>
+                            <span>Founder: <strong className="text-[#0b1326]">{effectiveRolesTree?.founderId ?? '—'}</strong></span>
                         </div>
                     </div>
                 </div>
@@ -873,9 +897,9 @@ export default function ProductionCompanyPage() {
 
             {/* Tab Content */}
             <div className="p-4 md:p-6 max-w-4xl mx-auto">
-                {activeTab === 'TEAM' && rolesTree && (
+                {activeTab === 'TEAM' && effectiveRolesTree && (
                     <TeamTab
-                        rolesTree={rolesTree}
+                        rolesTree={effectiveRolesTree}
                         myRole={myRole}
                         onAssignOwner={() => openModal('assignOwner')}
                         onAppointManager={() => openModal('appointManager')}
