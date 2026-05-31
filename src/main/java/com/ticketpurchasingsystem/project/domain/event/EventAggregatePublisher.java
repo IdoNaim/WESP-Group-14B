@@ -4,8 +4,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 // Import your custom events
-import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCreatedEvent;
+import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCapacityChangedEvent;
+import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCreatedEvent;
 
 @Component
 public class EventAggregatePublisher {
@@ -25,5 +26,7 @@ public class EventAggregatePublisher {
         eventPublisher.publishEvent(new EventCapacityChangedEvent(eventId, newCapacity));
     }
 
-    // Add more publish methods as needed (e.g., publishEventCancelled)
+    public void publishEventCancelled(String eventId, String eventName) {
+        eventPublisher.publishEvent(new EventCancelledEvent(eventId, eventName));
+    }
 }
