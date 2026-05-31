@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
+import { authApi } from '../../api/authApi';
 
 const ROLE_COLOR: Record<api.CompanySummary['role'], string> = {
     FOUNDER: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
@@ -100,6 +101,14 @@ export default function MyCompaniesPage() {
     const navigate = useNavigate();
     const userId = localStorage.getItem('userId') ?? '';
 
+    const handleLogout = async () => {
+        const token = localStorage.getItem('token') ?? '';
+        try { await authApi.logout(token, userId); } catch { /* ignore */ }
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        navigate('/login');
+    };
+
     const [companies, setCompanies] = useState<api.CompanySummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -165,13 +174,22 @@ export default function MyCompaniesPage() {
                         )}
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowCreate(true)}
-                    className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#0053db] text-white px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
-                >
-                    <span className="material-symbols-outlined text-[18px]">add_business</span>
-                    NEW COMPANY
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowCreate(true)}
+                        className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#0053db] text-white px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">add_business</span>
+                        NEW COMPANY
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 border border-gray-400 hover:border-red-400 text-gray-500 hover:text-red-500 px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">logout</span>
+                        LOGOUT
+                    </button>
+                </div>
             </div>
 
             {/* Company grid */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
 import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
+import { authApi } from '../../api/authApi';
 
 
 type Tab = 'TEAM' | 'HISTORY' | 'ACTIONS';
@@ -560,6 +561,15 @@ export default function ProductionCompanyPage() {
     const numericId = Number(companyId);
     const navigate = useNavigate();
 
+    const handleLogout = async () => {
+        const token = localStorage.getItem('token') ?? '';
+        const userId = localStorage.getItem('userId') ?? '';
+        try { await authApi.logout(token, userId); } catch { /* ignore */ }
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        navigate('/login');
+    };
+
     const [activeTab, setActiveTab] = useState<Tab>('TEAM');
     const [rolesTree, setRolesTree] = useState<api.RolesTreeDTO | null>(null);
     const [history, setHistory] = useState<api.HistoryOrderItem[]>([]);
@@ -750,10 +760,19 @@ export default function ProductionCompanyPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <StatCard label="OWNERS" value={ownerCount} color="text-[#2563eb]" />
-                    <StatCard label="MANAGERS" value={managerCount} color="text-[#00c896]" />
-                    <StatCard label="ORDERS" value={history.length} color="text-[#00c896]" />
+                <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                        <StatCard label="OWNERS" value={ownerCount} color="text-[#2563eb]" />
+                        <StatCard label="MANAGERS" value={managerCount} color="text-[#00c896]" />
+                        <StatCard label="ORDERS" value={history.length} color="text-[#00c896]" />
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 border border-gray-400 hover:border-red-400 text-gray-500 hover:text-red-500 px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">logout</span>
+                        LOGOUT
+                    </button>
                 </div>
             </div>
 
