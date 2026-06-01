@@ -116,6 +116,15 @@ public class ProductionCompany {
 //        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
         return true;
     }
+    public boolean removeOwner(String requesterId, String ownerId) {
+        if (isFounder(ownerId)) return false;           // founder can never be removed
+        if (!isOwner(requesterId) && !isFounder(requesterId)) return false;
+        if (!isOwner(ownerId)) return false;
+        ownerIds.remove(ownerId);
+        ownershipTree.remove(ownerId);
+        return true;
+    }
+
     public boolean removeManager(String appointerId, String managerId){
         if(!isManager(managerId) || !isManagerAppointedByOwner(managerId, appointerId)){
             return false;
