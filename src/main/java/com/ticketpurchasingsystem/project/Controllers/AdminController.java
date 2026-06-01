@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ticketpurchasingsystem.project.application.ISystemAdminService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -49,8 +49,13 @@ public class AdminController {
 
     // GET /api/admin/users
     @GetMapping("/users")
-    public ResponseEntity<List<UserInfo>> getUsers() {
-        return ResponseEntity.ok(adminService.getAllUsers());
+    public ResponseEntity<List<UserDTO>> getUsers(@RequestHeader("Authorization") String authHeader) {
+        try {
+            List<UserDTO> users = adminService.getAllUsers(extractToken(authHeader));
+            return ResponseEntity.ok(users);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
     private String extractToken(String authHeader) {

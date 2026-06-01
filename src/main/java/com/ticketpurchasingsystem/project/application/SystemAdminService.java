@@ -9,6 +9,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminPublisher;
@@ -45,11 +46,15 @@ public class SystemAdminService implements ISystemAdminService {
         return history.stream().map(HistoryOrderItem::makeDTO).collect(Collectors.toList());
     }
 
-    @Override
-    public List<UserInfo> getAllUsers() {
+    public List<UserInfo> getAllAdmins() {
         return adminRepo.findAll().stream()
                 .map(a -> new UserInfo(a.getId(), a.getUsername(), a.getEmail(), "", UserGroupDiscount.NONE))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());    }
+
+    @Override
+    public List<UserDTO> getAllUsers(String token) {
+        String adminId = validateAdminSession(token);
+        return adminPublisher.publishGetAllUsers(adminId);
     }
 
     public String validateAdminSession(String token) {
