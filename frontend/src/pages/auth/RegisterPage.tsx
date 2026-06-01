@@ -16,6 +16,12 @@ export default function RegisterPage() {
         setIsLoading(true);
         setErrorMessage(null);
 
+        if (/\d/.test(fullName)) {
+            setErrorMessage("Full name must not contain numbers.");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             // Step 1: Obtain the guest token required by your backend
             console.log('[UI STEP 1] Requesting guest token from API...');

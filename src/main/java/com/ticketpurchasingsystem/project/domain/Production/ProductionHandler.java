@@ -145,9 +145,26 @@ public class ProductionHandler {
             managerPermissions.put(managerId, company.getManagerPermissions(managerId));
         }
 
-        return new RolesTreeDTO(company.getCompanyId(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
+        return new RolesTreeDTO(company.getCompanyId(), company.getCompanyName(), company.getFounderId(), ownershipTree, managerTree, managerPermissions);
     }
 
+
+    public ProductionCompany removeOwner(String requesterId, Integer companyId, String ownerId, ProductionCompany company) {
+        if (isInvalid(requesterId) || companyId == null || isInvalid(ownerId) || company == null) {
+            loggerDef.getInstance().error("removeOwner called with null/blank arguments");
+            return null;
+        }
+        if (!company.isOwner(requesterId) && !company.isFounder(requesterId)) {
+            loggerDef.getInstance().error("removeOwner: caller " + requesterId + " is not an owner/founder of company " + companyId);
+            return null;
+        }
+        boolean removed = company.removeOwner(requesterId, ownerId);
+        if (!removed) {
+            loggerDef.getInstance().error("removeOwner: failed to remove " + ownerId + " from company " + companyId);
+            return null;
+        }
+        return company;
+    }
 
     public ProductionCompany removeManager(String ownerId, Integer companyId, String managerId, ProductionCompany company){
         if (isInvalid(ownerId) || companyId == null || isInvalid(managerId) || company == null) {
