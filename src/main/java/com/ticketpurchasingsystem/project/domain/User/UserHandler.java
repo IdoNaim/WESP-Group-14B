@@ -157,4 +157,11 @@ public class UserHandler {
             throw new RuntimeException("User must be logged in to perform this action.");
         }
     }
+
+    public boolean isGuest(UserInfo userInfo) {
+        if (userInfo == null) {
+            throw new RuntimeException("User is null.");
+        }
+        return userInfo.isGuest();
+    }
 }
