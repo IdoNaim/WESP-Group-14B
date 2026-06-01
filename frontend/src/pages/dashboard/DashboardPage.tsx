@@ -89,7 +89,7 @@ export default function DashboardPage() {
 
   // Get the isProductionUser state from your AuthContext hook
   const { isProductionUser } = useAuth();
-
+  console.log('Is production user:', isProductionUser); // Debug log to verify the value
   const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
