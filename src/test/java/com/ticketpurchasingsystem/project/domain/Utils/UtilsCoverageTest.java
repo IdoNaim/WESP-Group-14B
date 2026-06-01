@@ -34,6 +34,7 @@ public class UtilsCoverageTest {
 
         RolesTreeDTO dto = new RolesTreeDTO(
                 100,
+                null,
                 "owner1",
                 ownershipTree,
                 managerTree,
