@@ -38,22 +38,22 @@ public class EventService implements IEventService {
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
         purchasePolicy.addRule( new MinTicketsRule(1));
         purchasePolicy.addRule( new MaxTicketsRule(10));
-//        Event event = new Event(
-//                1,
-//                "testEvent",
-//                100,
-//                LocalDateTime.now().plusDays(30),
-//                purchasePolicy,
-//                new EventDiscountPolicy(new ArrayList<>()),
-//                0
-//        );
-//        SeatingMap seatingMap = new SeatingMap();
-//        seatingMap.addSeatingArea(5, 9, 50.0);
-//        seatingMap.addStandingArea(20, 30.0);
-//        event.setSeatingMap(seatingMap);
-//        Event eventWithId = eventRepo.save(event);
-//        logger.info("Created initail event with ID: "+ eventWithId.getEventId());
-//        logger.info("EventService initialized");
+        Event event = new Event(
+                1,
+                "testEvent",
+                100,
+                LocalDateTime.now().plusDays(30),
+                purchasePolicy,
+                new EventDiscountPolicy(new ArrayList<>()),
+                0
+        );
+        SeatingMap seatingMap = new SeatingMap();
+        seatingMap.addSeatingArea(5, 9, 50.0);
+        seatingMap.addStandingArea(20, 30.0);
+        event.setSeatingMap(seatingMap);
+        Event eventWithId = eventRepo.save(event);
+        logger.info("Created initail event with ID: "+ eventWithId.getEventId());
+        logger.info("EventService initialized");
     }
 
     private String extractToken(String token) {

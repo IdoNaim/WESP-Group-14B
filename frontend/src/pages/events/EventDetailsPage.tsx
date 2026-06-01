@@ -1,12 +1,17 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { eventApi, EventDTO } from '../../api/eventsApi';
+// Make sure to adjust this import path to where your activeOrderApi is located!
+import { activeOrderApi } from '../../api/activeOrderApi';
 
 export default function EventDetailsPage() {
     const { eventId } = useParams();
+    const navigate = useNavigate(); // Added for redirection
 
     const [eventData, setEventData] = useState<EventDTO | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreatingOrder, setIsCreatingOrder] = useState(false); // Loading state for the button
+    const [orderError, setOrderError] = useState<string | null>(null); // Error state for failed orders
     const [isAuthorized] = useState(true);
 
     useEffect(() => {
@@ -30,6 +35,36 @@ export default function EventDetailsPage() {
 
         fetchSingleEvent();
     }, [eventId]);
+
+    // NEW: Function to handle the start order process
+    const handleStartOrder = async () => {
+        if (!eventId) return;
+
+        setIsCreatingOrder(true);
+        setOrderError(null);
+
+        try {
+            const token = localStorage.getItem('token') || '';
+            // Assuming you store the logged-in user's ID in localStorage.
+            // Adjust this if you extract it from the JWT token instead!
+            const userId = localStorage.getItem('userId') || 'fallback-user-id';
+
+            const response = await activeOrderApi.createOrder(token, {
+                userId: userId,
+                eventId: eventId
+            });
+
+            if (response && response.orderId) {
+                // Success! Redirect to the reserve page
+                navigate(`/events/${eventId}/reserve`);
+            }
+        } catch (error: any) {
+            console.error('[ORDER ERROR] Failed to create order:', error.message);
+            setOrderError("Unable to start your order. Please try again.");
+        } finally {
+            setIsCreatingOrder(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -62,11 +97,20 @@ export default function EventDetailsPage() {
             </header>
 
             <main className="pt-28 px-6 md:px-12 max-w-4xl mx-auto space-y-8">
+                {/* Displaying Order Error if API call fails */}
+                {orderError && (
+                    <div className="bg-red-900/50 border border-red-500 text-red-200 p-4 rounded-lg text-center font-bold tracking-wider">
+                        {orderError}
+                    </div>
+                )}
+
                 <div>
                     <span className="bg-[#03dbe7]/10 text-[#03dbe7] px-3 py-1 rounded text-xs font-mono border border-[#03dbe7]/20 uppercase">
-                        {eventData.id || eventId}
+                        {/* FIXED: Using eventId instead of id */}
+                        {eventData.eventId || eventId}
                     </span>
-                    <h1 className="text-4xl md:text-5xl font-black text-white mt-4 uppercase leading-tight">{eventData.title}</h1>
+                    {/* FIXED: Using eventName instead of title */}
+                    <h1 className="text-4xl md:text-5xl font-black text-white mt-4 uppercase leading-tight">{eventData.eventName}</h1>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -74,7 +118,14 @@ export default function EventDetailsPage() {
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">calendar_month</span>
                         <div>
                             <p className="text-xs uppercase font-bold text-gray-500 mb-1">Date & Time</p>
-                            <p className="font-bold text-lg">{eventData.date}</p>
+                            {/* FIXED: Using eventDateTime instead of date, formatted to look nice */}
+                            <p className="font-bold text-lg">
+                                {eventData.eventDateTime
+                                    ? new Date(eventData.eventDateTime).toLocaleString('en-US', {
+                                        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                                    })
+                                    : 'TBD'}
+                            </p>
                         </div>
                     </div>
 
@@ -82,7 +133,8 @@ export default function EventDetailsPage() {
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">group</span>
                         <div>
                             <p className="text-xs uppercase font-bold text-gray-500 mb-1">Capacity</p>
-                            <p className="font-bold text-lg">{eventData.capacity} Tickets</p>
+                            {/* FIXED: Using eventCapacity instead of capacity */}
+                            <p className="font-bold text-lg">{eventData.eventCapacity} Tickets</p>
                         </div>
                     </div>
                 </div>
@@ -97,7 +149,8 @@ export default function EventDetailsPage() {
                 <div className="bg-[#eeefff] text-[#171f33] p-8 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
                         <p className="text-sm uppercase font-bold opacity-60 mb-1">Standard Admission</p>
-                        <p className="text-4xl font-mono font-black">{eventData.price ? `$${eventData.price}` : 'TBD'}</p>
+                        {/* FIXED: Using ticketPrice instead of price */}
+                        <p className="text-4xl font-mono font-black">{eventData.ticketPrice ? `$${eventData.ticketPrice}` : 'TBD'}</p>
                     </div>
 
                     {!isAuthorized ? (
@@ -106,8 +159,22 @@ export default function EventDetailsPage() {
                             PURCHASE UNAVAILABLE
                         </div>
                     ) : (
-                        <button className="w-full md:w-auto bg-[#2563eb] text-white px-10 py-4 rounded-xl font-bold tracking-widest hover:bg-[#0053db] transition-colors shadow-lg active:scale-95">
-                            RESERVE TICKETS
+                        <button
+                            onClick={handleStartOrder}
+                            disabled={isCreatingOrder}
+                            className={`w-full md:w-auto text-white px-10 py-4 rounded-xl font-bold tracking-widest transition-colors shadow-lg flex items-center justify-center gap-2
+                                ${isCreatingOrder
+                                ? 'bg-gray-500 cursor-not-allowed'
+                                : 'bg-[#2563eb] hover:bg-[#0053db] active:scale-95'}`}
+                        >
+                            {isCreatingOrder ? (
+                                <>
+                                    <span className="material-symbols-outlined animate-spin text-sm">refresh</span>
+                                    STARTING ORDER...
+                                </>
+                            ) : (
+                                "RESERVE TICKETS"
+                            )}
                         </button>
                     )}
                 </div>

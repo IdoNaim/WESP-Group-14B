@@ -74,35 +74,49 @@ export default function EventsPage() {
                 {!isLoading && !errorMessage && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {events.map((event) => (
-                            <div key={event.id} className="rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 bg-[#171f33] border border-gray-800 text-[#dbe2fd] hover:border-[#75f5ff]/50 group">
+                            // FIXED: Changed event.id to event.eventId
+                            <div key={event.eventId} className="rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 bg-[#171f33] border border-gray-800 text-[#dbe2fd] hover:border-[#75f5ff]/50 group">
                                 <div className="h-48 relative overflow-hidden bg-[#2d3449]">
                                     {/* Fallback image if backend doesn't provide one */}
                                     <img
                                         src={event.image || "https://images.unsplash.com/photo-1540039155733-d7696ba45ae7?auto=format&fit=crop&q=80&w=800"}
-                                        alt={event.title}
+                                        alt={event.eventName} // FIXED: eventName
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60"
                                     />
                                 </div>
 
                                 <div className="p-5 flex-1 flex flex-col z-10 -mt-6 bg-[#171f33] rounded-t-xl relative">
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-xl font-bold leading-tight uppercase">{event.title}</h3>
+                                        {/* FIXED: Changed event.title to event.eventName */}
+                                        <h3 className="text-xl font-bold leading-tight uppercase">{event.eventName}</h3>
                                     </div>
 
                                     <div className="flex items-center gap-2 mb-4 text-gray-400">
                                         <span className="material-symbols-outlined text-sm">calendar_today</span>
-                                        <p className="text-sm font-mono">{event.date || 'TBD'}</p>
+                                        <p className="text-sm font-mono">
+                                            {event.eventDateTime
+                                                ? new Date(event.eventDateTime).toLocaleString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                    hour: 'numeric',
+                                                    minute: '2-digit'
+                                                })
+                                                : 'TBD'}
+                                        </p>
                                     </div>
 
                                     <div className="mt-auto space-y-4">
                                         <div className="flex justify-between items-end border-t border-gray-800 pt-4">
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Capacity</p>
-                                                <p className="font-mono text-lg font-bold text-[#03dbe7]">{event.capacity}</p>
+                                                {/* FIXED: Changed event.capacity to event.eventCapacity */}
+                                                <p className="font-mono text-lg font-bold text-[#03dbe7]">{event.eventCapacity}</p>
                                             </div>
                                         </div>
 
-                                        <Link to={`/events/${event.id}`} className="w-full flex justify-center py-3 rounded-lg font-bold text-sm tracking-widest active:scale-95 transition-all shadow-md bg-[#2563eb] text-[#eeefff] border-t border-white/20 hover:bg-[#0053db]">
+                                        {/* FIXED: Changed event.id to event.eventId in the routing link */}
+                                        <Link to={`/events/${event.eventId}`} className="w-full flex justify-center py-3 rounded-lg font-bold text-sm tracking-widest active:scale-95 transition-all shadow-md bg-[#2563eb] text-[#eeefff] border-t border-white/20 hover:bg-[#0053db]">
                                             VIEW DETAILS
                                         </Link>
                                     </div>
