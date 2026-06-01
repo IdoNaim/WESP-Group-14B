@@ -21,10 +21,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.test.util.ReflectionTestUtils;
+import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFailureException;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
 @ExtendWith(MockitoExtension.class)
 public class ModifyManagerPermissionsTest {
@@ -265,5 +275,113 @@ public class ModifyManagerPermissionsTest {
 
         assertNotNull(result);
         assertEquals(SOME_PERMISSIONS, result.getManagerPermissions(OTHER_MANAGER_ID));
+    }
+
+    // ── Concurrency tests ────────────────────────────────────────────────────
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    private record ConcurrencyStack(AuthenticationService auth, ProdRepo repo, ProductionService service) {}
+
+    private ConcurrencyStack buildRealStack() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo, productionEventPublisher);
+        return new ConcurrencyStack(realAuth, realRepo, svc);
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentModifyDifferentOwnerPermissions_ThenAllSucceedThroughRetries()
+            throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Perm Co", "desc", "perm@co.com"));
+        int companyId = stack.repo().findByName("Perm Co").get().getCompanyId();
+
+        int threadCount = 3;
+        for (int i = 0; i < threadCount; i++) {
+            stack.service().assignOwner(founderToken, companyId, "target-owner-" + i);
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().modifyManagerPermissions(
+                            token, companyId, "target-owner-" + idx, SOME_PERMISSIONS);
+                    if (result) successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(threadCount, successCount.get(),
+                "All concurrent modify-permissions operations on different owners must succeed through optimistic-locking retries");
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentModifySameOwnerPermissions_ThenOnlyOneSucceeds()
+            throws Exception {
+        // Arrange
+        int threadCount = 5;
+        AtomicInteger saveCallCount = new AtomicInteger(0);
+        AtomicInteger successCount = new AtomicInteger(0);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenAnswer(inv -> Optional.of(companyWithFounderAndManager()));
+        when(prodRepo.save(any())).thenAnswer(inv -> {
+            if (saveCallCount.incrementAndGet() == 1) return inv.getArgument(0);
+            throw new OptimisticLockingFailureException("concurrent");
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    if (productionService.modifyManagerPermissions(VALID_TOKEN, COMPANY_ID, MANAGER_ID, SOME_PERMISSIONS))
+                        successCount.incrementAndGet();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        doneLatch.await(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Assert
+        assertEquals(1, successCount.get(),
+                "Only one thread must succeed when all race to modify the same owner's permissions — others must exhaust retries");
     }
 }

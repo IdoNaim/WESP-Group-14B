@@ -20,6 +20,8 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.AssignOwnerRequestD
 import com.ticketpurchasingsystem.project.Controllers.apidto.ModifyPermissionsRequestDTO;
 import com.ticketpurchasingsystem.project.application.IProductionService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
@@ -31,6 +33,18 @@ public class ProductionController {
 
         public ProductionController(IProductionService productionService) {
                 this.productionService = productionService;
+        }
+
+        // GET /api/production/companies/my
+        @GetMapping("/companies/my")
+        public ResponseEntity<List<CompanySummaryDTO>> getMyCompanies(
+                        @RequestHeader("Authorization") String authHeader) {
+                String token = extractToken(authHeader);
+                List<CompanySummaryDTO> companies = productionService.getMyCompanies(token);
+                if (companies == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                return ResponseEntity.ok(companies);
         }
 
         // POST /api/production/companies
@@ -107,6 +121,23 @@ public class ProductionController {
                                                 "Failed to update permissions. You may not have permission or the manager does not exist."));
         }
 
+        // DELETE /api/production/companies/{companyId}/owners/{ownerId}
+        @DeleteMapping("/companies/{companyId}/owners/{ownerId}")
+        public ResponseEntity<Map<String, String>> removeOwner(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId,
+                        @PathVariable String ownerId) {
+
+                String token = extractToken(authHeader);
+                boolean success = productionService.removeOwner(token, companyId, ownerId);
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Owner removed successfully."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to remove owner. You may not have permission, the user is the founder, or does not exist."));
+        }
+
         // DELETE /api/production/companies/{companyId}/managers/{managerId}
         @DeleteMapping("/companies/{companyId}/managers/{managerId}")
         public ResponseEntity<Map<String, String>> removeManager(
@@ -122,6 +153,19 @@ public class ProductionController {
                 return ResponseEntity.badRequest()
                                 .body(Map.of("error",
                                                 "Failed to remove manager. You may not have permission or the manager does not exist."));
+        }
+
+        // GET /api/production/companies/{companyId}/my-role
+        @GetMapping("/companies/{companyId}/my-role")
+        public ResponseEntity<MemberInfoDTO> getMyMemberInfo(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId) {
+
+                String token = extractToken(authHeader);
+                MemberInfoDTO result = productionService.getMyMemberInfo(token, companyId);
+                return result != null
+                                ? ResponseEntity.ok(result)
+                                : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         // GET /api/production/companies/{companyId}/roles
