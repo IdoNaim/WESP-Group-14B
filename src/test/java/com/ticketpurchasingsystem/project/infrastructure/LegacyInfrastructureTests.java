@@ -1,6 +1,8 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
+import com.ticketpurchasingsystem.project.application.PaymentDetails;
 import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
+import org.springframework.web.client.RestTemplate;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
@@ -21,27 +23,45 @@ public class LegacyInfrastructureTests {
 
     @Test
     public void testPaymentGateway() {
-        PaymentGateway gateway = new PaymentGateway();
-        assertTrue(gateway.pay());
-        assertTrue(gateway.refund("order-1", 100.0));
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
+                .thenReturn("50000")  // pay
+                .thenReturn("1")      // refund
+                .thenReturn("OK");    // handshake
+
+        PaymentGateway gateway = new PaymentGateway(restTemplate);
+        PaymentDetails details = new PaymentDetails(100.0, "USD", "4111111111111111",
+                "12", "2028", "John Doe", "123", "ID-001");
+
+        int txId = gateway.pay(details);
+        assertTrue(txId >= 10000 && txId <= 100000);
+        assertEquals(1, gateway.refund(txId));
+        assertTrue(gateway.handshake());
     }
 
     @Test
     public void testBarCodeGateway() {
-        BarCodeGateway gateway = new BarCodeGateway();
-        
-        List<String> seatIds = List.of("SeatA", "SeatB");
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
+                .thenReturn("TIX-AAA-0001")
+                .thenReturn("TIX-BBB-0002")
+                .thenReturn("TIX-CCC-0003");
+
+        BarCodeGateway gateway = new BarCodeGateway(restTemplate);
+
+        // seat IDs must follow zone_row_seat format used by AssignedSeat
+        List<String> seatIds = List.of("0_1_1", "0_1_2");
         HashMap<String, Integer> standingQuantities = new HashMap<>();
-        standingQuantities.put("Area1", 2);
-        
-        ActiveOrderDTO order = new ActiveOrderDTO("order1", "user1", "event1", new Timestamp(System.currentTimeMillis()), seatIds, standingQuantities);
-        
+        standingQuantities.put("1", 3);
+
+        ActiveOrderDTO order = new ActiveOrderDTO("order1", "user1", "event1",
+                new Timestamp(System.currentTimeMillis()), seatIds, standingQuantities);
+
         List<BarcodeDTO> barcodes = gateway.issueBarcodes(order);
-        assertEquals(4, barcodes.size());
-        assertEquals("order1-SeatA", barcodes.get(0).getBarcodeValue());
-        assertEquals("order1-SeatB", barcodes.get(1).getBarcodeValue());
-        assertEquals("order1-Area1-0", barcodes.get(2).getBarcodeValue());
-        assertEquals("order1-Area1-1", barcodes.get(3).getBarcodeValue());
+        assertEquals(3, barcodes.size());
+        assertEquals("TIX-AAA-0001", barcodes.get(0).getBarcodeValue());
+        assertEquals("TIX-BBB-0002", barcodes.get(1).getBarcodeValue());
+        assertEquals("TIX-CCC-0003", barcodes.get(2).getBarcodeValue());
     }
 
     @Test
