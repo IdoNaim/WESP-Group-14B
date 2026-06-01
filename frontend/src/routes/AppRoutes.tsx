@@ -12,7 +12,6 @@ import EventsPage from "../pages/events/EventsPage";
 import EventDetailsPage from "../pages/events/EventDetailsPage";
 
 import ActiveOrderPage from "../pages/orders/ActiveOrderPage";
-import CheckoutPage from "../pages/orders/CheckoutPage";
 import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
 import ReserveTicketPage from "../pages/orders/ReserveTicketPage";
 
@@ -51,7 +50,6 @@ export default function AppRoutes() {
           />
 
           <Route path="/orders/active" element={<ActiveOrderPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
 
           {/* Member-only routes */}
           <Route element={<RequireMember />}>

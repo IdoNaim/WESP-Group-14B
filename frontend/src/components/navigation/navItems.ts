@@ -23,11 +23,6 @@ export const navItems: NavItem[] = [
     visibility: "all",
   },
   {
-    label: "Checkout",
-    path: "/checkout",
-    visibility: "all",
-  },
-  {
     label: "Order History",
     path: "/orders/history",
     visibility: "member",
