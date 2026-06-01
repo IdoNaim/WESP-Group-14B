@@ -43,6 +43,9 @@ public class ActiveOrderService implements IActiveOrderService {
         if(activeOrderRepo == null || activeOrderListener == null || activeOrderPublisher == null || activeOrderHandler == null || authenticationService == null || barCodeGateway == null){
             logger.error("ActiveOrderService initialization failed: One or more dependencies are null");
         }
+        ActiveOrderItem order = new ActiveOrderItem("1", "idonaim56@gmail.com", "1");
+        order.addSeatIds(List.of("0_1_1"));
+        activeOrderRepo.save(order);
     }
 
     @Override
