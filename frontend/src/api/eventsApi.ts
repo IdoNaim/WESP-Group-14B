@@ -5,27 +5,6 @@ const BASE_URL = '/api/events';
 // ==========================================
 
 export interface EventDTO {
-<<<<<<< HEAD
-    id?: string | number;
-    title: string;
-    description?: string;
-    capacity: number;
-    date: string;
-    location?: string;
-    isPublished?: boolean;
-    // UI Fallbacks (In case your backend doesn't supply these yet)
-    price?: number;
-    category?: string;
-    image?: string;
-}
-
-export interface PurchasePolicyDTO {
-    minTicketsPerUser: number;
-    maxTicketsPerUser: number;
-    minAge?: number;
-    maxAge?: number;
-    requiresMembership?: boolean;
-=======
     eventId?: string;
     companyId?: number;
     eventName: string;
@@ -34,6 +13,10 @@ export interface PurchasePolicyDTO {
     isActive?: boolean;
     eventLocation?: string | null;
     ticketPrice?: number | null;
+    // UI Fallbacks
+    description?: string;
+    category?: string;
+    image?: string;
 }
 
 export interface PurchasePolicyDTO {
@@ -44,7 +27,7 @@ export interface PurchasePolicyDTO {
     maxAge?: number | null;
     isAgeOr: boolean;
     isAgeAndQuantityOr: boolean;
->>>>>>> 3374e4400d9933f529aff1c9d43275ec09e57486
+    requiresMembership?: boolean;
 }
 
 export interface DiscountDTO {
@@ -59,6 +42,19 @@ export interface CreateEventRequestDTO {
     discounts?: DiscountDTO[];
 }
 
+export interface EditEventDateRequestDTO {
+    newEventDateTime: string;
+}
+
+export interface EditEventCapacityRequestDTO {
+    newEventCapacity: number;
+}
+
+export interface ConfigureSeatingMapRequestDTO {
+    seatingAreas: any[];
+    standingAreas: any[];
+}
+
 // ==========================================
 // Helper: Header Generator
 // ==========================================
@@ -67,13 +63,12 @@ const getHeaders = (token: string) => ({
     'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
 });
 
-// Helper: Response parser (NOW PROPERLY USED)
+// Helper: Response parser
 const parseResponse = async (response: Response) => {
     if (!response.ok) {
         const err = await response.text();
         throw new Error(err || `HTTP Error: ${response.status}`);
     }
-    // Handle empty 200/201 responses safely
     const text = await response.text();
     return text ? JSON.parse(text) : {};
 };
@@ -91,7 +86,6 @@ export const eventApi = {
             body: JSON.stringify(data),
         });
 
-        // We can just use parseResponse to ensure errors are thrown if it fails
         await parseResponse(response);
         return true;
     },
@@ -104,11 +98,9 @@ export const eventApi = {
                 headers: getHeaders(token),
             });
 
-            // Using the helper here!
             const data = await parseResponse(response);
             console.log(`[API RESULT] Data for ${eventId}:`, data);
             return data;
-
         } catch (error: any) {
             console.error(`[API ERROR] Failed to fetch event ${eventId}:`, error.message);
             return null;
@@ -117,20 +109,23 @@ export const eventApi = {
 
     getEventsByCompany: async (token: string, companyId: number): Promise<EventDTO[]> => {
         console.log(`[API CALL] GET /api/events?companyId=${companyId}`);
-        const response = await fetch(`${BASE_URL}?companyId=${companyId}`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
+        try {
+            const response = await fetch(`${BASE_URL}?companyId=${companyId}`, {
+                method: 'GET',
+                headers: getHeaders(token),
+            });
 
-<<<<<<< HEAD
-        // Using the helper here!
-        const data = await parseResponse(response);
-        console.log(`[API RESULT] Events fetched for company ${companyId}:`, data);
-        return data;
-=======
+            const data = await parseResponse(response);
+            console.log(`[API RESULT] Events fetched for company ${companyId}:`, data);
+            return data;
+        } catch (error: any) {
+            console.error(`[API ERROR] Failed to fetch events for company ${companyId}:`, error.message);
+            return [];
+        }
+    },
+
     /**
      * PUT /api/events/{eventId}/date
-     * Updates the date and time of an existing event.
      */
     editEventDate: async (token: string, eventId: string | number, data: EditEventDateRequestDTO): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}/date`, {
@@ -143,7 +138,6 @@ export const eventApi = {
 
     /**
      * PUT /api/events/{eventId}/capacity
-     * Updates the total capacity for an event.
      */
     editEventCapacity: async (token: string, eventId: string | number, data: EditEventCapacityRequestDTO): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}/capacity`, {
@@ -156,7 +150,6 @@ export const eventApi = {
 
     /**
      * DELETE /api/events/{eventId}
-     * Removes an event from the system.
      */
     removeEvent: async (token: string, eventId: string | number): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}`, {
@@ -204,7 +197,6 @@ export const eventApi = {
 
     /**
      * PUT /api/events/{eventId}/seating-map
-     * Configures the seating and standing areas mapping for an event.
      */
     editSeatingMap: async (token: string, eventId: string | number, data: ConfigureSeatingMapRequestDTO): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}/seating-map`, {
@@ -213,6 +205,5 @@ export const eventApi = {
             body: JSON.stringify(data),
         });
         return response.ok;
->>>>>>> 3374e4400d9933f529aff1c9d43275ec09e57486
     }
 };
