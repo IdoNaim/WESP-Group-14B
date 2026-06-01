@@ -92,18 +92,18 @@ public class SeatingMap {
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
             if(!seats.containsKey(seatID)){
-                loggerDef.getInstance().error("Failed to unbook seat: " + seatID + " does not exist");
-                throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist");
+                loggerDef.getInstance().warn("Failed to unbook seat: " + seatID + " does not exist");
+                // throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist");
             }
             AssignedSeat seat = seats.get(seatID);
             if(!seat.unbook(1)){
-                loggerDef.getInstance().error("Failed to unbook seat: " + seatID + " is not currently booked");
+                loggerDef.getInstance().warn("Failed to unbook seat: " + seatID + " is not currently booked");
                 failedUnbookSeats.append(seatID).append(", ");
             }
         }
         if (failedUnbookSeats.length() > 0) {
-            loggerDef.getInstance().error("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
-            throw new IllegalStateException("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
+            loggerDef.getInstance().warn("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
+            // throw new IllegalStateException("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
         }
         return true;
     }

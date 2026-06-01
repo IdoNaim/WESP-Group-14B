@@ -5,6 +5,7 @@ import { eventApi, EventDTO, SeatingMapDTO } from '../../api/eventsApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
 const RESERVE_ROUTE = '/events/:eventId/reserve';
+const EVENTS_ROUTE = '/events';
 const CHECKOUT_ROUTE = '/checkout';
 
 type CheckoutStatus = 'idle' | 'processing' | 'finalizing' | 'purchased' | 'expired_canceled';
@@ -31,6 +32,7 @@ export default function ActiveOrderPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCanceling, setIsCanceling] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [hasNoActiveOrder, setHasNoActiveOrder] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(900); // 15:00 default fallback
   const [isPolicyErrorVisible, setIsPolicyErrorVisible] = useState<boolean>(false);
   const [checkoutState, setCheckoutState] = useState<CheckoutStatus>('idle');
@@ -56,13 +58,24 @@ export default function ActiveOrderPage() {
         const userProfile = await authApi.getCurrentUser(token);
         setUser(userProfile);
 
-        // 3. Fetch Active Order by User ID
-        const orderData = await activeOrderApi.getActiveOrderByUserId(token, userProfile.userId);
-        setActiveOrder(orderData);
+        // 3. Fetch Active Order — null result OR a thrown error both mean the
+        //    user has no active order, so we handle them identically.
+        let orderData: ActiveOrderDTO | null = null;
+        try {
+          orderData = await activeOrderApi.getActiveOrderByUserId(token, userProfile.userId);
+        } catch {
+          setHasNoActiveOrder(true);
+          setIsLoading(false);
+          return;
+        }
 
         if (!orderData || !orderData.eventId) {
-          throw new Error('No active order or assigned event found for this account.');
+          setHasNoActiveOrder(true);
+          setIsLoading(false);
+          return;
         }
+
+        setActiveOrder(orderData);
 
         // 4. Fetch Event Details & Seating Map concurrently
         const [eventDetails, seatingMapData] = await Promise.all([
@@ -218,7 +231,6 @@ export default function ActiveOrderPage() {
   const totalStandingTicketsQty = Object.values(standingAreaQuantitiesMap).reduce((sum: number, qty: any) => sum + Number(qty), 0);
   const totalTicketsCount = seatIdsArray.length + totalStandingTicketsQty;
 
-  // Enterprise discount references successfully removed
   const totalDue = Math.max(0, computedSubtotal);
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -255,11 +267,35 @@ export default function ActiveOrderPage() {
     }, 1500);
   };
 
+  // ─── View Controller Returns ────────────────────────────────────────────────
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff]">
         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-semibold tracking-wide text-[#4c4546]">Securing your session data...</p>
+      </div>
+    );
+  }
+
+  if (hasNoActiveOrder) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] p-6">
+        <div className="bg-white border border-[#e2e2e9] p-10 rounded-2xl max-w-lg text-center shadow-lg">
+          <div className="w-16 h-16 bg-[#f3f3fa] rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-[#4c4546] text-3xl">receipt_long</span>
+          </div>
+          <h3 className="text-xl font-bold text-black mb-2">No Active Order Found</h3>
+          <p className="text-sm text-[#4c4546] leading-relaxed mb-8">
+            You don't have an active order. Browse our events and select your tickets to get started.
+          </p>
+          <a
+            href={EVENTS_ROUTE}
+            className="inline-block bg-black text-white w-full py-3 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity"
+          >
+            Browse Events
+          </a>
+        </div>
       </div>
     );
   }
@@ -441,58 +477,58 @@ export default function ActiveOrderPage() {
 
             </div>
 
-            {/* {/* Right Column: Dynamic Price Summary Block */}
-			<div className="space-y-6 lg:sticky lg:top-12">
-			<div className="bg-white border border-[#e2e2e9] rounded-xl shadow-md overflow-hidden">
-				<div className="bg-[#f3f3fa] p-6 border-b border-[#e2e2e9]">
-				<h3 className="text-lg font-bold">Order Summary</h3>
-				<p className="text-[#4c4546] text-xs font-medium font-mono">Invoice #{activeOrder?.orderId ? activeOrder.orderId.toString().substring(0, 8).toUpperCase() : 'PENDING'}</p>
-				</div>
-				<div className="p-6 space-y-4">
-				<div className="space-y-2 pb-4 border-b border-[#e2e2e9]">
-					<div className="flex justify-between text-sm">
-					<span className="text-[#4c4546]">Subtotal ({totalTicketsCount} Tickets)</span>
-					<span className="font-semibold text-black">${computedSubtotal.toFixed(2)}</span>
-					</div>
-				</div>
-				<div className="flex justify-between items-end pt-2">
-					<span className="text-sm font-semibold">Total Due</span>
-					<span className="text-xl font-bold text-black">${totalDue.toFixed(2)}</span>
-				</div>
-				<div className="pt-4 space-y-2">
-					<button 
-					onClick={handleCheckoutSimulation}
-					disabled={checkoutState !== 'idle' || isCanceling}
-					className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
-						checkoutState === 'purchased' 
-						? 'bg-[#15803d] text-white cursor-default' 
-						: 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
-					}`}
-					>
-					<span>
-						{checkoutState === 'idle' && 'Go to Checkout'}
-						{checkoutState === 'processing' && 'Processing...'}
-						{checkoutState === 'finalizing' && 'Finalizing...'}
-						{checkoutState === 'purchased' && 'Redirecting...'}
-					</span>
-					{(checkoutState === 'processing' || checkoutState === 'finalizing') && (
-						<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-					)}
-					</button>
+            {/* Right Column: Dynamic Price Summary Block */}
+            <div className="space-y-6 lg:sticky lg:top-12">
+              <div className="bg-white border border-[#e2e2e9] rounded-xl shadow-md overflow-hidden">
+                <div className="bg-[#f3f3fa] p-6 border-b border-[#e2e2e9]">
+                  <h3 className="text-lg font-bold">Order Summary</h3>
+                  <p className="text-[#4c4546] text-xs font-medium font-mono">Invoice #{activeOrder?.orderId ? activeOrder.orderId.toString().substring(0, 8).toUpperCase() : 'PENDING'}</p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="space-y-2 pb-4 border-b border-[#e2e2e9]">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#4c4546]">Subtotal ({totalTicketsCount} Tickets)</span>
+                      <span className="font-semibold text-black">${computedSubtotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-end pt-2">
+                    <span className="text-sm font-semibold">Total Due</span>
+                    <span className="text-xl font-bold text-black">${totalDue.toFixed(2)}</span>
+                  </div>
+                  <div className="pt-4 space-y-2">
+                    <button 
+                      onClick={handleCheckoutSimulation}
+                      disabled={checkoutState !== 'idle' || isCanceling}
+                      className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
+                        checkoutState === 'purchased' 
+                        ? 'bg-[#15803d] text-white cursor-default' 
+                        : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
+                      }`}
+                    >
+                      <span>
+                        {checkoutState === 'idle' && 'Go to Checkout'}
+                        {checkoutState === 'processing' && 'Processing...'}
+                        {checkoutState === 'finalizing' && 'Finalizing...'}
+                        {checkoutState === 'purchased' && 'Redirecting...'}
+                      </span>
+                      {(checkoutState === 'processing' || checkoutState === 'finalizing') && (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </button>
 
-					{/* ─── Cancel Order Button ─── */}
-					<button
-					onClick={handleManualCancel}
-					disabled={checkoutState !== 'idle' || isCanceling}
-					className="w-full bg-white text-red-600 border border-[#e2e2e9] hover:border-red-600 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50/50 active:scale-[0.98] transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none text-sm"
-					>
-					<span className="material-symbols-outlined text-lg leading-none">close</span>
-					<span>{isCanceling ? 'Canceling Order...' : 'Cancel Order'}</span>
-					</button>
-				</div>
-				</div>
-			</div>
-			</div>
+                    {/* ─── Cancel Order Button ─── */}
+                    <button
+                      onClick={handleManualCancel}
+                      disabled={checkoutState !== 'idle' || isCanceling}
+                      className="w-full bg-white text-red-600 border border-[#e2e2e9] hover:border-red-600 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50/50 active:scale-[0.98] transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none text-sm"
+                    >
+                      <span className="material-symbols-outlined text-lg leading-none">close</span>
+                      <span>{isCanceling ? 'Canceling Order...' : 'Cancel Order'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

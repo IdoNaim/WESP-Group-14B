@@ -5,6 +5,7 @@ import { authApi, UserProfileDTO } from '../../api/authApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
 const FALLBACK_RESERVE_ROUTE = '/reserve';
+const EVENTS_ROUTE = '/events';
 const GET_RESERVE_ROUTE = (eventId: string | number) => `/events/${eventId}/reserve`;
 
 type CheckoutStatus = 'idle' | 'processing' | 'success' | 'expired_canceled';
@@ -13,6 +14,7 @@ export default function CheckoutPage() {
   // ─── Component State ──────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [hasNoActiveOrder, setHasNoActiveOrder] = useState(false);
   const [processState, setProcessState] = useState<CheckoutStatus>('idle');
   const [successBarcodes, setSuccessBarcodes] = useState<string[]>([]);
   
@@ -55,11 +57,23 @@ export default function CheckoutPage() {
         }
         setUser(profile);
 
-        // 3. Extract user-bound active order
-        const activeOrder = await activeOrderApi.getActiveOrderByUserId(token, profile.userId);
-        if (!activeOrder || !activeOrder.orderId) {
-          throw new Error('No pending active ticket reservation orders were found for your session.');
+        // 3. Extract user-bound active order — null result OR a thrown error both
+        //    mean the user has no active order, so we handle them identically.
+        let activeOrder: ActiveOrderDTO | null = null;
+        try {
+          activeOrder = await activeOrderApi.getActiveOrderByUserId(token, profile.userId);
+        } catch {
+          setHasNoActiveOrder(true);
+          setIsLoading(false);
+          return;
         }
+
+        if (!activeOrder || !activeOrder.orderId) {
+          setHasNoActiveOrder(true);
+          setIsLoading(false);
+          return;
+        }
+
         setOrder(activeOrder);
 
         // 4. Concurrently run Event Shell Meta and Seating Pricing Matrices requests
@@ -271,6 +285,29 @@ export default function CheckoutPage() {
     );
   }
 
+  if (hasNoActiveOrder) {
+    return (
+      <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center p-4">
+        {globalStyles}
+        <div className="bg-white border border-[#c7c6cb] p-10 rounded-2xl max-w-lg text-center shadow-lg">
+          <div className="w-16 h-16 bg-[#eceef3] rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-[#46464b] text-3xl">receipt_long</span>
+          </div>
+          <h3 className="text-xl font-bold text-[#191c20] mb-2">No Active Order Found</h3>
+          <p className="text-sm text-[#46464b] leading-relaxed mb-8">
+            You don't have an active order. Browse our events and select your tickets to get started.
+          </p>
+          <a
+            href={EVENTS_ROUTE}
+            className="inline-block bg-[#1a1b20] text-white w-full py-3 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity"
+          >
+            Browse Events
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (errorMessage) {
     return (
       <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center p-4">
@@ -289,7 +326,6 @@ export default function CheckoutPage() {
     );
   }
 
-  // Handle Expired view state exactly like ActiveOrderPage
   if (processState === 'expired_canceled') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] p-6">

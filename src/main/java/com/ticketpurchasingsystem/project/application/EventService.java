@@ -406,9 +406,11 @@ public class EventService implements IEventService {
         }
         if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
             logger.warn("Cannot release standing area. one or more stands not booked");
-            throw new IllegalArgumentException("one or more stands not booked");
+            // throw new IllegalArgumentException("one or more stands not booked");
         }
+        else{
         logger.info("Released standing area successfully");
+        }
     }
     public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
