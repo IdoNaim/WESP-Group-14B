@@ -6,23 +6,24 @@ const BASE_URL = '/api/events';
 // ==========================================
 
 export interface EventDTO {
-    id?: string | number; // Optional on create, present on fetch
-    title: string;
-    description?: string;
-    capacity: number;
-    date: string; // ISO 8601 string recommended (e.g., "2026-10-24T21:00:00")
-    location?: string;
-    isPublished?: boolean;
-    // Add any other fields your Java EventDTO contains
+    eventId?: string;
+    companyId?: number;
+    eventName: string;
+    eventCapacity: number;
+    eventDateTime: string; // ISO 8601 e.g. "2026-10-24T21:00:00"
+    isActive?: boolean;
+    eventLocation?: string | null;
+    ticketPrice?: number | null;
 }
 
 export interface PurchasePolicyDTO {
-    minTicketsPerUser: number;
-    maxTicketsPerUser: number;
-    minAge?: number;
-    maxAge?: number;
-    requiresMembership?: boolean;
-    // Add any other fields your Java PurchasePolicyDTO contains
+    minTickets?: number | null;
+    maxTickets?: number | null;
+    isQuantityOr: boolean;
+    minAge?: number | null;
+    maxAge?: number | null;
+    isAgeOr: boolean;
+    isAgeAndQuantityOr: boolean;
 }
 
 export interface DiscountDTO {
@@ -147,6 +148,42 @@ export const eventApi = {
         const response = await fetch(`${BASE_URL}/${eventId}`, {
             method: 'DELETE',
             headers: getHeaders(token),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/location
+     */
+    editEventLocation: async (token: string, eventId: string | number, newLocation: string | null): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/location`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify({ newLocation }),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/price
+     */
+    editEventPrice: async (token: string, eventId: string | number, newPrice: number | null): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/price`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify({ newPrice }),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/policy
+     */
+    editEventPolicy: async (token: string, eventId: string | number, policy: PurchasePolicyDTO): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/policy`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify(policy),
         });
         return response.ok;
     },
