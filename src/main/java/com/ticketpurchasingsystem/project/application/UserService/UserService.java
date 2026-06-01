@@ -269,4 +269,13 @@ public class UserService implements IUserService {
     public boolean isUserRegistered(String userId){
         return userHandler.isUserRegistered(userRepo.findByID(userId));
     }
+
+    public boolean isGuest(String userId) {
+        try {
+            return userHandler.isGuest(userRepo.findByID(userId));
+        } catch (Exception e) {
+            loggerDef.getInstance().error("Failed to check if user is guest (probably user not found): " + e.getMessage());
+            return false;
+        }
+    }
 }

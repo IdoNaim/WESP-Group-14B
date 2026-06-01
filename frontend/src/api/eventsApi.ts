@@ -169,6 +169,42 @@ export const eventApi = {
     },
 
     /**
+     * PUT /api/events/{eventId}/location
+     */
+    editEventLocation: async (token: string, eventId: string | number, newLocation: string | null): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/location`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify({ newLocation }),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/price
+     */
+    editEventPrice: async (token: string, eventId: string | number, newPrice: number | null): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/price`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify({ newPrice }),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/policy
+     */
+    editEventPolicy: async (token: string, eventId: string | number, policy: PurchasePolicyDTO): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/policy`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify(policy),
+        });
+        return response.ok;
+    },
+
+    /**
      * PUT /api/events/{eventId}/seating-map
      * Configures the seating and standing areas mapping for an event.
      */

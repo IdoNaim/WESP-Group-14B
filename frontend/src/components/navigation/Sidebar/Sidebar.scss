@@ -1,0 +1,53 @@
+@use "../../../styles/app-theme.scss" as theme;
+
+.sidebar {
+    position: fixed;
+    top: theme.$topbar-height;
+    left: 0;
+    bottom: 0;
+
+    width: theme.$sidebar-width;
+    background: theme.$app-bg-dark;
+    color: theme.$app-text-light;
+
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+
+    padding: 1rem;
+    overflow-y: auto;
+
+    &__nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    &__link {
+        padding: 0.8rem 1rem;
+        border-radius: 0.75rem;
+
+        font-size: 0.9rem;
+        font-weight: 700;
+
+        color: rgba(theme.$app-text-light, 0.8);
+        text-decoration: none;
+
+        transition: background 0.2s ease, color 0.2s ease;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: theme.$app-text-light;
+        }
+
+        &--active {
+            background: theme.$app-primary;
+            color: white;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+        }
+    }
+}
+
+@media (max-width: 800px) {
+    .sidebar {
+        width: 210px;
+    }
+}

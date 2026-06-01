@@ -1,0 +1,226 @@
+$app-bg-dark: #0b1326;
+$app-bg-light: #f4f6fb;
+$app-card-light: #eeefff;
+
+$app-text-dark: #171f33;
+$app-text-light: #dae2fd;
+$app-muted: #b4c5ff;
+
+$app-primary: #2563eb;
+$app-primary-hover: #1d4ed8;
+$app-cyan: #00dbe7;
+
+$topbar-height: 64px;
+$sidebar-width: 256px;
+
+.root {
+    width: 100%;
+    min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: $app-bg-light;
+  color: $app-text-dark;
+
+  &__loading {
+    min-height: 100vh;
+    background: $app-bg-dark;
+    color: $app-text-light;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__loading-content {
+    text-align: center;
+  }
+
+  &__loading-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+
+  &__loading-subtitle {
+    font-size: 0.9rem;
+    color: $app-muted;
+  }
+
+  &__content {
+    min-height: 100vh;
+
+    padding-top: calc($topbar-height + 1rem);
+    padding-left: calc($sidebar-width + 2rem);
+    padding-right: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+.app-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: $topbar-height;
+  z-index: 50;
+
+  background: $app-bg-dark;
+  color: $app-text-light;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 1.5rem;
+
+  &__brand {
+    font-size: 1.25rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: $app-text-light;
+    text-decoration: none;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__status {
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: rgba($app-muted, 0.85);
+
+    &--production {
+      color: $app-cyan;
+    }
+
+    &--admin {
+      color: #fde047;
+    }
+  }
+
+  &__error {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fca5a5;
+  }
+
+  &__button,
+  &__link-button {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: $app-text-light;
+    background: transparent;
+
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+
+    font-size: 0.875rem;
+    font-weight: 800;
+    line-height: 1;
+
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &--primary {
+      border-color: $app-primary;
+      background: $app-primary;
+      color: white;
+
+      &:hover {
+        background: $app-primary-hover;
+      }
+    }
+  }
+}
+
+.app-sidebar {
+  position: fixed;
+  top: $topbar-height;
+  left: 0;
+  bottom: 0;
+
+  width: $sidebar-width;
+  background: $app-bg-dark;
+  color: $app-text-light;
+
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+
+  padding: 1rem;
+  overflow-y: auto;
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__link {
+    padding: 0.8rem 1rem;
+    border-radius: 0.75rem;
+
+    font-size: 0.9rem;
+    font-weight: 700;
+
+    color: rgba($app-text-light, 0.8);
+    text-decoration: none;
+
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    &--active {
+      background: $app-primary;
+      color: white;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+    }
+  }
+}
+
+@media (max-width: 800px) {
+  .app-topbar {
+    padding: 0 1rem;
+
+    &__brand {
+      font-size: 1rem;
+    }
+
+    &__status {
+      display: none;
+    }
+  }
+
+  .app-sidebar {
+    width: 210px;
+  }
+
+  .app-shell {
+    &__content {
+      padding-left: calc(210px + 1rem);
+      padding-right: 1rem;
+    }
+  }
+}

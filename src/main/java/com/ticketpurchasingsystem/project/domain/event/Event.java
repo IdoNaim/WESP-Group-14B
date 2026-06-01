@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
@@ -36,6 +37,10 @@ public class Event {
     private EventPurchasePolicy purchasePolicy;
 
     private ITicketPurchaseRule ticketPurchasePolicy;
+
+    private String eventLocation;
+
+    private Double ticketPrice;
 
     private int version = 0;
 
@@ -88,6 +93,8 @@ public class Event {
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
+        this.eventLocation = other.eventLocation;
+        this.ticketPrice = other.ticketPrice;
     }
 
 
@@ -155,6 +162,12 @@ public class Event {
     }
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
+
+    public String getEventLocation() { return eventLocation; }
+    public void setEventLocation(String eventLocation) { this.eventLocation = eventLocation; }
+
+    public Double getTicketPrice() { return ticketPrice; }
+    public void setTicketPrice(Double ticketPrice) { this.ticketPrice = ticketPrice; }
 
     public ITicketPurchaseRule getTicketPurchasePolicy() {
         return ticketPurchasePolicy;

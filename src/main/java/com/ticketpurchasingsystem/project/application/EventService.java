@@ -67,16 +67,26 @@ public class EventService implements IEventService {
         logger.info("EventService initialized");
     }
 
+    private String extractToken(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token;
+    }
+
     public boolean createEvent(String sessionToken, EventDTO eventDTO,
                                PurchasePolicyDTO purchasePolicyDTO,
                                List<DiscountDTO> discountPolicyDTO) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("Creating event: " + eventDTO.eventName());
 
         // --- VALIDATION LAYER ---
-        // Retain the logical checks that used to live in your old value object constructor
+        if (eventDTO.eventDateTime() != null && eventDTO.eventDateTime().isBefore(LocalDateTime.now())) {
+            logger.error("Failed to create event: event date cannot be in the past");
+            return false;
+        }
 
         if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
@@ -90,25 +100,42 @@ public class EventService implements IEventService {
         }
 
         // --- COMPOSITE RULE CONSTRUCTION ---
-        // Initialize the composite container
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
 
-        // Dynamically add your rules if they are specified in the DTO
-        if (purchasePolicyDTO.minTickets() != null) {
-            purchasePolicy.addRule(new MinTicketsRule(purchasePolicyDTO.minTickets()));
+        // Build age sub-rule respecting isAgeOr flag
+        IPurchaseRule ageRule = null;
+        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null) {
+            IPurchaseRule minA = new MinAgeRule(purchasePolicyDTO.minAge());
+            IPurchaseRule maxA = new MaxAgeRule(purchasePolicyDTO.maxAge());
+            ageRule = purchasePolicyDTO.isAgeOr() ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
+        } else if (purchasePolicyDTO.minAge() != null) {
+            ageRule = new MinAgeRule(purchasePolicyDTO.minAge());
+        } else if (purchasePolicyDTO.maxAge() != null) {
+            ageRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
         }
 
-        // REUSE: Use your colleague's production rule right here!
-        if (purchasePolicyDTO.maxTickets() != null) {
-            purchasePolicy.addRule(new MaxTicketsRule(purchasePolicyDTO.maxTickets()));
+        // Build quantity sub-rule respecting isQuantityOr flag
+        IPurchaseRule quantityRule = null;
+        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null) {
+            IPurchaseRule minT = new MinTicketsRule(purchasePolicyDTO.minTickets());
+            IPurchaseRule maxT = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
+            quantityRule = purchasePolicyDTO.isQuantityOr() ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
+        } else if (purchasePolicyDTO.minTickets() != null) {
+            quantityRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
+        } else if (purchasePolicyDTO.maxTickets() != null) {
+            quantityRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
         }
 
-        if (purchasePolicyDTO.minAge() != null) {
-            purchasePolicy.addRule(new MinAgeRule(purchasePolicyDTO.minAge()));
-        }
-
-        if (purchasePolicyDTO.maxAge() != null) {
-            purchasePolicy.addRule(new MaxAgeRule(purchasePolicyDTO.maxAge()));
+        // Combine age and quantity rules respecting isAgeAndQuantityOr flag
+        if (ageRule != null && quantityRule != null) {
+            IPurchaseRule combined = purchasePolicyDTO.isAgeAndQuantityOr()
+                    ? new OrRule(ageRule, quantityRule)
+                    : new AndRule(ageRule, quantityRule);
+            purchasePolicy.addRule(combined);
+        } else if (ageRule != null) {
+            purchasePolicy.addRule(ageRule);
+        } else if (quantityRule != null) {
+            purchasePolicy.addRule(quantityRule);
         }
 
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
@@ -123,6 +150,8 @@ public class EventService implements IEventService {
                 discountPolicy,
                 0
         );
+        event.setEventLocation(eventDTO.eventLocation());
+        event.setTicketPrice(eventDTO.ticketPrice());
 
         try {
             // Save the event and capture the returned object (which includes the newly generated eventId)
@@ -144,7 +173,7 @@ public class EventService implements IEventService {
 
     @Override
     public EventDTO searchEvent(String sessionToken, String eventId) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -165,14 +194,15 @@ public class EventService implements IEventService {
                 event.getEventName(),
                 event.getEventCapacity(),
                 event.getEventDate(),
-                event.getLocation(),
-                event.isActive()
+                event.isActive(),
+                event.getEventLocation(),
+                event.getTicketPrice()
         );
     }
 
     @Override
     public List<EventDTO> searchEventsByCompany(String sessionToke, int companyId) {
-        if(!authenticationService.validate(sessionToke)) {
+        if(!authenticationService.validate(extractToken(sessionToke))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -186,8 +216,9 @@ public class EventService implements IEventService {
                         event.getEventName(),
                         event.getEventCapacity(),
                         event.getEventDate(),
-                        event.getLocation(),
-                        event.isActive()
+                        event.isActive(),
+                        event.getEventLocation(),
+                        event.getTicketPrice()
                 ))
                 .toList();
 
@@ -198,7 +229,7 @@ public class EventService implements IEventService {
 
     @Override
     public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -209,6 +240,11 @@ public class EventService implements IEventService {
 
             if (event == null) {
                 logger.warn("Cannot edit date. Event not found: " + eventId);
+                return false;
+            }
+
+            if (newDateTime == null || newDateTime.isBefore(LocalDateTime.now())) {
+                logger.warn("Cannot edit date: new date cannot be in the past");
                 return false;
             }
 
@@ -228,7 +264,7 @@ public class EventService implements IEventService {
 
     @Override
     public boolean removeEvent(String sessionToken, String eventId) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -259,7 +295,7 @@ public class EventService implements IEventService {
 
     @Override
     public boolean editEventInventory(String sessionToken, String eventId, int newCapacity) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -295,7 +331,7 @@ public class EventService implements IEventService {
 
     @Override
     public boolean editEventSeatingMap(String sesionToken, String eventId, SeatingMap seatingMap) {
-        if(!authenticationService.validate(sesionToken)) {
+        if(!authenticationService.validate(extractToken(sesionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -326,7 +362,7 @@ public class EventService implements IEventService {
     @Override
     public SeatingMap configureSeatingMap(String sessionToken, List<SeatingAreaConfig> seatingAreas,
                                           List<StandingAreaConfig> standingAreas) {
-        if(!authenticationService.validate(sessionToken)) {
+        if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
 
@@ -354,7 +390,7 @@ public class EventService implements IEventService {
     }
     public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
         //TODO: Implement the logic to release reserved seats based on the orderId, eventId, and seatIds
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("Releasing seats");
@@ -371,7 +407,7 @@ public class EventService implements IEventService {
     }
     public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
         //TODO: Implement the logic to release reserved standing area based on the eventId, areaId, and quantity
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("Releasing standing area");
@@ -388,7 +424,7 @@ public class EventService implements IEventService {
     }
     public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("Releasing seats");
@@ -406,7 +442,7 @@ public class EventService implements IEventService {
     }
     public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
         //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("booking standing area");
@@ -426,7 +462,7 @@ public class EventService implements IEventService {
     public List<String> checkSeatsReserved(String sessionToken, String orderId, String eventId, List<String> seatIds){
         //checks for each seatid if really saved for this specific orderID, if not, add the seatID to result
         //string list and return it
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         logger.info("checking reserved seats");
@@ -446,9 +482,50 @@ public class EventService implements IEventService {
         return reservedSeatIds;
     }
     @Override
-    public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO){
-        if(!authenticationService.validate(sesssionToken)){
+    public boolean editEventLocation(String sessionToken, String eventId, String newLocation) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setEventLocation(newLocation);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event location for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean editEventPrice(String sessionToken, String eventId, Double newPrice) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setTicketPrice(newPrice);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event price for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO){
+        if(!authenticationService.validate(extractToken(sesssionToken))){
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+                && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
+            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets");
+        }
+        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+                && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
+            throw new IllegalArgumentException("minAge cannot be greater than maxAge");
         }
         Event event = eventRepo.findById(eventId);
         if(event == null){
