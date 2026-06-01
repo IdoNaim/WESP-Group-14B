@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.infrastructure;
+package com.ticketpurchasingsystem.project.Controllers;
 
 import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
 import com.ticketpurchasingsystem.project.domain.tickets.*;
@@ -25,13 +25,13 @@ public class PurchasePolicyController {
         PolicyValidationResult result = purchasePolicyService.validatePurchase(
                 request.getEventId(),
                 request.getBuyerAge(),
-                request.getRequestedTickets()
-        );
+                request.getRequestedTickets());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/assign/event/{eventId}")
-    public ResponseEntity<String> assignPolicyToEvent(@PathVariable String eventId, @RequestBody PolicyRequest request) {
+    public ResponseEntity<String> assignPolicyToEvent(@PathVariable String eventId,
+            @RequestBody PolicyRequest request) {
         try {
             ITicketPurchaseRule rule = buildRule(request);
             purchasePolicyService.assignPolicyToEvent(eventId, rule);
@@ -42,7 +42,8 @@ public class PurchasePolicyController {
     }
 
     @PostMapping("/assign/company/{companyId}")
-    public ResponseEntity<String> assignPolicyToCompany(@PathVariable Integer companyId, @RequestBody PolicyRequest request) {
+    public ResponseEntity<String> assignPolicyToCompany(@PathVariable Integer companyId,
+            @RequestBody PolicyRequest request) {
         try {
             ITicketPurchaseRule rule = buildRule(request);
             purchasePolicyService.assignPolicyToCompany(companyId, rule);
@@ -97,12 +98,14 @@ public class PurchasePolicyController {
                 if (req.getMinTickets() == null) {
                     throw new IllegalArgumentException("minTickets is required for MIN_TICKETS policy");
                 }
-                return new PurchaseRuleAdapter(new MinTicketsRule(req.getMinTickets()), "MIN_TICKETS", null, null, req.getMinTickets(), null, null);
+                return new PurchaseRuleAdapter(new MinTicketsRule(req.getMinTickets()), "MIN_TICKETS", null, null,
+                        req.getMinTickets(), null, null);
             case "MAX_TICKETS":
                 if (req.getMaxTickets() == null) {
                     throw new IllegalArgumentException("maxTickets is required for MAX_TICKETS policy");
                 }
-                return new PurchaseRuleAdapter(new MaxTicketsRule(req.getMaxTickets()), "MAX_TICKETS", null, null, null, req.getMaxTickets(), null);
+                return new PurchaseRuleAdapter(new MaxTicketsRule(req.getMaxTickets()), "MAX_TICKETS", null, null, null,
+                        req.getMaxTickets(), null);
             case "AND":
                 if (req.getSubPolicies() == null) {
                     throw new IllegalArgumentException("subPolicies are required for AND composition");
@@ -110,23 +113,32 @@ public class PurchasePolicyController {
                 // Cross-validate direct children for logically impossible constraints
                 Integer andMinTickets = null, andMaxTickets = null, andMinAge = null, andMaxAge = null;
                 for (PolicyRequest sub : req.getSubPolicies()) {
-                    if (sub.getType() == null) continue;
+                    if (sub.getType() == null)
+                        continue;
                     switch (sub.getType().toUpperCase()) {
-                        case "MIN_TICKETS": andMinTickets = sub.getMinTickets(); break;
-                        case "MAX_TICKETS": andMaxTickets = sub.getMaxTickets(); break;
+                        case "MIN_TICKETS":
+                            andMinTickets = sub.getMinTickets();
+                            break;
+                        case "MAX_TICKETS":
+                            andMaxTickets = sub.getMaxTickets();
+                            break;
                         case "AGE":
-                            if (sub.getMinAge() != null) andMinAge = sub.getMinAge();
-                            if (sub.getMaxAge() != null) andMaxAge = sub.getMaxAge();
+                            if (sub.getMinAge() != null)
+                                andMinAge = sub.getMinAge();
+                            if (sub.getMaxAge() != null)
+                                andMaxAge = sub.getMaxAge();
                             break;
                     }
                 }
                 if (andMinTickets != null && andMaxTickets != null && andMinTickets > andMaxTickets) {
                     throw new IllegalArgumentException(
-                            "In AND rule: minTickets (" + andMinTickets + ") cannot be greater than maxTickets (" + andMaxTickets + ")");
+                            "In AND rule: minTickets (" + andMinTickets + ") cannot be greater than maxTickets ("
+                                    + andMaxTickets + ")");
                 }
                 if (andMinAge != null && andMaxAge != null && andMinAge > andMaxAge) {
                     throw new IllegalArgumentException(
-                            "In AND rule: minAge (" + andMinAge + ") cannot be greater than maxAge (" + andMaxAge + ")");
+                            "In AND rule: minAge (" + andMinAge + ") cannot be greater than maxAge (" + andMaxAge
+                                    + ")");
                 }
                 List<ITicketPurchaseRule> andAdapters = new ArrayList<>();
                 List<IPurchaseRule> andTeammateRules = new ArrayList<>();
@@ -195,14 +207,29 @@ public class PurchasePolicyController {
         private int buyerAge;
         private int requestedTickets;
 
-        public String getEventId() { return eventId; }
-        public void setEventId(String eventId) { this.eventId = eventId; }
+        public String getEventId() {
+            return eventId;
+        }
 
-        public int getBuyerAge() { return buyerAge; }
-        public void setBuyerAge(int buyerAge) { this.buyerAge = buyerAge; }
+        public void setEventId(String eventId) {
+            this.eventId = eventId;
+        }
 
-        public int getRequestedTickets() { return requestedTickets; }
-        public void setRequestedTickets(int requestedTickets) { this.requestedTickets = requestedTickets; }
+        public int getBuyerAge() {
+            return buyerAge;
+        }
+
+        public void setBuyerAge(int buyerAge) {
+            this.buyerAge = buyerAge;
+        }
+
+        public int getRequestedTickets() {
+            return requestedTickets;
+        }
+
+        public void setRequestedTickets(int requestedTickets) {
+            this.requestedTickets = requestedTickets;
+        }
     }
 
     public static class PolicyRequest {
@@ -213,23 +240,53 @@ public class PurchasePolicyController {
         private Integer maxTickets;
         private List<PolicyRequest> subPolicies;
 
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
+        public String getType() {
+            return type;
+        }
 
-        public Integer getMinAge() { return minAge; }
-        public void setMinAge(Integer minAge) { this.minAge = minAge; }
+        public void setType(String type) {
+            this.type = type;
+        }
 
-        public Integer getMaxAge() { return maxAge; }
-        public void setMaxAge(Integer maxAge) { this.maxAge = maxAge; }
+        public Integer getMinAge() {
+            return minAge;
+        }
 
-        public Integer getMinTickets() { return minTickets; }
-        public void setMinTickets(Integer minTickets) { this.minTickets = minTickets; }
+        public void setMinAge(Integer minAge) {
+            this.minAge = minAge;
+        }
 
-        public Integer getMaxTickets() { return maxTickets; }
-        public void setMaxTickets(Integer maxTickets) { this.maxTickets = maxTickets; }
+        public Integer getMaxAge() {
+            return maxAge;
+        }
 
-        public List<PolicyRequest> getSubPolicies() { return subPolicies; }
-        public void setSubPolicies(List<PolicyRequest> subPolicies) { this.subPolicies = subPolicies; }
+        public void setMaxAge(Integer maxAge) {
+            this.maxAge = maxAge;
+        }
+
+        public Integer getMinTickets() {
+            return minTickets;
+        }
+
+        public void setMinTickets(Integer minTickets) {
+            this.minTickets = minTickets;
+        }
+
+        public Integer getMaxTickets() {
+            return maxTickets;
+        }
+
+        public void setMaxTickets(Integer maxTickets) {
+            this.maxTickets = maxTickets;
+        }
+
+        public List<PolicyRequest> getSubPolicies() {
+            return subPolicies;
+        }
+
+        public void setSubPolicies(List<PolicyRequest> subPolicies) {
+            this.subPolicies = subPolicies;
+        }
     }
 
     public static class PolicyResponse {
@@ -239,7 +296,12 @@ public class PurchasePolicyController {
             this.description = description;
         }
 
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
     }
 }
