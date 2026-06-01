@@ -32,5 +32,6 @@ public interface IEventService {
      public boolean editEventPurchasePolicy(String sessionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO);
      public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
      public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
+     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge);
      
 }

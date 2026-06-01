@@ -205,6 +205,30 @@ export const eventApi = {
         });
         if (!response.ok) return null;
         return response.json();
+    },
+
+    /**
+     * POST /api/events/{eventId}/validate-policy
+     * Validates the purchase policy for the given quantity and user age.
+     * Returns true if the purchase is allowed, false otherwise.
+     */
+    validatePurchasePolicy: async (
+        token: string,
+        eventId: string | number,
+        quantity: number,
+        userAge: number
+    ): Promise<string | null> => {
+        console.log('[validatePurchasePolicy] eventId:', eventId, 'quantity:', quantity, 'userAge:', userAge);
+        const response = await fetch(`${BASE_URL}/${eventId}/validate-policy`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify({ quantity, userAge }),
+        });
+        const bodyText = await response.text();
+        console.log('[validatePurchasePolicy] status:', response.status, 'body:', bodyText);
+        if (response.status === 422) return bodyText;
+        if (!response.ok) return 'Failed to validate purchase policy.';
+        return null;
     }
 
 };

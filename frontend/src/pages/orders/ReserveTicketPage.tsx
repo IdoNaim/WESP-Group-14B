@@ -162,6 +162,7 @@ function buildOrderItemsFromActiveOrder(
   return items;
 }
 
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SeatDot({
@@ -439,6 +440,12 @@ function ActiveOrderPanel({
               <span>Total</span>
               <span className="text-amber-400">${subtotal.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between text-sm border-t border-white/10 pt-3 text-white/60">
+              <span>Tickets selected</span>
+              <span className="text-white font-semibold">
+                {items.reduce((acc, i) => acc + i.qty, 0)}
+              </span>
+            </div>
             <button
               disabled={items.length === 0}
               onClick={onCheckout}
@@ -480,7 +487,7 @@ export default function ReserveTicketsPage() {
   const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
 
   // Effective max tickets: use policy value if available, else fall back to default
-  const effectiveMaxTickets = purchasePolicy?.maxTickets ?? DEFAULT_MAX_TICKETS;
+  const effectiveMaxTickets = purchasePolicy?.maxTickets ?? null;
 
   // ── Bootstrap: token → user → activeOrder → eventId → event + seatingMap + purchasePolicy ──
   useEffect(() => {
@@ -608,7 +615,7 @@ export default function ReserveTicketsPage() {
         return;
       }
 
-      if (totalSelected >= effectiveMaxTickets) {
+      if (effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets) {
         showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
         return;
       }
@@ -637,7 +644,7 @@ export default function ReserveTicketsPage() {
   // ── Standing zone ──
   const handleStandingAdd = useCallback(
     (zoneId: string) => {
-      if (totalSelected >= effectiveMaxTickets) {
+      if (effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets) {
         showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
         return;
       }
@@ -734,6 +741,16 @@ export default function ReserveTicketsPage() {
 
   // ── Checkout ──
   const handleCheckout = async () => {
+    const GENERIC_USER_AGE = 25;
+    const token = localStorage.getItem("token") ?? "";
+    console.log('[handleCheckout] currentOrder.eventId:', currentOrder?.eventId, 'totalSelected:', totalSelected);
+    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, GENERIC_USER_AGE);
+    console.log('[handleCheckout] policyViolation:', policyViolation);
+    if (policyViolation) {
+      alert(policyViolation);
+      return;
+    }
+
     const isSuccess = await handleReserveTickets();
     if (isSuccess) {
       alert("Proceeding to checkout…");
@@ -960,22 +977,12 @@ export default function ReserveTicketsPage() {
             {/* ── Dynamic Purchase Rules ── */}
             <PurchaseRules policy={purchasePolicy} />
 
-            {totalSelected >= effectiveMaxTickets && (
+            {effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets && (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
                 You've reached the maximum of <strong>{effectiveMaxTickets} tickets</strong> per order as per purchase policy.
               </p>
             )}
 
-            <div className="flex justify-end pt-2">
-              <button
-                disabled={totalSelected === 0 || timeLeft === 0 || !currentOrder}
-                className="px-12 py-4 text-sm font-bold uppercase tracking-widest rounded shadow transition-all hover:brightness-110 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#FFB400", color: "#0A192F" }}
-                onClick={handleReserveTickets}
-              >
-                Reserve Tickets
-              </button>
-            </div>
           </section>
 
           {/* ── Right Panel ── */}
