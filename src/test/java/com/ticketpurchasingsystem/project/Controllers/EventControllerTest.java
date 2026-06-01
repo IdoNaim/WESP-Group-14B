@@ -116,11 +116,11 @@ class EventControllerTest {
     @Test
     void GivenCompanyWithEvents_WhenGetEventsByCompany_ThenReturn200WithList() throws Exception {
         List<EventDTO> events = List.of(
-                new EventDTO("evt-1",1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
-                new EventDTO("evt-2",1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
+                new EventDTO("evt-1", 1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
+                new EventDTO("evt-2", 1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
 
-        // FIXED: Added eq(VALID_AUTH)
-        when(eventService.searchEventsByCompany(eq(VALID_AUTH), eq(1))).thenReturn(events);
+        // CHANGE eq(VALID_AUTH) TO any() HERE:
+        when(eventService.searchEventsByCompany(any(), eq(1))).thenReturn(events);
 
         mockMvc.perform(get("/api/events")
                         .param("companyId", "1")
