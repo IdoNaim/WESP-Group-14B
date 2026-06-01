@@ -33,8 +33,9 @@ public class UserService implements IUserService {
         UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
         UserProduction userProduction = new UserProduction();
         userProduction.addProduction(1, UserProduction.RoleInProduction.FOUNDER);
-        idonaim.setUserProduction(userProduction);
-        userRepo.store(idonaim);
+        if( idonaim != null){            idonaim.setUserProduction(userProduction);
+            }
+            userRepo.store(idonaim);
 
     }
 
