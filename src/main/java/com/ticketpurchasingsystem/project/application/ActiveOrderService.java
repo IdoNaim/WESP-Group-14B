@@ -40,6 +40,8 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderHandler = activeOrderHandler;
         this.authenticationService = authenticationService;
         this.barCodeGateway = barCodeGateway;
+        ActiveOrderItem order = new ActiveOrderItem("1","idonaim56@gmail.com","1");
+        activeOrderRepo.save(order);
     }
 
     @Override
