@@ -79,6 +79,18 @@ public class Event {
         this.location = location;
     }
 
+    public Event(
+            int companyId,
+            String eventName,
+            int eventCapacity,
+            LocalDateTime eventDate,
+            EventPurchasePolicy purchasePolicy,
+            EventDiscountPolicy discountPolicy,
+            int version
+    ) {
+        this(companyId, eventName, eventCapacity, eventDate, null, purchasePolicy, discountPolicy, version);
+    }
+
     // COPY CONSTRUCTOR: Required for Event::new to work in your Streams
     public Event(Event other) {
         this.eventId = other.eventId;
