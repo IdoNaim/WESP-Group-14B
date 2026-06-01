@@ -8,22 +8,83 @@ import CompanyEventsPage from '../pages/production-company/CompanyEventsPage.tsx
 import EventsPage from "../pages/events/EventsPage.tsx";
 import EventDetailsPage from "../pages/events/EventDetailsPage.tsx";
 
+import MainLayout from "../layouts/MainLayout/MainLayout";
+
+import LoginPage from "../pages/auth/LoginPage";
+import RegisterPage from "../pages/auth/RegisterPage";
+import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+
+import DashboardPage from "../pages/dashboard/DashboardPage";
+
+import EventsPage from "../pages/events/EventsPage";
+import EventDetailsPage from "../pages/events/EventDetailsPage";
+
+import ActiveOrderPage from "../pages/orders/ActiveOrderPage";
+import CheckoutPage from "../pages/orders/CheckoutPage";
+import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
+import ReserveTicketPage from "../pages/orders/ReserveTicketPage";
+
+import NotificationsPage from "../pages/notifications/NotificationsPage";
+
+import ProductionCompanyPage from "../pages/production-company/ProductionCompanyPage";
+import PurchasePolicyPage from "../pages/policies/PurchasePolicyPage";
+
+import AdminPage from "../pages/admin/AdminPage";
+import AccountPage from "../pages/user/AccountPage";
+
+import RequireMember from "../components/auth/RequireMember";
+import RequireProductionUser from "../components/auth/RequireProductionUser";
+import RequireAdmin from "../components/auth/RequireAdmin";
 
 export default function AppRoutes() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/dashboard" element={<MyCompaniesPage />} />
-                <Route path="/company/:companyId" element={<ProductionCompanyPage />} />
-                <Route path="/company/:companyId/events" element={<CompanyEventsPage />} />
-                {/* Wildcard: Redirects any unknown paths straight to login */}
-                <Route path="/events" element={<EventsPage />} />
-                <Route path="/events/:eventId" element={<EventDetailsPage />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-        </BrowserRouter>
-    );
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Auth pages - outside the main app shell */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        {/* Main application shell */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* Public routes - guests and members */}
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId" element={<EventDetailsPage />} />
+          <Route
+            path="/events/:eventId/reserve"
+            element={<ReserveTicketPage />}
+          />
+
+          <Route path="/orders/active" element={<ActiveOrderPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+
+          {/* Member-only routes */}
+          <Route element={<RequireMember />}>
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/orders/history" element={<OrderHistoryPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+          </Route>
+
+          {/* Production-user-only routes */}
+          <Route element={<RequireProductionUser />}>
+            <Route
+              path="/production-company"
+              element={<ProductionCompanyPage />}
+            />
+            <Route path="/policies" element={<PurchasePolicyPage />} />
+          </Route>
+
+          {/* Admin-only routes */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
