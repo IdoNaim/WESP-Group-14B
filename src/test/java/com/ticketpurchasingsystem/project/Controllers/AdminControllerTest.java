@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.ticketpurchasingsystem.project.application.ISystemAdminService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
@@ -46,8 +47,8 @@ class AdminControllerTest {
                 42, Timestamp.from(Instant.now()), 99.0, List.of("A2"), new HashMap<>());
     }
 
-    private UserInfo sampleUser() {
-        return new UserInfo("user-1", "alice", "alice@example.com", "", UserGroupDiscount.NONE);
+    private UserDTO sampleUser() {
+        return new UserDTO("user-1", "alice", "alice@example.com", UserGroupDiscount.NONE);
     }
 
     // ── GET /api/admin/active-orders ─────────────────────────────────────────
@@ -140,9 +141,10 @@ class AdminControllerTest {
 
     @Test
     void GivenRequest_WhenGetUsers_ThenReturn200WithList() throws Exception {
-        when(adminService.getAllUsers()).thenReturn(List.of(sampleUser()));
+        when(adminService.getAllUsers("valid-token")).thenReturn(List.of(sampleUser()));
 
-        mockMvc.perform(get("/api/admin/users"))
+        mockMvc.perform(get("/api/admin/users")
+                        .header("Authorization", TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("user-1"))
                 .andExpect(jsonPath("$[0].email").value("alice@example.com"));
@@ -150,9 +152,10 @@ class AdminControllerTest {
 
     @Test
     void GivenRequest_WhenGetUsers_ThenReturnEmptyList() throws Exception {
-        when(adminService.getAllUsers()).thenReturn(List.of());
+        when(adminService.getAllUsers("valid-token")).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/admin/users"))
+        mockMvc.perform(get("/api/admin/users")
+                        .header("Authorization", TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
     }
