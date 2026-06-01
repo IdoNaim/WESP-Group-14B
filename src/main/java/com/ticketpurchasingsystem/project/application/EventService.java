@@ -20,6 +20,8 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingArea;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.PurchaseContext;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
@@ -150,7 +152,7 @@ public class EventService implements IEventService {
                 discountPolicy,
                 0
         );
-        event.setEventLocation(eventDTO.eventLocation());
+        event.setEventLocation(eventDTO.location());
         event.setTicketPrice(eventDTO.ticketPrice());
 
         try {
