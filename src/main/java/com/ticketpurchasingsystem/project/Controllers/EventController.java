@@ -78,14 +78,9 @@ public class EventController {
         public ResponseEntity<List<EventDTO>> getEventsByCompany(
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
-                String token  = (authHeader != null && authHeader.startsWith("Bearer ")) ? authHeader.substring(7) : authHeader;
 
-<<<<<<< HEAD
-                // FIXED: Added authHeader
-                List<EventDTO> events = eventService.searchEventsByCompany(token, companyId);
-=======
+                // RESOLVED: Cleaned conflict markers and passing standard authHeader to match your other service endpoints
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
->>>>>>> 3374e4400d9933f529aff1c9d43275ec09e57486
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
 
@@ -185,5 +180,4 @@ public class EventController {
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
         }
-
 }
