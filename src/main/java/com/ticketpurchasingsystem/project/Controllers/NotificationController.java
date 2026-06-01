@@ -20,6 +20,7 @@ import com.ticketpurchasingsystem.project.application.INotificationService;
 import com.ticketpurchasingsystem.project.application.NotFoundException;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -73,6 +74,7 @@ public class NotificationController {
             @RequestHeader("Authorization") String token) {
         try {
             long count = notificationService.getUnreadCount(bearerToken(token));
+            loggerDef.getInstance().info("Unread notifications count for user: " + count);
             return ResponseEntity.ok(count);
         } catch (UnauthorizedException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
@@ -86,6 +88,9 @@ public class NotificationController {
             @PathVariable String id) {
         try {
             NotificationDTO notification = notificationService.getNotificationById(bearerToken(token), id);
+            loggerDef.getInstance().info("Fetched notification by ID: " + id);
+            //is read value
+            loggerDef.getInstance().info("Notification read status: " + notification.isRead());
             return ResponseEntity.ok(notification);
         } catch (UnauthorizedException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
@@ -141,6 +146,7 @@ public class NotificationController {
     public ResponseEntity<?> markAsRead(
             @RequestHeader("Authorization") String token,
             @PathVariable String id) {
+        loggerDef.getInstance().info("Received request to mark notification as read: " + id);
         try {
             notificationService.markAsRead(bearerToken(token), id);
             return ResponseEntity.ok("Notification marked as read");

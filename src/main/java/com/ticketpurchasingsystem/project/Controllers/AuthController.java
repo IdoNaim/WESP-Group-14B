@@ -37,6 +37,7 @@ public class AuthController {
         this.userService = userService;
         this.authenticationService = authenticationService;
         this.adminRepo = adminRepo;
+
     }
 
     // POST /api/identity/guest
