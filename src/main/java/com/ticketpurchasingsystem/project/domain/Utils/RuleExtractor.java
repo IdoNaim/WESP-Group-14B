@@ -10,12 +10,12 @@ import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRul
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
 
-class RuleExtractor {
+public class RuleExtractor {
 
     Integer minAge, maxAge, minTickets, maxTickets;
     Boolean isAgeOr, isQuantityOr, isAgeAndQuantityOr;
 
-    void extract(IPurchaseRule rule, boolean isOr) {
+    public void extract(IPurchaseRule rule, boolean isOr) {
         if (rule instanceof MinAgeRule r)       { minAge = r.getMinAge(); }
         else if (rule instanceof MaxAgeRule r)  { maxAge = r.getMaxAge(); }
         else if (rule instanceof MinTicketsRule r) { minTickets = r.getLimit(); }
@@ -58,7 +58,7 @@ class RuleExtractor {
             || r instanceof OrRule  o && isQuantityRule(o.getComponent1());
     }
 
-    PurchasePolicyDTO toDTO() {
+    public PurchasePolicyDTO toDTO() {
         return new PurchasePolicyDTO(
             minTickets,
             maxTickets,
