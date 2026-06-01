@@ -7,6 +7,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.ticketpurchasingsystem.project.domain.Utils.AssignedSeatDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.StandingAreaDTO;
 public class SeatingMap {
     private ConcurrentMap<String,AssignedSeat> seats;
     private ConcurrentMap<String, StandingArea> standingAreas;
@@ -27,6 +31,7 @@ public class SeatingMap {
             return false;
         }
         String areaID = generateAreaID();
+        System.out.println("------------------Generated areaID: " + areaID);
         standingAreas.put(areaID, new StandingArea(capacity, priceForTicket, areaID));
         return true;
     }
@@ -156,6 +161,19 @@ public class SeatingMap {
         Map<String, Bookable> combined = new HashMap<>(seats);
         combined.putAll(standingAreas);
         return combined;
+    }
+    public SeatingMapDTO getDTO(){
+        List<AssignedSeatDTO> assignedSeatsDTO = new ArrayList<>();
+        for(AssignedSeat seat : seats.values()){
+            if(seat != null)
+                assignedSeatsDTO.add(new AssignedSeatDTO(seat.getId(), seat.isBooked(), seat.getOrderId(), seat.getPriceForTicket()));
+        }
+        List<StandingAreaDTO> standingAreasDTO = new ArrayList<>();
+        for(StandingArea area : standingAreas.values()){
+            if(area != null)
+                standingAreasDTO.add(new StandingAreaDTO(area.getId(), area.getAvalibleSeatNumber(), area.getCapacity(), area.getPriceForTicket()));
+        }
+        return new SeatingMapDTO(assignedSeatsDTO, standingAreasDTO);
     }
 
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){

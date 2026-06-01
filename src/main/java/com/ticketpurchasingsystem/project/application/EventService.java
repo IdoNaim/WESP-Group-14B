@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -46,6 +47,10 @@ public class EventService implements IEventService {
                 0
         );
         testEvent.setEventLocation("Test Location");
+        SeatingMap seatingMap = new SeatingMap();
+        seatingMap.addSeatingArea(10, 10, 40.0); 
+        seatingMap.addStandingArea(50, 20.0);
+        testEvent.setSeatingMap(seatingMap);
         Event eventWithId =eventRepo.save(testEvent);
         logger.info("Created test event with ID: " + eventWithId.getEventId());
         logger.info("EventService initialized");
@@ -548,5 +553,17 @@ public class EventService implements IEventService {
         if (event == null || event.getSeatingMap() == null) return false;
         StandingArea area = event.getSeatingMap().getArea(areaId);
         return area != null && area.getAvalibleSeatNumber() >= quantity;
+    }
+    @Override
+    public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
+        if (!authenticationService.validate(sessionToken)) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot get seating map. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        return event.getSeatingMap().getDTO();
     }
 }

@@ -38,8 +38,8 @@ export interface ActiveOrderDTO {
     orderId: string;
     userId: string;
     eventId: string;
-    seats?: any[]; 
-    standingAreas?: Record<string, number>;
+    seatIds?: string[]; 
+    StandingAreaQuantities?: Record<string, number>;
 }
 
 // ==========================================

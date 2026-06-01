@@ -41,6 +41,8 @@ public class ActiveOrderService implements IActiveOrderService {
         this.authenticationService = authenticationService;
         this.barCodeGateway = barCodeGateway;
         ActiveOrderItem order = new ActiveOrderItem("1","idonaim56@gmail.com","1");
+        order.addSeatIds(List.of("0_1_1"));
+        order.addStandingAreaQuantity("1", 2);
         activeOrderRepo.save(order);
     }
 

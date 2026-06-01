@@ -70,6 +70,8 @@ public class AssignedSeat implements Bookable {
         this.priceForTicket = newPrice;
         return true; // Price updated successfully
     }
-
+    public String getOrderId() {
+        return orderId;
+    }
 
 }

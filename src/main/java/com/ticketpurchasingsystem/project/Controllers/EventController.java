@@ -24,6 +24,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateReques
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -178,6 +179,18 @@ public class EventController {
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
+        }
+        @GetMapping("/{eventId}/seating-map")
+        public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                SeatingMapDTO seatingMap = eventService.getEventSeatingMap(token, eventId);
+                return seatingMap != null
+                        ? ResponseEntity.ok(seatingMap)
+                        : ResponseEntity.notFound().build();
         }
 
 }
