@@ -90,8 +90,7 @@ class EventControllerTest {
     void GivenExistingEvent_WhenGetEvent_ThenReturn200WithBody() throws Exception {
         EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14),"test location", true);
 
-        // FIXED: Added eq(VALID_AUTH)
-        when(eventService.searchEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(event);
+        when(eventService.searchEvent(eq("valid-token"), eq("evt-1"))).thenReturn(event);
 
         mockMvc.perform(get("/api/events/evt-1")
                         .header("Authorization", VALID_AUTH))

@@ -141,6 +141,7 @@ public class EventServiceTest {
         when(mockEvent.getEventCapacity()).thenReturn(100);
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
+        when(mockEvent.getEventLocation()).thenReturn("test location");
 
         when(mockRepo.findById("1")).thenReturn(mockEvent);
 
