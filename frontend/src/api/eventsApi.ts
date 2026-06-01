@@ -17,12 +17,13 @@ export interface EventDTO {
 }
 
 export interface PurchasePolicyDTO {
-    minTicketsPerUser: number;
-    maxTicketsPerUser: number;
-    minAge?: number;
-    maxAge?: number;
-    requiresMembership?: boolean;
-    // Add any other fields your Java PurchasePolicyDTO contains
+    minTickets: number | null;
+    maxTickets: number | null;
+    isQuantityOr: boolean;
+    minAge: number | null;
+    maxAge: number | null;
+    isAgeOr: boolean;
+    isAgeAndQuantityOr: boolean;
 }
 
 export interface DiscountDTO {

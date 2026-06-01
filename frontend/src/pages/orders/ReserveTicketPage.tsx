@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO } from "../../api/eventsApi";
+import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO, PurchasePolicyDTO } from "../../api/eventsApi";
 import { authApi } from "../../api/authApi";
 import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
 import { useNavigate } from "react-router-dom";
@@ -41,11 +41,12 @@ interface OrderItem {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const RESERVATION_MINUTES = 15
+const RESERVATION_MINUTES = 15;
 const RESERVATION_SECONDS = RESERVATION_MINUTES * 60;
-const MAX_TICKETS = 4;
+const DEFAULT_MAX_TICKETS = 4;
 const checkoutWindowURL = "/checkout";
 const dashboardURL = "/dashboard";
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTime(seconds: number): string {
@@ -72,7 +73,6 @@ function buildZonesFromSeatingMap(
   dto: SeatingMapDTO,
   activeOrder: ActiveOrderDTO | null
 ): { zones: ZoneData[]; standing: StandingZone[] } {
-  // Build a set of seat IDs already in the active order for quick lookup
   const activeSeatIds = new Set(activeOrder?.seatIds ?? []);
 
   const zoneMap = new Map<string, AssignedSeatDTO[]>();
@@ -87,7 +87,6 @@ function buildZonesFromSeatingMap(
     const seats: Seat[] = seatDTOs.flatMap((s) => {
       const p = parseSeatId(s.id);
       if (!p) return [];
-      // If the seat is in the active order → "selected", if booked by someone else → "taken"
       const status: SeatStatus = activeSeatIds.has(s.id)
         ? "selected"
         : s.isBooked
@@ -109,7 +108,6 @@ function buildZonesFromSeatingMap(
     zones.push({ zone, seats, cols });
   }
 
-  // Build standing zones, pre-populating selected quantity from active order
   const activeStandingMap = new Map(
     Object.entries(activeOrder?.StandingAreaQuantities ?? {})
   );
@@ -126,7 +124,6 @@ function buildZonesFromSeatingMap(
   return { zones, standing };
 }
 
-// Builds the initial OrderItems list from an existing active order + seating map
 function buildOrderItemsFromActiveOrder(
   activeOrder: ActiveOrderDTO,
   zones: ZoneData[],
@@ -134,7 +131,6 @@ function buildOrderItemsFromActiveOrder(
 ): OrderItem[] {
   const items: OrderItem[] = [];
 
-  // Seated tickets
   for (const seatId of activeOrder.seatIds) {
     const parsed = parseSeatId(seatId);
     if (!parsed) continue;
@@ -150,8 +146,7 @@ function buildOrderItemsFromActiveOrder(
     });
   }
 
-  // Standing tickets
-for (const [areaId, quantity] of Object.entries(activeOrder.StandingAreaQuantities ?? {})) {
+  for (const [areaId, quantity] of Object.entries(activeOrder.StandingAreaQuantities ?? {})) {
     if (quantity <= 0) continue;
     const zone = standingZones.find((z) => z.id === areaId);
     if (!zone) continue;
@@ -203,7 +198,7 @@ function StandingZoneCard({
   onRemove: (id: string) => void;
   totalSelected: number;
 }) {
-  const canAdd = zone.selected < zone.available && totalSelected < MAX_TICKETS;
+  const canAdd = zone.selected < zone.available && totalSelected < DEFAULT_MAX_TICKETS;
   const canRemove = zone.selected > 0;
   const isActive = zone.selected > 0;
 
@@ -252,8 +247,59 @@ function StandingZoneCard({
   );
 }
 
-function PurchaseRules() {
+// ── PurchaseRules — dynamic from API ─────────────────────────────────────────
+
+function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
   const [open, setOpen] = useState(false);
+
+  const rules: string[] = [];
+
+  if (policy) {
+    // Quantity rules
+    if (policy.minTickets !== null && policy.maxTickets !== null) {
+      rules.push(
+        policy.isQuantityOr
+          ? `Purchase up to ${policy.maxTickets} tickets, or buy in bulk (minimum ${policy.minTickets}).`
+          : `Between ${policy.minTickets} and ${policy.maxTickets} tickets per order.`
+      );
+    } else if (policy.minTickets !== null) {
+      rules.push(`Minimum ${policy.minTickets} ticket(s) per order.`);
+    } else if (policy.maxTickets !== null) {
+      rules.push(`Maximum ${policy.maxTickets} ticket(s) per order.`);
+    }
+
+    // Age rules
+    if (policy.minAge !== null && policy.maxAge !== null) {
+      rules.push(
+        policy.isAgeOr
+          ? `Open to attendees under ${policy.maxAge} or over ${policy.minAge} years old.`
+          : `Attendees must be between ${policy.minAge} and ${policy.maxAge} years old.`
+      );
+    } else if (policy.minAge !== null) {
+      rules.push(`Minimum age requirement: ${policy.minAge} years old.`);
+    } else if (policy.maxAge !== null) {
+      rules.push(`Maximum age requirement: ${policy.maxAge} years old.`);
+    }
+
+    // Cross-block composition note (only meaningful when both blocks exist)
+    if (
+      (policy.minAge !== null || policy.maxAge !== null) &&
+      (policy.minTickets !== null || policy.maxTickets !== null)
+    ) {
+      rules.push(
+        policy.isAgeAndQuantityOr
+          ? "Either the age policy or the ticket quantity policy must be satisfied."
+          : "Both the age policy and the ticket quantity policy must be satisfied."
+      );
+    }
+  }
+
+  // Static rules always shown
+  rules.push("Resale strictly through EliteTickets platform only.");
+  rules.push(
+    `Reserved tickets are held for ${RESERVATION_MINUTES} minutes. Uncompleted orders are released automatically.`
+  );
+
   return (
     <div className="rounded-lg overflow-hidden border border-amber-300/50 bg-amber-50/40">
       <button
@@ -268,29 +314,28 @@ function PurchaseRules() {
         </div>
         <svg
           className={`w-4 h-4 text-amber-700 transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {open && (
         <ul className="px-5 pb-4 space-y-1.5 text-sm text-amber-900">
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-amber-600">•</span>
-            <span><strong>Max {MAX_TICKETS} tickets per buyer</strong> to ensure fair distribution.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-amber-600">•</span>
-            <span>Age 12+ recommended; under 16s must be accompanied by an adult.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-amber-600">•</span>
-            <span>Regular Sale — resale strictly through EliteTickets platform only.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-amber-600">•</span>
-            <span>Reserved tickets are held for <strong>10 minutes</strong>. Uncompleted orders are released automatically.</span>
-          </li>
+          {policy === null && (
+            <li className="flex items-start gap-2 text-amber-700/60 italic">
+              <span className="mt-0.5 text-amber-400">•</span>
+              <span>Event purchase policy could not be loaded.</span>
+            </li>
+          )}
+          {rules.map((rule, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="mt-0.5 text-amber-600">•</span>
+              <span>{rule}</span>
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -411,7 +456,7 @@ function ActiveOrderPanel({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ReserveTicketsPage() {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [currentOrder, setCurrentOrder] = useState<ActiveOrderDTO | null>(null);
 
   const [zones, setZones] = useState<ZoneData[]>([]);
@@ -431,33 +476,34 @@ export default function ReserveTicketsPage() {
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState(false);
 
-  // ── Bootstrap: token → user → activeOrder → eventId → event + seatingMap ──
+  // ── NEW: Purchase policy state ──
+  const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
+
+  // Effective max tickets: use policy value if available, else fall back to default
+  const effectiveMaxTickets = purchasePolicy?.maxTickets ?? DEFAULT_MAX_TICKETS;
+
+  // ── Bootstrap: token → user → activeOrder → eventId → event + seatingMap + purchasePolicy ──
   useEffect(() => {
     const token = localStorage.getItem("token") ?? "";
 
-    // Step 1: get userId from token
     authApi.getCurrentUser(token)
       .then((user) => {
-        // Step 2: get active order for this user
         return activeOrderApi.getActiveOrderByUserId(token, user.userId);
       })
       .then((activeOrder) => {
         if (!activeOrder) {
-          // No active order — show empty state, still load nothing
           setEventLoading(false);
           setMapLoading(false);
           return;
         }
 
-        // NEW: Save the fetched active order to state
         setCurrentOrder(activeOrder);
-        // Sync timer with createdAt
+
         const createdTime = new Date(activeOrder.createdAt).getTime();
-        const expiresAtTime = createdTime + (RESERVATION_MINUTES * 60 * 1000); // createdAt + 15 mins
-        const remainingSeconds = Math.floor((expiresAtTime - Date.now()) / 1000); // Time left from right now
-        
-        // If the time has already passed, it sets it to 0, otherwise sets the remaining seconds
+        const expiresAtTime = createdTime + RESERVATION_MINUTES * 60 * 1000;
+        const remainingSeconds = Math.floor((expiresAtTime - Date.now()) / 1000);
         setTimeLeft(Math.max(0, remainingSeconds));
+
         const { eventId } = activeOrder;
 
         // Step 3a: fetch event details
@@ -469,25 +515,30 @@ export default function ReserveTicketsPage() {
           .catch(() => setEventError(true))
           .finally(() => setEventLoading(false));
 
-        // Step 3b: fetch seating map, then pre-populate order from activeOrder
+        // Step 3b: fetch purchase policy (non-critical — silently ignored on failure)
+        eventApi.getEventPurchasePolicy(token, eventId)
+          .then((policy) => {
+            if (policy) setPurchasePolicy(policy);
+          })
+          .catch(() => {/* non-critical */});
+
+        // Step 3c: fetch seating map, then pre-populate order from activeOrder
         eventApi.getEventSeatingMap(token, eventId)
           .then((mapData) => {
-            console.log("seating map response:", mapData);   
+            console.log("seating map response:", mapData);
             if (!mapData) { setMapError(true); return; }
             const { zones: z, standing } = buildZonesFromSeatingMap(mapData, activeOrder);
-            console.log("parsed zones:", z, "standing:", standing);  
+            console.log("parsed zones:", z, "standing:", standing);
             setZones(z);
             setStandingZones(standing);
-            // Pre-populate order items from the active order
             const items = buildOrderItemsFromActiveOrder(activeOrder, z, standing);
             setOrderItems(items);
-            // Start the timer if there are already items in the order
             if (items.length > 0) setTimerActive(true);
           })
-          .catch((err) => {    
-              console.log("seating map error:", err);   // ADD THIS
-              setMapError(true);
-            })
+          .catch((err) => {
+            console.log("seating map error:", err);
+            setMapError(true);
+          })
           .finally(() => setMapLoading(false));
       })
       .catch(() => {
@@ -496,7 +547,7 @@ export default function ReserveTicketsPage() {
         setEventLoading(false);
         setMapLoading(false);
       });
-  }, []); // runs once on mount
+  }, []);
 
   // Compute total selected across all zones + standing
   const totalSelected =
@@ -557,8 +608,8 @@ export default function ReserveTicketsPage() {
         return;
       }
 
-      if (totalSelected >= MAX_TICKETS) {
-        showBanner("error", `Max ${MAX_TICKETS} tickets per order as per purchase policy.`);
+      if (totalSelected >= effectiveMaxTickets) {
+        showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
         return;
       }
 
@@ -580,14 +631,14 @@ export default function ReserveTicketsPage() {
         },
       ]);
     },
-    [totalSelected, timeLeft, showBanner]
+    [totalSelected, timeLeft, showBanner, effectiveMaxTickets]
   );
 
   // ── Standing zone ──
   const handleStandingAdd = useCallback(
     (zoneId: string) => {
-      if (totalSelected >= MAX_TICKETS) {
-        showBanner("error", `Max ${MAX_TICKETS} tickets per order as per purchase policy.`);
+      if (totalSelected >= effectiveMaxTickets) {
+        showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
         return;
       }
       const zone = standingZones.find((z) => z.id === zoneId);
@@ -613,7 +664,7 @@ export default function ReserveTicketsPage() {
         ];
       });
     },
-    [totalSelected, showBanner, standingZones]
+    [totalSelected, showBanner, standingZones, effectiveMaxTickets]
   );
 
   const handleStandingRemove = useCallback((zoneId: string) => {
@@ -642,19 +693,17 @@ export default function ReserveTicketsPage() {
     );
   }, []);
 
-  // ── NEW: Handle Reserving Tickets via API ──
+  // ── Reserve Tickets via API ──
   const handleReserveTickets = async (): Promise<boolean> => {
     if (!currentOrder) return false;
 
     const token = localStorage.getItem("token") ?? "";
-    
-    // Extract currently selected standard seat IDs
+
     const selectedSeatIds = zones
       .flatMap((z) => z.seats)
       .filter((s) => s.status === "selected")
       .map((s) => s.id);
 
-    // Extract currently selected standing area quantities
     const standingQuantities: Record<string, number> = {};
     standingZones.forEach((z) => {
       if (z.selected > 0) {
@@ -662,7 +711,6 @@ export default function ReserveTicketsPage() {
       }
     });
 
-    // Build the updated DTO to send to the server
     const updatedOrder: ActiveOrderDTO = {
       ...currentOrder,
       seatIds: selectedSeatIds,
@@ -678,21 +726,20 @@ export default function ReserveTicketsPage() {
         showBanner("error", "Failed to reserve tickets. They might no longer be available.");
         return false;
       }
-    } catch (error) {
+    } catch {
       showBanner("error", "An error occurred while reserving tickets. Please try again.");
       return false;
     }
   };
 
   // ── Checkout ──
-  const handleCheckout = async() => {
+  const handleCheckout = async () => {
     const isSuccess = await handleReserveTickets();
-    if(isSuccess){
+    if (isSuccess) {
       alert("Proceeding to checkout…");
       navigate(checkoutWindowURL);
       console.log("got here");
-    }
-    else{
+    } else {
       alert("Unable to reserve tickets for checkout. Please review your selection and try again.");
       window.location.reload();
     }
@@ -732,15 +779,13 @@ export default function ReserveTicketsPage() {
             ))}
           </div>
           <div className="flex items-center gap-4">
-            {/* NEW: Dashboard Button */}
             <button
               onClick={() => navigate(dashboardURL)}
-              className="bg-white px-4 py-1.5 text-sm font-bold rounded-full transition-colors hover:bg-gray-100" 
+              className="bg-white px-4 py-1.5 text-sm font-bold rounded-full transition-colors hover:bg-gray-100"
               style={{ color: "#0A192F", border: "1px solid #c5c6cd" }}
             >
               Dashboard
             </button>
-            
             <svg className="w-5 h-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
@@ -912,11 +957,12 @@ export default function ReserveTicketsPage() {
               </div>
             </div>
 
-            <PurchaseRules />
+            {/* ── Dynamic Purchase Rules ── */}
+            <PurchaseRules policy={purchasePolicy} />
 
-            {totalSelected >= MAX_TICKETS && (
+            {totalSelected >= effectiveMaxTickets && (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
-                You've reached the maximum of <strong>{MAX_TICKETS} tickets</strong> per order as per purchase policy.
+                You've reached the maximum of <strong>{effectiveMaxTickets} tickets</strong> per order as per purchase policy.
               </p>
             )}
 
@@ -925,7 +971,6 @@ export default function ReserveTicketsPage() {
                 disabled={totalSelected === 0 || timeLeft === 0 || !currentOrder}
                 className="px-12 py-4 text-sm font-bold uppercase tracking-widest rounded shadow transition-all hover:brightness-110 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#FFB400", color: "#0A192F" }}
-                // NEW: Use our async function instead of the inline alert
                 onClick={handleReserveTickets}
               >
                 Reserve Tickets
