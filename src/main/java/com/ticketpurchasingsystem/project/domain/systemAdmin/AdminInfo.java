@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.systemAdmin;
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 public class AdminInfo {
     private final String id;
     private final String username;
@@ -9,6 +10,7 @@ public class AdminInfo {
         this.username = username;
         this.email = email;
         this.id = "admin-" + IdGenerator.getInstance().nextId();
+        loggerDef.getInstance().info("Admin created with ID: " + this.id);
     }
 
     public String getUsername() {

@@ -110,6 +110,22 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+    @PostMapping("/admin/login")
+    public ResponseEntity<Map<String, String>> loginAdmin(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody LoginRequestDTO body) {
+
+        String token = extractToken(authHeader);
+        try {
+            String newToken = userService.loginAdmin(body.getUserId(), body.getPassword(), token);
+            return ResponseEntity.ok(Map.of(
+                    "token", newToken,
+                    "userId", body.getUserId()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 
     // POST /api/identity/logout
     // Header: Authorization: Bearer <userToken>
@@ -221,9 +237,11 @@ public class AuthController {
                         .body(Map.of("error", "Invalid or expired session token."));
             }
             String userId = authenticationService.getUser(token);
+            System.out.println("Authenticated user ID: " + userId);
             UserInfo userInfo = userService.getUserInfo(userId);
-
+            System.out.println("User : " + userInfo.getName()+", id: "+ userInfo.getId());
             boolean isAdmin = adminRepo.isAdmin(userId);
+            System.out.println("Is admin: " + isAdmin);
             String state = userInfo.getUserState().name();
 
             Map<Integer, String> productionRoles = Collections.emptyMap();

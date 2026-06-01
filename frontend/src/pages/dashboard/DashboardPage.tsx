@@ -26,11 +26,16 @@ interface QuickLinkCard {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home',          icon: 'home',                 href: '/home',   active: true },
   { label: 'Events',        icon: 'event',                href: '/events' },
+  //TODO: this page is not implemented yet
   { label: 'My Order',      icon: 'shopping_cart',        href: '/activeorder/' },
-  { label: 'Order History', icon: 'history',              href: '#',       memberOnly: true },
-  { label: 'Notifications', icon: 'notifications',        href: '#',       memberOnly: true },
-  { label: 'My Companies',  icon: 'business',             href: '#',       memberOnly: true },
-  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '#',       memberOnly: true },
+  //TODO: this page is not implemented yet
+  { label: 'Order History', icon: 'history',              href: '/order-history',       memberOnly: true },
+    //TODO: this page is not implemented yet
+  { label: 'Notifications', icon: 'notifications',        href: '/notifications',       memberOnly: true },
+    //TODO: this page is not implemented yet
+  { label: 'My Companies',  icon: 'business',             href: '/companies',       memberOnly: true },
+  //TODO: this page is not implemented yet
+  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '/admin',       memberOnly: true },
 ];
 
 const QUICK_LINKS: QuickLinkCard[] = [
@@ -44,34 +49,39 @@ const QUICK_LINKS: QuickLinkCard[] = [
     icon: 'shopping_bag',
     title: 'Active Order',
     subtitle: 'View status of your current pending transactions.',
+    //TODO: this page is not implemented yet
     href: '/activeorder/',
   },
   {
     icon: 'receipt_long',
     title: 'Order History',
     subtitle: 'Review past purchases and download invoices.',
-    href: '#',
+    //TODO: this page is not implemented yet
+    href: '/order-history',
     memberOnly: true,
   },
   {
     icon: 'notifications_active',
     title: 'Notifications',
     subtitle: 'Stay updated with real-time event alerts.',
-    href: '#',
+    //TODO: this page is not implemented yet
+    href: '/notifications',
     memberOnly: true,
   },
   {
     icon: 'monitoring',
     title: 'My Companies',
     subtitle: 'Manage your production companies and events.',
-    href: '#',
+    //TODO: this page is not implemented yet
+    href: '/companies',
     memberOnly: true,
   },
   {
     icon: 'admin_panel_settings',
     title: 'Admin Panel',
     subtitle: 'Manage system settings and user permissions.',
-    href: '#',
+    //TODO: this page is not implemented yet
+    href: '/admin',
     memberOnly: true,
   },
 ];

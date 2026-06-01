@@ -27,6 +27,9 @@ public class UserService implements IUserService {
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
+        //creating admin for testing purposes
+        UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
+        userRepo.store(newUser);
     }
 
     public String guestEntry() {
@@ -129,6 +132,35 @@ public class UserService implements IUserService {
             return newSessionTokenStr;
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to log in user: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+    public String loginAdmin(String userId, String password, String sessionTokenStr){
+        try {
+            if (!authenticationService.validate(sessionTokenStr)) {
+                throw new RuntimeException("Invalid session token.");
+            }
+            String guestId = authenticationService.getUser(sessionTokenStr);
+            UserInfo guestInfo = userRepo.findByID(guestId);
+            userHandler.validateGuest(guestInfo);
+            // if we are here, it means that session token is valid
+            // the user is not null and a guest so he can login and become a user 
+            
+            String newSessionTokenStr = null;
+            // validate user exists
+            if(userId.equals("admin@gmail.com") && password.equals("admin123")){
+                newSessionTokenStr = authenticationService.login("admin-1", "admin");
+            }else{
+                throw new RuntimeException("Failed to log in user "+ userId);
+            }
+            // Delete guest matching the OLD session token before saving the user
+            userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
+            authenticationService.logout(sessionTokenStr);
+            userPublisher.publishGuestExited(guestId, sessionTokenStr);
+            loggerDef.getInstance().info("Admin logged in successfully: " + userId);
+            return newSessionTokenStr;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("Failed to log in admin: " + e.getMessage());
             throw new RuntimeException(e);
         }
     }

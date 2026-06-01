@@ -108,13 +108,23 @@ export const authApi = {
      * Logs in a user. Requires the current token (guest or existing session) in the header.
      */
     login: async (token: string, data: LoginRequestDTO): Promise<{ token: string; userId: string }> => {
-        const response = await fetch(`${BASE_URL}/login`, {
+    let response: Response; 
+    
+    if (data.userId === "admin@gmail.com") {
+        response = await fetch(`${BASE_URL}/admin/login`, {
             method: 'POST',
             headers: getHeaders(token),
             body: JSON.stringify(data),
         });
-        return parseResponse(response);
-    },
+    } else {
+        response = await fetch(`${BASE_URL}/login`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify(data),
+        });
+    }
+    return parseResponse(response);
+},
 
     /**
      * POST /api/identity/logout
@@ -176,7 +186,15 @@ export const authApi = {
             method: 'GET',
             headers: getHeaders(token),
         });
-        return parseResponse(response);
+        
+        // Await and store the parsed data first
+        const permissions: UserPermissionsDTO = await parseResponse(response);
+        
+        // Print out if isAdmin is true or false
+        console.log(`[Permissions API] User is admin: ${permissions.isAdmin}`);
+        
+        // Return the data so the rest of the app can still use it
+        return permissions;
     },
 
     editPassword: async(token: string, data: PasswordUpdateRequestDTO) : Promise<{message : string}> => {
