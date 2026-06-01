@@ -69,11 +69,7 @@ public class EventController {
         public ResponseEntity<EventDTO> getEvent(
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
-                String token = authHeader.startsWith("Bearer ") 
-                ? authHeader.substring(7) 
-                : authHeader;
-                // FIXED: Added authHeader
-                EventDTO result = eventService.searchEvent(token, eventId);
+                EventDTO result = eventService.searchEvent(authHeader, eventId);
                 return result != null
                         ? ResponseEntity.ok(result)
                         : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
