@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.ticketpurchasingsystem.project.domain.Utils.AssignedSeatDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.StandingAreaDTO;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 public class SeatingMap {
     private ConcurrentMap<String,AssignedSeat> seats;
     private ConcurrentMap<String, StandingArea> standingAreas;
@@ -91,14 +92,17 @@ public class SeatingMap {
         StringBuilder failedUnbookSeats = new StringBuilder();
         for(String seatID : seatIDs){
             if(!seats.containsKey(seatID)){
+                loggerDef.getInstance().error("Failed to unbook seat: " + seatID + " does not exist");
                 throw new IllegalArgumentException("failed to unbook Seats, got seats that dont exist");
             }
             AssignedSeat seat = seats.get(seatID);
             if(!seat.unbook(1)){
+                loggerDef.getInstance().error("Failed to unbook seat: " + seatID + " is not currently booked");
                 failedUnbookSeats.append(seatID).append(", ");
             }
         }
         if (failedUnbookSeats.length() > 0) {
+            loggerDef.getInstance().error("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
             throw new IllegalStateException("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
         }
         return true;

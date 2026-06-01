@@ -1,301 +1,547 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authApi, UserPermissionsDTO } from '../../api/authApi'; 
-import { activeOrderApi, ActiveOrderDTO } from '../../api/activeOrderApi'; 
-import { eventApi, EventDTO } from '../../api/eventsApi'; 
+import React, { useState, useEffect, useRef } from 'react';
+import { activeOrderApi, ActiveOrderDTO } from '../../api/activeOrderApi';
+import { eventApi, EventDTO, SeatingMapDTO } from '../../api/eventsApi';
+import { authApi, UserProfileDTO } from '../../api/authApi';
 
-// ─── Types & Nav Data ─────────────────────────────────────────────────────────
-interface NavItem { label: string; icon: string; href: string; active?: boolean; memberOnly?: boolean; }
+// ─── Route Constants ────────────────────────────────────────────────────────
+const FALLBACK_RESERVE_ROUTE = '/reserve';
+const GET_RESERVE_ROUTE = (eventId: string | number) => `/events/${eventId}/reserve`;
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Home',          icon: 'home',                 href: '/home' },
-  { label: 'Events',        icon: 'event',                href: '/events' },
-  { label: 'My Order',      icon: 'shopping_cart',        href: '/activeorder/', active: true },
-  { label: 'Order History', icon: 'history',              href: '/history', memberOnly: true },
-];
+type CheckoutStatus = 'idle' | 'processing' | 'success' | 'expired_canceled';
 
-function MaterialIcon({ name, className = '' }: { name: string; className?: string }) {
-  return (
-    <span className={`material-symbols-outlined ${className}`} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>
-      {name}
-    </span>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function CheckoutPage() {
-  const navigate = useNavigate();
-
-  // Auth & Data State
-  const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  // ─── Component State ──────────────────────────────────────────────────────
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [processState, setProcessState] = useState<CheckoutStatus>('idle');
+  const [successBarcodes, setSuccessBarcodes] = useState<string[]>([]);
   
+  // ─── Domain Data State with proper TypeScript Typings ──────────────────────
+  const [user, setUser] = useState<UserProfileDTO | null>(null);
   const [order, setOrder] = useState<ActiveOrderDTO | null>(null);
-  const [event, setEvent] = useState<EventDTO | null>(null);
-  const [barcodes, setBarcodes] = useState<string[]>([]);
+  const [eventDetails, setEventDetails] = useState<EventDTO | null>(null);
+  const [seatingMap, setSeatingMap] = useState<SeatingMapDTO | null>(null);
+
+  // ─── UX/UI Timer State ──────────────────────────────────────────────────────
+  const [timeLeft, setTimeLeft] = useState<number>(900); // 15:00 default fallback
   
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success'>('idle');
-  const [timeLeft, setTimeLeft] = useState<number>(600);
+  // Ref tracking cancellation status prevents double invocation during tight state loops
+  const hasCanceledRef = useRef<boolean>(false);
 
-  // ============================================================================
-  //  START: TESTING & SEEDING SANDBOX (Fixed Payload and Return Type Mismatch)
-  // ============================================================================
-  const RUN_TEST_SEEDER = true; 
+  // ─── Simulated / Extracted Financial State ────────────────────────────────
+  const [pricing, setPricing] = useState({
+    subtotal: 0,
+    fee: 2.50,
+    total: 2.50
+  });
 
-  const handleTestEnvironmentSeeding = async (token: string, userId: string) => {
-    console.warn("⚠️ [Sandbox Seeder] No active order found. Triggering automated test creation...");
-    try {
-      // Define a stable fallback/test ID since the boolean response won't return one from the database
-      let testEventId = "test-event-2026";
-      
-      try {
-        if (eventApi.createEvent) { 
-          // 1. Properly construct the request payload to match CreateEventRequestDTO rules
-          const success: boolean = await eventApi.createEvent(token, {
-            event: {
-              id: testEventId, // Passed explicitly if your backend allows client-defined IDs or ignores it
-              title: "Rock Odyssey Live 2026",
-              capacity: 5000,
-              date: new Date(Date.now() + 86400000 * 5).toISOString(), // 5 days from now
-              location: "Tel Aviv Amphitheater, Arena A",
-              isPublished: true
-            },
-            purchasePolicy: {
-              minTicketsPerUser: 1,
-              maxTicketsPerUser: 10,
-              minAge: 0,
-              requiresMembership: false
-            },
-            discounts: [] // Optional parameter matching structure arrays
-          });
-
-          console.log(`[Sandbox Seeder] eventApi.createEvent execution status: ${success}`);
-        }
-      } catch (e) {
-        console.log("[Sandbox Seeder] eventApi.createEvent payload failed or rejected, proceeding with component state simulation.", e);
-      }
-
-      // 2. Provision an active order wrapper directly through the controller database API
-      // (This will look up or generate a reservation referencing your target eventId string)
-      // const newOrder = await activeOrderApi.createOrder(token, {
-      //   userId: userId,
-      //   eventId: testEventId
-      // });
-
-      // // 3. Inject baseline seats and standing tiers into the newly generated wrapper
-      // await activeOrderApi.addSeats(token, newOrder.orderId, {
-      //   seatIds: ["SEC-A-ROW1-CH12", "SEC-A-ROW1-CH13"]
-      // });
-
-      // await activeOrderApi.addStandingArea(token, newOrder.orderId, {
-      //   areaId: "GA-Floor",
-      //   quantity: 3
-      // });
-
-      // console.log(" [Sandbox Seeder] Successfully provisioned Test Order Envelope:", newOrder.orderId);
-      
-      // // Re-fetch the clean populated dataset sequence from your backend controller
-      // const synchronizedOrder = await activeOrderApi.getActiveOrderByUserId(token, userId);
-      // return synchronizedOrder;
-      return null;
-
-    } catch (seederError: any) {
-      console.error(" [Sandbox Seeder Failed]", seederError);
-      throw new Error(`Seeding Sandbox execution crashed: ${seederError.message}`);
-    }
-  };
-  // ============================================================================
-  //  END: TESTING & SEEDING SANDBOX
-  // ============================================================================
-
-
-  // ─── Main Lifecycle Data Sync Chain ───
+  // ─── Life Cycle: Data Hydration Pipeline ──────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setErrorMsg("Authentication token not found. Please log in to complete your transaction.");
-      setLoading(false);
+    async function hydrateCheckoutData() {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+
+        // 1. Recover active auth token state
+        const token = localStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
+        if (!token) {
+          throw new Error('Authentication token missing. Please log in to complete checkout.');
+        }
+
+        // 2. Fetch User Profile Context to secure the userId descriptor
+        const profile = await authApi.getCurrentUser(token);
+        if (!profile || !profile.userId) {
+          throw new Error('Failed to synchronize authenticated user security context.');
+        }
+        setUser(profile);
+
+        // 3. Extract user-bound active order
+        const activeOrder = await activeOrderApi.getActiveOrderByUserId(token, profile.userId);
+        if (!activeOrder || !activeOrder.orderId) {
+          throw new Error('No pending active ticket reservation orders were found for your session.');
+        }
+        setOrder(activeOrder);
+
+        // 4. Concurrently run Event Shell Meta and Seating Pricing Matrices requests
+        const [eventMeta, seatConfig] = await Promise.all([
+          eventApi.getEvent(token, activeOrder.eventId),
+          eventApi.getEventSeatingMap(token, activeOrder.eventId)
+        ]);
+
+        if (!eventMeta) {
+          throw new Error('Target event inventory details could not be parsed.');
+        }
+        setEventDetails(eventMeta);
+        setSeatingMap(seatConfig);
+
+        // 5. Calculate real prices using data maps from backend seating configs
+        calculateOrderTotals(activeOrder, seatConfig);
+
+        // 6. Setup Timer exactly like ActiveOrderPage
+        const rawData = activeOrder as any;
+        const orderCreatedMs = rawData.createdAt || rawData.createdTime || rawData.timestamp || Date.now();
+        
+        const elapsedSeconds = Math.floor((Date.now() - new Date(orderCreatedMs).getTime()) / 1000);
+        const maxReservationSeconds = 15 * 60; 
+        const remainingSeconds = maxReservationSeconds - elapsedSeconds;
+
+        if (remainingSeconds <= 0) {
+          setTimeLeft(0);
+        } else {
+          setTimeLeft(remainingSeconds <= maxReservationSeconds ? remainingSeconds : maxReservationSeconds);
+        }
+
+      } catch (err: any) {
+        console.error('[Checkout Data Hydration Error]:', err);
+        setErrorMessage(err.message || 'An unexpected error occurred while compiling checkout invoice parameters.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    hydrateCheckoutData();
+  }, []);
+
+  // ─── Reservation Timer Effect ────────────────────────────────────────────────
+  useEffect(() => {
+    if (isLoading || errorMessage || processState === 'expired_canceled' || processState === 'success') return;
+    
+    if (timeLeft <= 0) {
+      handleOrderExpiration();
       return;
     }
 
-    const loadPageData = async () => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isLoading, errorMessage, timeLeft, processState]);
+
+  // ─── Server-Side Expiration Handshake ───────────────────────────────────────
+  const handleOrderExpiration = async () => {
+    if (hasCanceledRef.current) return;
+    hasCanceledRef.current = true;
+
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    const orderId = order?.orderId;
+    const userId = user?.userId;
+
+    if (token && orderId && userId) {
       try {
-        // 1. Fetch current profile identity properties directly using authApi
-        const [perms, profile] = await Promise.all([
-          authApi.getPermissions(token),
-          authApi.getCurrentUser(token),
-        ]);
-        
-        setPermissions(perms);
-        setUsername(profile.name); 
-        setSessionUserId(profile.userId);
-
-        if (!profile.userId) {
-          throw new Error("Unable to extract a valid User identification context string.");
-        }
-
-        // 2. Query your backend active order using user ID session reference
-        let currentOrder: ActiveOrderDTO | null = null;
-        try {
-          currentOrder = await activeOrderApi.getActiveOrderByUserId(token, profile.userId);
-        } catch (orderError) {
-          // If fetch fails or returns 404, capture it gracefully to let the seeder intercept
-          console.log("[Data Load] Active order query returned empty or failed.");
-        }
-
-        // INTERCEPTOR: Run testing seeder automatically if allowed and data returned blank
-        if ((!currentOrder || !currentOrder.orderId) && RUN_TEST_SEEDER) {
-          currentOrder = await handleTestEnvironmentSeeding(token, profile.userId);
-        }
-
-        if (currentOrder && currentOrder.orderId) {
-          setOrder(currentOrder);
-
-          // 3. Resolve corresponding dynamic Event metadata details
-          try {
-            const currentEvent = await eventApi.getEvent(token, currentOrder.eventId);
-            setEvent(currentEvent);
-          } catch (eventErr) {
-            // Client-side hardcoded fallback object *only* if your backend doesn't have the event matching the ID yet
-            setEvent({
-              eventId: currentOrder.eventId,
-              title: "Rock Odyssey Live 2026",
-              date: new Date(Date.now() + 86400000 * 5).toISOString(),
-              location: "Tel Aviv Amphitheater, Arena A"
-            } as any);
-          }
-        } else {
-          setErrorMsg("You do not currently have an active ticket reservation pending checkout.");
-        }
-
-      } catch (error: any) {
-        console.error('[Secure Checkout Sync Failed]', error);
-        setErrorMsg(error.message || 'Failed to sync checkout parameters securely.');
-      } finally {
-        setLoading(false);
+        setProcessState('expired_canceled');
+        await activeOrderApi.cancelOrder(token, orderId.toString(), userId.toString());
+      } catch (err) {
+        console.error('Failed to auto-cancel expired order on server:', err);
       }
-    };
-
-    loadPageData();
-  }, []);
-
-  // ─── Financial Calculations ───
-  const seatTicketsCount = order?.seats?.length || 0;
-  const standingTicketsCount = order?.standingAreas 
-    ? Object.values(order.standingAreas).reduce((sum, qty) => sum + qty, 0) 
-    : 0;
-
-  const SEAT_PRICE = 120.00;
-  const STANDING_PRICE = 75.00;
-  const subtotal = (seatTicketsCount * SEAT_PRICE) + (standingTicketsCount * STANDING_PRICE);
-  const discount = subtotal > 150 ? 15.00 : 0.00; 
-  const totalDue = Math.max(0, subtotal - discount);
-
-  const handleCheckoutSubmit = async () => {
-    if (checkoutStatus !== 'idle' || !order?.orderId) return;
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    setCheckoutStatus('processing');
-    try {
-      const response = await activeOrderApi.checkout(token, order.orderId, { amount: totalDue });
-      if (response && response.barcodes) {
-        setBarcodes(response.barcodes);
-        setCheckoutStatus('success');
-      }
-    } catch (error: any) {
-      alert(error.message || "Transaction declined.");
-      setCheckoutStatus('idle');
+    } else {
+      setProcessState('expired_canceled');
     }
   };
 
-  // Countdown timer handler
-  useEffect(() => {
-    if (timeLeft <= 0 || checkoutStatus === 'success') return;
-    const timerId = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    return () => clearInterval(timerId);
-  }, [timeLeft, checkoutStatus]);
+  // ─── Order Processing Calculator ──────────────────────────────────────────
+  const calculateOrderTotals = (activeOrder: ActiveOrderDTO, mapData: SeatingMapDTO | null) => {
+    let computedSubtotal = 0;
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"/></div>;
-  if (errorMsg) return <div className="flex items-center justify-center min-h-screen text-center p-8"><h2 className="text-xl font-bold mb-2">Checkout Unavailable</h2><p className="text-gray-600 mb-4">{errorMsg}</p><Link to="/events" className="bg-blue-600 text-white py-2 px-6 rounded-lg">Browse Events</Link></div>;
+    if (!mapData) return;
+
+    // Cross reference reserved seat ID items to extract true programmatic ticket values
+    if (activeOrder.seatIds && activeOrder.seatIds.length > 0 && mapData.assignedSeats) {
+      activeOrder.seatIds.forEach(id => {
+        const matchingSeat = mapData.assignedSeats.find(s => s.id === id);
+        if (matchingSeat) {
+          computedSubtotal += matchingSeat.priceForTicket;
+        }
+      });
+    }
+
+    // Extract standing map dictionary dynamically
+    const rawOrder = activeOrder as any;
+    const standingAreaQuantitiesMap = rawOrder?.StandingAreaQuantities || rawOrder?.standingAreaQuantities || rawOrder?.standinAreaQuantities || {};
+
+    if (standingAreaQuantitiesMap && mapData.standingAreas) {
+      Object.entries(standingAreaQuantitiesMap).forEach(([areaId, quantity]) => {
+        const matchingArea = mapData.standingAreas.find(a => a.areaId === areaId);
+        if (matchingArea) {
+          computedSubtotal += (matchingArea.priceForTicket * Number(quantity));
+        }
+      });
+    }
+
+    const standardProcessingFee = 2.50;
+    setPricing({
+      subtotal: computedSubtotal,
+      fee: standardProcessingFee,
+      total: computedSubtotal + standardProcessingFee
+    });
+  };
+
+  // ─── Main Payment Authorization Execution ─────────────────────────────────
+  const handlePayment = async () => {
+    try {
+      setProcessState('processing');
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      
+      if (!order || !order.orderId) return;
+
+      // Direct connection to backend point-of-sale verification gateway endpoint
+      const checkoutResult = await activeOrderApi.checkout(token, order.orderId, {
+        amount: pricing.total
+      });
+
+      if (checkoutResult && checkoutResult.barcodes) {
+        setSuccessBarcodes(checkoutResult.barcodes);
+        setProcessState('success');
+      } else {
+        throw new Error('Transaction authorized but secure ticket barcodes failed to generate.');
+      }
+
+    } catch (err: any) {
+      console.error('[Checkout Execution Failure]:', err);
+      alert(err.message || 'Payment gateway rejection. Check payment rules criteria.');
+      setProcessState('idle');
+    }
+  };
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  const formatTime = (totalSeconds: number) => {
+    if (totalSeconds <= 0) return 'EXPIRED';
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // ─── Embedded Style Definitions ────────────────────────────────────────────
+  const globalStyles = (
+    <style>{`
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin-slow {
+        animation: spin-slow 1s linear infinite;
+      }
+    `}</style>
+  );
+
+  // ─── Structural Layout Blocks ──────────────────────────────────────────────
+  const Footer = () => (
+    <footer className="bg-[#f2f3f9] border-t border-[#c7c6cb] mt-20">
+      <div className="flex flex-col md:flex-row justify-between items-center w-full px-4 md:px-12 py-8 max-w-[1120px] mx-auto gap-6">
+        <div className="font-sans text-xs tracking-widest text-[#46464b] font-semibold">
+          © {new Date().getFullYear()} SECUREPAY INC. ALL TRANSACTIONS ARE ENCRYPTED.
+        </div>
+        <div className="flex gap-6">
+          {["Terms of Service", "Privacy Policy", "Contact Support"].map(link => (
+            <a key={link} href="#" className="text-sm text-[#46464b] hover:text-[#1a1b20] underline transition-all">
+              {link}
+            </a>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+
+  // ─── Data parsing matching ActiveOrderPage methodology ─────────────────────
+  const rawOrder = order as any;
+  const standingAreaQuantitiesMap = rawOrder?.StandingAreaQuantities || rawOrder?.standingAreaQuantities || rawOrder?.standinAreaQuantities || {};
+  
+  const totalStandingTicketsQty = Object.values(standingAreaQuantitiesMap).reduce((sum: number, qty: any) => sum + Number(qty), 0);
+  const totalTicketsCount = (order?.seatIds?.length || 0) + totalStandingTicketsQty;
+
+  // ─── View Controller Returns ────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-[#f8f9ff] z-[100] flex flex-col items-center justify-center">
+        {globalStyles}
+        <div className="w-12 h-12 border-4 border-[#c7c6cb] border-t-[#1a1b20] rounded-full animate-spin-slow mb-4"></div>
+        <p className="font-sans text-xs tracking-widest text-[#46464b] uppercase font-semibold">
+          Synchronizing Live Order State
+        </p>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center p-4">
+        <div className="bg-white border border-red-200 p-8 rounded-xl shadow-sm text-center max-w-md">
+          <span className="material-symbols-outlined text-red-500 text-5xl mb-4">error</span>
+          <h2 className="text-xl font-bold text-[#191c20] mb-2">Checkout Error</h2>
+          <p className="text-[#46464b] text-sm mb-6">{errorMessage}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-[#1a1b20] text-white px-6 py-3 rounded font-medium transition-all hover:opacity-90"
+          >
+            Retry Verification Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle Expired view state exactly like ActiveOrderPage
+  if (processState === 'expired_canceled') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] p-6">
+        <div className="bg-white border border-[#e2e2e9] p-10 rounded-2xl max-w-lg text-center shadow-lg">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-red-600 text-3xl">gavel</span>
+          </div>
+          <h3 className="text-xl font-bold text-black mb-2">Reservation Period Expired</h3>
+          <p className="text-sm text-[#4c4546] leading-relaxed mb-8">
+            The 15-minute selection holding timeframe has concluded. To ensure equal platform availability, your pending tickets have been securely released back into general public stock.
+          </p>
+          <a 
+            href={order?.eventId ? GET_RESERVE_ROUTE(order.eventId) : FALLBACK_RESERVE_ROUTE} 
+            className="inline-block bg-black text-white w-full py-3 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity"
+          >
+            Return to Ticket Selection
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (processState === 'success') {
+    return (
+      <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans">
+        <main className="flex-grow pt-20 pb-20 max-w-md mx-auto px-4 text-center flex flex-col items-center justify-center">
+          <div className="w-20 h-20 bg-[#006c49] rounded-full flex items-center justify-center mb-8">
+            <span className="material-symbols-outlined text-white text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              check_circle
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-[#191c20] mb-2">Transaction Successful</h1>
+          <p className="text-[#46464b] mb-6">Your ticket authorization processing sequence has closed effectively.</p>
+          
+          <div className="bg-white rounded-xl p-6 mb-10 w-full border border-[#c7c6cb] text-left space-y-4">
+            <div className="border-b border-gray-100 pb-2">
+              <p className="text-xs font-semibold tracking-widest text-[#46464b] uppercase">ORDER CONTEXT ID</p>
+              <p className="text-md font-mono text-[#191c20] font-bold">{order?.orderId}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">SECURE TICKET ACCESS BARCODES ({successBarcodes.length})</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
+                {successBarcodes.map((code, index) => (
+                  <div key={index} className="bg-[#f2f3f9] px-3 py-2 text-xs font-mono font-bold rounded flex items-center justify-between border border-[#e2e2e9]">
+                    <span>Ticket #{index + 1}</span>
+                    <span className="text-blue-700 tracking-wider font-extrabold">{code}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="bg-[#1a1b20] text-white px-8 py-4 font-bold transition-all hover:opacity-90 rounded w-full"
+          >
+            Return to Store
+          </button>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="text-[14px] bg-[#f8f9ff] text-[#1a1b20] min-h-screen font-sans pt-[64px] ml-[260px] p-6">
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap'); @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');`}</style>
+    <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans">
+      {globalStyles}
       
-      <div className="max-w-[1440px] mx-auto">
-        {/* Banner Alert denoting sandbox status */}
-        {RUN_TEST_SEEDER && (
-          <div className="mb-4 p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs rounded-lg font-bold flex items-center gap-2">
-            <MaterialIcon name="construction" className="text-sm" />
-            <span>Sandbox Seeder Mode Active. If no reservation is found upon login, sample records are hot-wired instantly.</span>
-          </div>
-        )}
+      <main className="flex-grow pt-20 pb-20 max-w-[1120px] mx-auto px-4 md:px-12 w-full">
+        <div className="mb-6 text-center">
+          <div className="text-xl font-bold text-[#191c20] mb-2">SecurePay Checkout Gateway</div>
+          <p className="text-[#46464b] text-sm">Review asset allocation fields prior to closing dynamic checkout parameters</p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Main Display Summary Details */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="h-36 bg-gradient-to-br from-slate-900 to-black p-6 flex flex-col justify-end">
-                <span className="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded uppercase max-w-max mb-1">Active Reservation</span>
-                <h2 className="text-white text-2xl font-black">{event?.title}</h2>
-                <p className="text-gray-300 text-xs mt-1 flex items-center gap-1"><MaterialIcon name="location_on" className="text-sm text-red-400" /> {event?.location}</p>
+        {/* 15-Minute Countdown Banner Block */}
+        <div className="mb-6 p-4 rounded-lg flex items-center justify-between border transition-colors duration-300 bg-[#ffdad6] text-[#93000a] border-red-200 animate-pulse">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined">timer</span>
+            <p className="text-sm font-bold">
+              Reservation expires in <span>{formatTime(timeLeft)}</span>
+            </p>
+          </div>
+          <p className="text-xs hidden sm:block">Complete your purchase to secure these seats.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column: Tickets & Form */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* Selected Tickets Section */}
+            <div className="bg-white border border-[#c7c6cb] p-8 rounded shadow-sm">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="material-symbols-outlined">confirmation_number</span>
+                <h2 className="text-xl font-bold text-[#191c20]">
+                  Selected Tickets ({totalTicketsCount})
+                </h2>
               </div>
               
-              <div className="p-6 space-y-4">
-                <h3 className="text-base font-bold text-black flex items-center gap-2"><MaterialIcon name="confirmation_number" className="text-blue-600" /> Allocation Breakdown</h3>
-                
-                {/* Seats Mapping */}
-                {order?.seats && order.seats.length > 0 && (
-                  <div className="p-4 bg-gray-50 border rounded-xl">
-                    <p className="text-sm font-bold text-black">Reserved Assigned Seating (Qty: {order.seats.length})</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {order.seats.map((s, i) => <span key={i} className="bg-white border text-xs px-2 py-0.5 rounded font-mono font-bold">{s}</span>)}
+              <div className="space-y-4 mb-6">
+                {/* Dynamically Loaded Assigned Seats */}
+                {order?.seatIds?.map(seatId => {
+                  const details = seatingMap?.assignedSeats?.find(s => s.id === seatId);
+                  return (
+                    <div key={seatId} className="flex items-center justify-between p-4 border border-[#c7c6cb] rounded bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#1a1b20] text-white rounded flex items-center justify-center">
+                          <span className="material-symbols-outlined">chair</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#191c20]">Assigned Seating Node</p>
+                          <p className="text-xs text-[#46464b]">Seat Unit Core Identifier: {seatId}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-[#191c20]">${details ? details.priceForTicket.toFixed(2) : '0.00'}</p>
+                        <p className="text-[10px] text-[#46464b] uppercase tracking-tighter font-medium">RESERVED</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })}
 
-                {/* Standing Tiers Mapping */}
-                {order?.standingAreas && Object.entries(order.standingAreas).map(([area, qty]) => qty > 0 && (
-                  <div key={area} className="p-4 bg-white border rounded-xl flex justify-between items-center">
-                    <div><p className="text-sm font-bold text-black">General Standing ({area})</p><p className="text-xs text-gray-500">General Admission Tier</p></div>
-                    <span className="text-sm font-bold bg-blue-50 text-blue-700 px-3 py-1 rounded-full">Qty: {qty}</span>
+                {/* Dynamically Loaded Standing Area Quantities */}
+                {Object.entries(standingAreaQuantitiesMap).map(([areaId, quantity]) => {
+                  const qty = Number(quantity);
+                  if (qty <= 0) return null;
+                  
+                  const details = seatingMap?.standingAreas?.find(a => a.areaId === areaId);
+                  return (
+                    <div key={areaId} className="flex items-center justify-between p-4 border border-dashed border-[#c7c6cb] rounded bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#eceef3] text-[#191c20] rounded flex items-center justify-center">
+                          <span className="material-symbols-outlined">groups</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#191c20]">Standing Deck Allocation</p>
+                          <p className="text-xs text-[#46464b]">Zone Target Ref: {areaId} • (${details ? details.priceForTicket.toFixed(2) : '0.00'} each)</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-[#191c20]">${details ? (details.priceForTicket * qty).toFixed(2) : '0.00'}</p>
+                        <p className="text-[10px] text-[#46464b] uppercase tracking-tighter font-medium">QTY: {qty}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Parametized Modification Selection Link */}
+              <a 
+                href={order?.eventId ? GET_RESERVE_ROUTE(order.eventId) : FALLBACK_RESERVE_ROUTE} 
+                className="flex items-center gap-2 text-[#1a1b20] hover:underline font-medium text-sm transition-colors"
+              >
+                <span className="material-symbols-outlined text-base">edit</span>
+                Modify Selection / Edit Order
+              </a>
+            </div>
+
+            {/* Payment Input Cards */}
+            <div className="bg-white border border-[#c7c6cb] p-8 rounded shadow-sm">
+              <h2 className="text-xl font-bold text-[#191c20] mb-8">Billing Details</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">Cardholder Name</label>
+                  <input type="text" placeholder="Johnathan Doe" className="w-full bg-white border border-[#c7c6cb] p-4 focus:border-[#1a1b20] transition-all outline-none rounded" defaultValue="Johnathan Doe" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">Card Number</label>
+                  <div className="relative">
+                    <input type="text" placeholder="4111 2222 3333 4444" className="w-full bg-white border border-[#c7c6cb] p-4 pr-12 focus:border-[#1a1b20] transition-all outline-none rounded" defaultValue="4111 2222 3333 4444" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#46464b]">credit_card</span>
                   </div>
-                ))}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">Expiry Date</label>
+                    <input type="text" placeholder="MM / YY" className="w-full bg-white border border-[#c7c6cb] p-4 focus:border-[#1a1b20] transition-all outline-none rounded" defaultValue="12/28" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">CVV</label>
+                    <input type="password" placeholder="•••" className="w-full bg-white border border-[#c7c6cb] p-4 focus:border-[#1a1b20] transition-all outline-none rounded" defaultValue="123" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Pricing Right Panel Column */}
-          <div className="space-y-6">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden p-6 space-y-4">
-              <h3 className="text-lg font-bold text-black">Invoice Summary</h3>
-              <div className="border-b pb-3 text-xs space-y-1 text-gray-600">
-                <div className="flex justify-between"><span>Subtotal</span><span className="font-bold text-black">${subtotal.toFixed(2)}</span></div>
-                {discount > 0 && <div className="flex justify-between text-green-700 font-bold"><span>Discount Applied</span><span>-${discount.toFixed(2)}</span></div>}
+          {/* Right Column: Sticky Summary */}
+          <div className="lg:col-span-4 lg:sticky lg:top-8">
+            <div className="bg-white border border-[#c7c6cb] rounded overflow-hidden shadow-sm">
+              <div className="p-6 bg-[#f2f3f9] border-b border-[#c7c6cb]">
+                <h3 className="text-xl font-bold tracking-tight text-[#191c20]">Order Summary</h3>
               </div>
-              <div className="flex justify-between items-center"><span className="text-sm font-bold">Total Due</span><span className="text-2xl font-black">${totalDue.toFixed(2)}</span></div>
-              <button onClick={handleCheckoutSubmit} disabled={checkoutStatus !== 'idle'} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                {checkoutStatus === 'idle' ? 'AUTHORIZE & PURCHASE' : 'PROCESSING...'}
-              </button>
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#46464b]">Subtotal ({totalTicketsCount} Tickets)</span>
+                  <span className="font-medium text-[#191c20]">${pricing.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#46464b] flex items-center gap-1">
+                    Processing Fee 
+                    <span className="material-symbols-outlined text-sm cursor-help">info</span>
+                  </span>
+                  <span className="font-medium text-[#191c20]">${pricing.fee.toFixed(2)}</span>
+                </div>
+                <div className="border-t border-dashed border-[#c7c6cb] pt-4 flex justify-between items-end">
+                  <div>
+                    <p className="text-xs font-semibold tracking-widest text-[#46464b] uppercase">Total Due</p>
+                    <p className="text-3xl font-bold text-[#191c20] tracking-tighter">${pricing.total.toFixed(2)}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-[#46464b] mb-1">verified_user</span>
+                </div>
+                
+                <div className="pt-6">
+                  <button 
+                    onClick={handlePayment}
+                    disabled={processState === 'processing' || pricing.subtotal === 0}
+                    className="w-full bg-[#1a1b20] text-white py-5 font-bold rounded flex items-center justify-center gap-3 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processState === 'processing' ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Processing Gateway Authorization...</span>
+                      </>
+                    ) : (
+                      <span>Authorize & Pay ${pricing.total.toFixed(2)}</span>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Issued Barcodes Window */}
-            {checkoutStatus === 'success' && barcodes.length > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 space-y-2">
-                <p className="text-sm font-bold text-emerald-900 flex items-center gap-1"><MaterialIcon name="qr_code_scanner" className="text-emerald-700" /> Digital Tokens Generated</p>
-                {barcodes.map((code, idx) => (
-                  <div key={idx} className="bg-white border rounded p-2 text-center font-mono text-xs font-bold text-gray-700">TICKET #{idx+1}: {code}</div>
-                ))}
+            {/* Event Summary Details Card */}
+            {eventDetails && (
+              <div className="mt-6 p-4 border border-[#c7c6cb] rounded flex gap-4 items-center bg-white">
+                <div className="w-16 h-16 bg-[#eceef3] flex items-center justify-center rounded text-[#191c20]">
+                  <span className="material-symbols-outlined text-3xl">event</span>
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-[#191c20]">{eventDetails.eventName}</p>
+                  <p className="text-xs text-[#46464b]">{eventDetails.eventLocation || 'Venue Map Unassigned'}</p>
+                  <p className="text-xs font-mono mt-1 text-gray-500">
+                    {eventDetails.eventDateTime ? new Date(eventDetails.eventDateTime).toLocaleString() : 'Date TBD'}
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

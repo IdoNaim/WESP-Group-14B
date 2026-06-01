@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authApi, UserProfileDTO } from '../../api/authApi';
 import { activeOrderApi, ActiveOrderDTO } from '../../api/activeOrderApi';
 import { eventApi, EventDTO, SeatingMapDTO } from '../../api/eventsApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
-const RESERVE_ROUTE = '/reserve';
+const RESERVE_ROUTE = '/events/:eventId/reserve';
 const CHECKOUT_ROUTE = '/checkout';
 
-type CheckoutStatus = 'idle' | 'processing' | 'finalizing' | 'purchased';
+type CheckoutStatus = 'idle' | 'processing' | 'finalizing' | 'purchased' | 'expired_canceled';
 
 // Helper function to decode the backend format "zone_row_number" (e.g., "0_1_1")
 const parseSeatId = (seatId: string) => {
@@ -29,11 +29,15 @@ export default function ActiveOrderPage() {
   
   // ─── UX/UI State ────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isCanceling, setIsCanceling] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(900); // 15:00 default fallback
   const [isPolicyErrorVisible, setIsPolicyErrorVisible] = useState<boolean>(false);
   const [checkoutState, setCheckoutState] = useState<CheckoutStatus>('idle');
   const [showToast, setShowToast] = useState<boolean>(false);
+
+  // Ref tracking cancellation status prevents double invocation during tight state loops
+  const hasCanceledRef = useRef<boolean>(false);
 
   // ─── Data Initialization Pipeline ──────────────────────────────────────────
   useEffect(() => {
@@ -69,6 +73,9 @@ export default function ActiveOrderPage() {
         if (!eventDetails) {
           throw new Error('Failed to retrieve details for the assigned event.');
         }
+        
+        console.log('[ActiveOrderPage Debug] Fetched Event Data:', eventDetails);
+        
         setEvent(eventDetails);
         setSeatingMap(seatingMapData);
 
@@ -80,7 +87,11 @@ export default function ActiveOrderPage() {
         const maxReservationSeconds = 15 * 60; 
         const remainingSeconds = maxReservationSeconds - elapsedSeconds;
 
-        setTimeLeft(remainingSeconds > 0 && remainingSeconds <= maxReservationSeconds ? remainingSeconds : maxReservationSeconds);
+        if (remainingSeconds <= 0) {
+          setTimeLeft(0);
+        } else {
+          setTimeLeft(remainingSeconds <= maxReservationSeconds ? remainingSeconds : maxReservationSeconds);
+        }
 
       } catch (err: any) {
         setApiError(err.message || 'An error occurred while setting up your checkout.');
@@ -94,12 +105,75 @@ export default function ActiveOrderPage() {
 
   // ─── Reservation Timer Effect ────────────────────────────────────────────────
   useEffect(() => {
-    if (isLoading || apiError) return;
+    if (isLoading || apiError || checkoutState === 'expired_canceled') return;
+    
+    if (timeLeft <= 0) {
+      handleOrderExpiration();
+      return;
+    }
+
     const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [isLoading, apiError]);
+  }, [isLoading, apiError, timeLeft, checkoutState]);
+
+  // ─── Server-Side Expiration Handshake ───────────────────────────────────────
+  const handleOrderExpiration = async () => {
+    if (hasCanceledRef.current) return;
+    hasCanceledRef.current = true;
+
+    const token = localStorage.getItem('token');
+    const orderId = activeOrder?.orderId;
+    const userId = user?.userId;
+
+    if (token && orderId && userId) {
+      try {
+        setCheckoutState('expired_canceled');
+        await activeOrderApi.cancelOrder(token, orderId.toString(), userId.toString());
+      } catch (err) {
+        console.error('Failed to auto-cancel expired order on server:', err);
+      }
+    } else {
+      setCheckoutState('expired_canceled');
+    }
+  };
+
+  // ─── Manual Order Cancellation Handler ──────────────────────────────────────
+  const handleManualCancel = async () => {
+    if (isCanceling || checkoutState !== 'idle') return;
+    
+    const confirmCancel = window.confirm("Are you sure you want to cancel your order? Your reserved seats will be released.");
+    if (!confirmCancel) return;
+
+    const token = localStorage.getItem('token');
+    const orderId = activeOrder?.orderId;
+    const userId = user?.userId;
+
+    if (token && orderId && userId) {
+      try {
+        setIsCanceling(true);
+        hasCanceledRef.current = true; // Block the background expiration mechanism
+        await activeOrderApi.cancelOrder(token, orderId.toString(), userId.toString());
+        setCheckoutState('expired_canceled');
+      } catch (err: any) {
+        console.error('Failed to cancel order:', err);
+        alert(err.message || 'Failed to cancel order securely. Please try again.');
+        hasCanceledRef.current = false;
+      } finally {
+        setIsCanceling(false);
+      }
+    } else {
+      setCheckoutState('expired_canceled');
+    }
+  };
 
   // ─── Keydown Listener for Policy Toggle ('e' key) ──────────────────────────
   useEffect(() => {
@@ -116,11 +190,9 @@ export default function ActiveOrderPage() {
   // ─── Calculations & Ticket Pricing Engine ──────────────────────────────────
   const seatIdsArray: string[] = activeOrder?.seatIds || [];
   
-  // SAFE EXTRACTION: Safely matches "StandingAreaQuantities", "standingAreaQuantities", or "standinAreaQuantities"
   const rawOrder = activeOrder as any;
   const standingAreaQuantitiesMap = rawOrder?.StandingAreaQuantities || rawOrder?.standingAreaQuantities || rawOrder?.standinAreaQuantities || {};
 
-  // Find individual seat configurations from SeatingMapDTO to determine exact itemized prices
   const seatTicketsWithPrices = seatIdsArray.map((seatId) => {
     const matchedSeatConfig = seatingMap?.assignedSeats?.find((s) => s.id === seatId);
     return {
@@ -129,7 +201,6 @@ export default function ActiveOrderPage() {
     };
   });
 
-  // Find standing area configurations from SeatingMapDTO to determine exact tier itemized prices
   const standingAreasWithPrices = Object.entries(standingAreaQuantitiesMap).map(([areaId, quantity]) => {
     const matchedAreaConfig = seatingMap?.standingAreas?.find((a) => a.areaId === areaId);
     return {
@@ -140,7 +211,6 @@ export default function ActiveOrderPage() {
     };
   });
 
-  // Compute precise Subtotals
   const totalSeatsPrice = seatTicketsWithPrices.reduce((sum, item) => sum + item.price, 0);
   const totalStandingPrice = standingAreasWithPrices.reduce((sum, item) => sum + item.totalTierPrice, 0);
   const computedSubtotal = totalSeatsPrice + totalStandingPrice;
@@ -148,8 +218,8 @@ export default function ActiveOrderPage() {
   const totalStandingTicketsQty = Object.values(standingAreaQuantitiesMap).reduce((sum: number, qty: any) => sum + Number(qty), 0);
   const totalTicketsCount = seatIdsArray.length + totalStandingTicketsQty;
 
-  const discountAmount = user?.userGroupDiscount ? 50.00 : 0.00; 
-  const totalDue = Math.max(0, computedSubtotal - discountAmount);
+  // Enterprise discount references successfully removed
+  const totalDue = Math.max(0, computedSubtotal);
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
   const formatTime = (totalSeconds: number) => {
@@ -160,7 +230,7 @@ export default function ActiveOrderPage() {
   };
 
   const formatDate = (isoString?: string) => {
-    if (!isoString) return '';
+    if (!isoString) return 'Date TBD';
     return new Date(isoString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -209,6 +279,25 @@ export default function ActiveOrderPage() {
     );
   }
 
+  if (checkoutState === 'expired_canceled') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] p-6">
+        <div className="bg-white border border-[#e2e2e9] p-10 rounded-2xl max-w-lg text-center shadow-lg">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-red-600 text-3xl">gavel</span>
+          </div>
+          <h3 className="text-xl font-bold text-black mb-2">Reservation Handled / Expired</h3>
+          <p className="text-sm text-[#4c4546] leading-relaxed mb-8">
+            Your ticket holding session has ended or been canceled. To ensure equal platform availability, any pending allocations have been released back into general public stock.
+          </p>
+          <a href={RESERVE_ROUTE} className="inline-block bg-black text-white w-full py-3 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity">
+            Return to Ticket Selection
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="font-sans antialiased text-[#1a1b20] min-h-screen bg-[#f8f9ff]" style={{ fontFamily: "'Geist', sans-serif" }}>
       <style>{`
@@ -224,22 +313,20 @@ export default function ActiveOrderPage() {
           <nav className="flex items-center gap-1 text-[#4c4546] text-xs font-semibold mb-6">
             <a className="hover:text-black" href="#">Events</a>
             <span className="material-symbols-outlined text-sm">chevron_right</span>
-            <a className="hover:text-black" href="#">{event?.eventName}</a>
+            <span className="hover:text-black">{event?.eventName || 'Loading Event Name...'}</span>
             <span className="material-symbols-outlined text-sm">chevron_right</span>
             <span className="text-black font-bold">Checkout</span>
           </nav>
 
-          {checkoutState !== 'purchased' && (
-            <div className={`mb-6 p-4 rounded-lg flex items-center justify-between border transition-colors duration-300 ${timeLeft <= 0 ? 'bg-red-900 text-white border-transparent' : 'bg-[#ffdad6] text-[#93000a] border-red-200 animate-pulse'}`}>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined">timer</span>
-                <p className="text-sm font-bold">
-                  Reservation {timeLeft <= 0 ? 'status:' : 'expires in'} <span>{formatTime(timeLeft)}</span>
-                </p>
-              </div>
-              <p className="text-xs">{timeLeft <= 0 ? 'Please restart ticket selection process.' : 'Complete your purchase to secure these seats.'}</p>
+          <div className="mb-6 p-4 rounded-lg flex items-center justify-between border transition-colors duration-300 bg-[#ffdad6] text-[#93000a] border-red-200 animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined">timer</span>
+              <p className="text-sm font-bold">
+                Reservation expires in <span>{formatTime(timeLeft)}</span>
+              </p>
             </div>
-          )}
+            <p className="text-xs">Complete your purchase to secure these seats.</p>
+          </div>
 
           {isPolicyErrorVisible && (
             <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 flex gap-4 transition-all duration-300">
@@ -263,8 +350,12 @@ export default function ActiveOrderPage() {
                       <span className="w-2 h-2 rounded-full bg-[#15803d] animate-ping"></span>
                       Live Inventory
                     </span>
-                    <h2 className="text-white text-2xl font-bold leading-tight">{event?.eventName}</h2>
-                    <p className="text-white/70 text-xs">{formatDate(event?.eventDateTime)} • {event?.location || 'Main Arena Center'}</p>
+                    <h2 className="text-white text-2xl font-bold leading-tight">
+                      {event?.eventName || 'Unnamed Event'}
+                    </h2>
+                    <p className="text-white/70 text-xs">
+                      {formatDate(event?.eventDateTime)} • {event?.eventLocation || 'No Location Specified'}
+                    </p>
                   </div>
                 </div>
                 
@@ -345,63 +436,63 @@ export default function ActiveOrderPage() {
                 <div className="space-y-1 text-sm text-[#4c4546]">
                   <p className="text-black font-bold">{user?.name || 'User Account'}</p>
                   <p>Profile ID Account: {user?.userId}</p>
-                  <p>Discount Group Classification: {user?.userGroupDiscount || 'NONE'}</p>
                 </div>
               </div>
 
             </div>
 
-            {/* Right Column: Dynamic Price Summary Block */}
-            <div className="space-y-6 lg:sticky lg:top-12">
-              <div className="bg-white border border-[#e2e2e9] rounded-xl shadow-md overflow-hidden">
-                <div className="bg-[#f3f3fa] p-6 border-b border-[#e2e2e9]">
-                  <h3 className="text-lg font-bold">Order Summary</h3>
-                  <p className="text-[#4c4546] text-xs font-medium font-mono">Invoice #{activeOrder?.orderId ? activeOrder.orderId.toString().substring(0, 8).toUpperCase() : 'PENDING'}</p>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="space-y-2 pb-4 border-b border-[#e2e2e9]">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[#4c4546]">Subtotal ({totalTicketsCount} Tickets)</span>
-                      <span className="font-semibold text-black">${computedSubtotal.toFixed(2)}</span>
-                    </div>
-                    {discountAmount > 0 && (
-                      <div className="flex justify-between text-sm text-[#15803d]">
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">sell</span>
-                          Enterprise Discount ({user?.userGroupDiscount})
-                        </span>
-                        <span>-${discountAmount.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-end pt-2">
-                    <span className="text-sm font-semibold">Total Due</span>
-                    <span className="text-xl font-bold text-black">${totalDue.toFixed(2)}</span>
-                  </div>
-                  <div className="pt-4">
-                    <button 
-                      onClick={handleCheckoutSimulation}
-                      disabled={checkoutState !== 'idle' || timeLeft <= 0}
-                      className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
-                        checkoutState === 'purchased' 
-                          ? 'bg-[#15803d] text-white cursor-default' 
-                          : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
-                      }`}
-                    >
-                      <span>
-                        {checkoutState === 'idle' && 'Go to Checkout'}
-                        {checkoutState === 'processing' && 'Processing...'}
-                        {checkoutState === 'finalizing' && 'Finalizing...'}
-                        {checkoutState === 'purchased' && 'Redirecting...'}
-                      </span>
-                      {(checkoutState === 'processing' || checkoutState === 'finalizing') && (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* {/* Right Column: Dynamic Price Summary Block */}
+			<div className="space-y-6 lg:sticky lg:top-12">
+			<div className="bg-white border border-[#e2e2e9] rounded-xl shadow-md overflow-hidden">
+				<div className="bg-[#f3f3fa] p-6 border-b border-[#e2e2e9]">
+				<h3 className="text-lg font-bold">Order Summary</h3>
+				<p className="text-[#4c4546] text-xs font-medium font-mono">Invoice #{activeOrder?.orderId ? activeOrder.orderId.toString().substring(0, 8).toUpperCase() : 'PENDING'}</p>
+				</div>
+				<div className="p-6 space-y-4">
+				<div className="space-y-2 pb-4 border-b border-[#e2e2e9]">
+					<div className="flex justify-between text-sm">
+					<span className="text-[#4c4546]">Subtotal ({totalTicketsCount} Tickets)</span>
+					<span className="font-semibold text-black">${computedSubtotal.toFixed(2)}</span>
+					</div>
+				</div>
+				<div className="flex justify-between items-end pt-2">
+					<span className="text-sm font-semibold">Total Due</span>
+					<span className="text-xl font-bold text-black">${totalDue.toFixed(2)}</span>
+				</div>
+				<div className="pt-4 space-y-2">
+					<button 
+					onClick={handleCheckoutSimulation}
+					disabled={checkoutState !== 'idle' || isCanceling}
+					className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
+						checkoutState === 'purchased' 
+						? 'bg-[#15803d] text-white cursor-default' 
+						: 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
+					}`}
+					>
+					<span>
+						{checkoutState === 'idle' && 'Go to Checkout'}
+						{checkoutState === 'processing' && 'Processing...'}
+						{checkoutState === 'finalizing' && 'Finalizing...'}
+						{checkoutState === 'purchased' && 'Redirecting...'}
+					</span>
+					{(checkoutState === 'processing' || checkoutState === 'finalizing') && (
+						<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+					)}
+					</button>
+
+					{/* ─── Cancel Order Button ─── */}
+					<button
+					onClick={handleManualCancel}
+					disabled={checkoutState !== 'idle' || isCanceling}
+					className="w-full bg-white text-red-600 border border-[#e2e2e9] hover:border-red-600 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50/50 active:scale-[0.98] transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none text-sm"
+					>
+					<span className="material-symbols-outlined text-lg leading-none">close</span>
+					<span>{isCanceling ? 'Canceling Order...' : 'Cancel Order'}</span>
+					</button>
+				</div>
+				</div>
+			</div>
+			</div>
 
           </div>
         </div>

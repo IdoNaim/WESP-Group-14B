@@ -75,6 +75,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
 
         boolean processing = activeOrderRepo.markAsProcessing(orderId);
+        logger.info("Marked order " + orderId + " as processing for cancellation");
         if (!processing) {
             logger.warn("Cancel order failed: Order " + orderId + " is already being processed");
             throw new IllegalStateException("order is already being processed, cannot cancel");
@@ -292,6 +293,8 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("Order violates purchase policies");
         }
         boolean processing = activeOrderRepo.markAsProcessing(orderId);
+        logger.info("Marked order " + orderId + " as processing for completion");
+
         if(!processing){
             logger.warn("Complete order failed: Order " + orderId + " is already being processed");
             throw new IllegalStateException("order is already being processed");

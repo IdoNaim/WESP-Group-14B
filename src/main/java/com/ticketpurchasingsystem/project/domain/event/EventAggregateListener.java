@@ -33,6 +33,7 @@ public class EventAggregateListener {
     public EventAggregateListener(IEventRepo eventRepo, IEventService eventService) {
         this.eventRepo = eventRepo;
         this.eventService = eventService;
+        loggerDef.getInstance().info("EventAggregateListener initialized");
     }
 
     @EventListener
@@ -87,11 +88,15 @@ public class EventAggregateListener {
     }
     @EventListener
     public void onSeatReleaseEvent(SeatReleaseEvent event){
+        loggerDef.getInstance().info("Releasing seats for Event ID: " + event.getEventID() + ", Order ID: " + event.getOrderID());
         eventService.releaseSeats(event.getSessionToken(), event.getOrderID(), event.getEventID(), event.getSeatIds());
+        loggerDef.getInstance().info("Seats released for Event ID: " + event.getEventID());
     }
     @EventListener
     public void onStandingAreaReleaseEvent(StandingAreaReleaseEvent event){
+        loggerDef.getInstance().info("Releasing standing area for Event ID: " + event.getEventID() + ", Area ID: " + event.getAreaID());
         eventService.releaseStandingArea(event.getSessionToken(), event.getEventID(), event.getAreaID(), event.getQuantity());
+        loggerDef.getInstance().info("Standing area released for Event ID: " + event.getEventID());
     }
     @EventListener
     public void onSeatReservationEvent(SeatReservationEvent event){
