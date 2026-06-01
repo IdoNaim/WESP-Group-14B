@@ -38,14 +38,14 @@ public class ProductionService implements IProductionService {
         this.productionHandler = productionHandler;
         this.prodRepo = prodRepo;
         this.productionEventPublisher = productionEventPublisher;
-        ProductionCompanyDTO testCompanyDTO = new ProductionCompanyDTO("Test Company", "Test Description", "comp@gmail.com");
-        ProductionCompany testCompany = productionHandler.createProductionCompany("idonaim56@gmail.com", testCompanyDTO);
-        if(testCompany == null) {
-            loggerDef.getInstance().error("Failed to create test company");
-            return;
-        }
-        prodRepo.save(testCompany);
-        loggerDef.getInstance().info("Test company created and saved.");
+        // ProductionCompanyDTO testCompanyDTO = new ProductionCompanyDTO("Test Company", "Test Description", "comp@gmail.com");
+        // ProductionCompany testCompany = productionHandler.createProductionCompany("idonaim56@gmail.com", testCompanyDTO);
+        // if(testCompany == null) {
+        //     loggerDef.getInstance().error("Failed to create test company");
+        //     return;
+        // }
+        // prodRepo.save(testCompany);
+        // loggerDef.getInstance().info("Test company created and saved.");
     }
 
     @Override
