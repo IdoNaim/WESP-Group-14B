@@ -3,6 +3,9 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext';
 
+// Central configuration for landing/dashboard path
+const DEFAULT_REDIRECT_PATH = '/dashboard';
+
 export default function LoginPage() {
     const navigate = useNavigate();
     const { isMember, loading, ensureGuestToken, loginWithToken } = useAuth();
@@ -24,7 +27,7 @@ export default function LoginPage() {
     // We use replace so the /login entry is removed from the browser history stack —
     // pressing Back will not return to this page.
     if (isMember) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to={DEFAULT_REDIRECT_PATH} replace />;
     }
 
     const handleLoginSubmit = async (event: FormEvent) => {
@@ -53,7 +56,7 @@ export default function LoginPage() {
 
             // replace: true removes /login from the history stack so the Back button
             // does not return the user to the login form after a successful sign-in.
-            navigate('/dashboard', { replace: true });
+            navigate(DEFAULT_REDIRECT_PATH, { replace: true });
 
         } catch (error: any) {
             setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
@@ -81,8 +84,17 @@ export default function LoginPage() {
                 {/* Ticket Stub Card */}
                 <div className="bg-[#eeefff] rounded-2xl shadow-2xl pt-8 pb-10 px-8 text-[#171f33] transition-all duration-300 transform hover:-translate-y-1">
 
-                    {/* Header Identity */}
-                    <div className="flex flex-col items-center mb-6">
+                    {/* Header Identity & Home Access Button */}
+                    <div className="flex flex-col items-center mb-6 relative">
+                        {/* Clean Home Button pinned to the top right of the card header */}
+                        <Link 
+                            to={DEFAULT_REDIRECT_PATH}
+                            className="absolute right-0 top-0 text-[#8d90a0] hover:text-[#2563eb] transition-colors p-1 flex items-center justify-center rounded-lg hover:bg-gray-200/50"
+                            title="Go to Home/Dashboard"
+                        >
+                            <span className="material-symbols-outlined text-[22px]">home</span>
+                        </Link>
+
                         <div className="text-3xl font-black tracking-tighter text-[#0b1326] mb-1">IDODO TICKETS</div>
                         <p className="text-[11px] font-mono text-[#2563eb] tracking-widest uppercase font-bold">Premium Access Gate</p>
                     </div>
