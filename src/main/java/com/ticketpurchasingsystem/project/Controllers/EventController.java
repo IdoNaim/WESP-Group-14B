@@ -21,6 +21,9 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMap
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -46,7 +49,6 @@ public class EventController {
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
                         .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
 
-                // FIXED: Passed authHeader instead of body.getSessionToken() to centralize auth
                 boolean success = eventService.createEvent(
                         authHeader,
                         body.getEvent(),
@@ -65,7 +67,6 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                // FIXED: Added authHeader
                 EventDTO result = eventService.searchEvent(authHeader, eventId);
                 return result != null
                         ? ResponseEntity.ok(result)
@@ -78,7 +79,6 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
-                // FIXED: Added authHeader
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
@@ -90,7 +90,6 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventDateRequestDTO body) {
 
-                // FIXED: Added authHeader
                 boolean success = eventService.editEventDate(authHeader, eventId, body.getNewDateTime());
                 return success
                         ? ResponseEntity.ok().build()
@@ -104,7 +103,6 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventCapacityRequestDTO body) {
 
-                // FIXED: Added authHeader
                 boolean success = eventService.editEventInventory(authHeader, eventId, body.getNewCapacity());
                 return success
                         ? ResponseEntity.ok().build()
@@ -117,11 +115,43 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                // FIXED: Added authHeader
                 boolean success = eventService.removeEvent(authHeader, eventId);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/location
+        @PutMapping("/{eventId}/location")
+        public ResponseEntity<Void> editEventLocation(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventLocationRequestDTO body) {
+
+                boolean success = eventService.editEventLocation(authHeader, eventId, body.getNewLocation());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/price
+        @PutMapping("/{eventId}/price")
+        public ResponseEntity<Void> editEventPrice(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventPriceRequestDTO body) {
+
+                boolean success = eventService.editEventPrice(authHeader, eventId, body.getNewPrice());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/policy
+        @PutMapping("/{eventId}/policy")
+        public ResponseEntity<Void> editEventPolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody PurchasePolicyDTO body) {
+
+                boolean success = eventService.editEventPurchasePolicy(authHeader, eventId, body);
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
         // PUT /api/events/{eventId}/seating-map
@@ -134,8 +164,7 @@ public class EventController {
                 List<SeatingAreaConfig> seatingAreas = body.getSeatingAreas() == null
                         ? Collections.emptyList()
                         : body.getSeatingAreas().stream()
-                        .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(),
-                                a.getPrice()))
+                        .map(a -> new SeatingAreaConfig(a.getRows(), a.getSeatsPerRow(), a.getPrice()))
                         .collect(Collectors.toList());
 
                 List<StandingAreaConfig> standingAreas = body.getStandingAreas() == null
@@ -144,7 +173,6 @@ public class EventController {
                         .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
                         .collect(Collectors.toList());
 
-                // FIXED: Added authHeader to both configureSeatingMap and editEventSeatingMap
                 SeatingMap seatingMap = eventService.configureSeatingMap(authHeader, seatingAreas, standingAreas);
                 boolean success = eventService.editEventSeatingMap(authHeader, eventId, seatingMap);
                 return success

@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,6 +16,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 public class ProdRepo implements IProdRepo {
 
     private final ConcurrentHashMap<Integer, ProductionCompany> storage = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> nameToId = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
 
     private static ProdRepo instance;
@@ -28,9 +31,15 @@ public class ProdRepo implements IProdRepo {
     @Override
     public ProductionCompany save(ProductionCompany company) {
         if (company.getCompanyId() == null) {
-            company.setCompanyId(idGenerator.getAndIncrement());
+            int newId = idGenerator.getAndIncrement();
+            String normalizedName = company.getCompanyName().toLowerCase();
+            Integer conflict = nameToId.putIfAbsent(normalizedName, newId);
+            if (conflict != null) {
+                throw new IllegalStateException("Company name already exists: " + company.getCompanyName());
+            }
+            company.setCompanyId(newId);
             company.setVersion(0);
-            storage.put(company.getCompanyId(), company);
+            storage.put(newId, company);
             return new ProductionCompany(company);
         }
 
@@ -71,5 +80,18 @@ public class ProdRepo implements IProdRepo {
     public Optional<ProductionCompany> findById(Integer companyId) {
         ProductionCompany stored = storage.get(companyId);
         return stored != null ? Optional.of(new ProductionCompany(stored)) : Optional.empty();
+    }
+
+    @Override
+    public List<ProductionCompany> findAllByUserId(String userId) {
+        List<ProductionCompany> result = new ArrayList<>();
+        for (ProductionCompany company : storage.values()) {
+            if (userId.equals(company.getFounderId())
+                    || company.isOwner(userId)
+                    || company.isManager(userId)) {
+                result.add(new ProductionCompany(company));
+            }
+        }
+        return result;
     }
 }

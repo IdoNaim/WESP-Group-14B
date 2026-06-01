@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,8 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import org.springframework.stereotype.Service;
@@ -272,6 +275,35 @@ public class ProductionService implements IProductionService {
         loggerDef.getInstance().error("removeManager failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
+
+    @Override
+    public boolean removeOwner(String sessionToken, Integer companyId, String ownerId) {
+        if (!authenticationService.validate(sessionToken)) return false;
+        String requesterId = authenticationService.getUser(sessionToken);
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("removeOwner: company not found, id=" + companyId);
+                return false;
+            }
+            ProductionCompany company = productionHandler.removeOwner(requesterId, companyId, ownerId, new ProductionCompany(companyOpt.get()));
+            if (company == null) return false;
+            try {
+                prodRepo.save(company);
+                loggerDef.getInstance().info("removed owner " + ownerId + " from company " + companyId + " by " + requesterId);
+                return true;
+            } catch (OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("removeOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("removeOwner failed: " + e.getMessage());
+                return false;
+            }
+        }
+        loggerDef.getInstance().error("removeOwner failed after " + maxRetries + " retries");
+        return false;
+    }
+
     @Override
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'createEvent'");
@@ -301,6 +333,62 @@ public class ProductionService implements IProductionService {
     @Override
     public String getEventAsCustomer(String eventId) {
         throw new UnsupportedOperationException("Unimplemented method 'getEventAsCustomer'");
+    }
+
+    @Override
+    public List<CompanySummaryDTO> getMyCompanies(String sessionToken) {
+        if (!authenticationService.validate(sessionToken)) {
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+        List<ProductionCompany> companies = prodRepo.findAllByUserId(userId);
+        List<CompanySummaryDTO> result = new ArrayList<>();
+        for (ProductionCompany c : companies) {
+            String role;
+            if (userId.equals(c.getFounderId())) {
+                role = "FOUNDER";
+            } else if (c.isOwner(userId)) {
+                role = "OWNER";
+            } else {
+                role = "MANAGER";
+            }
+            result.add(new CompanySummaryDTO(c.getCompanyId(), c.getCompanyName(), c.getCompanyDescription(), c.getCompanyEmail(), role));
+        }
+        return result;
+    }
+
+    @Override
+    public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) return null;
+        String userId = authenticationService.getUser(sessionToken);
+        Optional<ProductionCompany> opt = prodRepo.findById(companyId);
+        if (opt.isEmpty()) return null;
+        ProductionCompany company = opt.get();
+
+        String role;
+        Set<ManagerPermission> perms = java.util.Collections.emptySet();
+        if (company.isFounder(userId)) {
+            role = "FOUNDER";
+        } else if (company.isOwner(userId)) {
+            role = "OWNER";
+        } else if (company.isManager(userId)) {
+            role = "MANAGER";
+            perms = company.getManagerPermissions(userId);
+        } else {
+            return null;
+        }
+
+        // Build per-manager permissions map
+        java.util.Map<String, Set<ManagerPermission>> managerPerms = new java.util.LinkedHashMap<>();
+        for (String mid : company.getManagerTree().keySet()) {
+            managerPerms.put(mid, company.getManagerPermissions(mid));
+        }
+
+        return new MemberInfoDTO(role, perms, company.getCompanyName(),
+                company.getFounderId(),
+                company.getOwnershipTree(),
+                company.getManagerTree(),
+                managerPerms);
     }
 
     @Override

@@ -1,0 +1,49 @@
+@use "../../styles/app-theme" as theme;
+
+.main-layout {
+    min-height: 100vh;
+    background: theme.$app-bg-light;
+    color: theme.$app-text-dark;
+
+    &__content {
+        min-height: 100vh;
+        padding-top: calc(theme.$topbar-height + 1rem);
+        padding-left: calc(theme.$sidebar-width + 2rem);
+        padding-right: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    &__loading {
+        min-height: 100vh;
+        background: theme.$app-bg-dark;
+        color: theme.$app-text-light;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__loading-content {
+        text-align: center;
+    }
+
+    &__loading-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    &__loading-subtitle {
+        font-size: 0.9rem;
+        color: theme.$app-muted;
+    }
+}
+
+@media (max-width: 800px) {
+    .main-layout {
+        &__content {
+            padding-left: calc(210px + 1rem);
+            padding-right: 1rem;
+        }
+    }
+}
