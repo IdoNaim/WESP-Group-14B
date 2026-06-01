@@ -275,10 +275,9 @@ export default function DashboardPage() {
       `}</style>
 
       {/* ════════════════════════════════════════
-          SIDEBAR
-      ════════════════════════════════════════ */}
-      <aside className="fixed left-0 top-0 h-full w-[260px] bg-white border-r border-[#c6c6cd] flex flex-col py-6 z-50">
-        {/* Logo */}
+          SIDEBAR (COMMENTED OUT)
+         ════════════════════════════════════════ */}
+      {/* <aside className="fixed left-0 top-0 h-full w-[260px] bg-white border-r border-[#c6c6cd] flex flex-col py-6 z-50">
         <div className="px-6 mb-10">
           <h1 className="text-2xl font-semibold leading-8 text-[#0b1c30] flex items-center gap-2">
             <MaterialIcon name="confirmation_number" className="text-[#3980f4]" />
@@ -287,14 +286,12 @@ export default function DashboardPage() {
           <p className="text-[#5c5f61] text-xs leading-4 tracking-wide mt-1">Event Management</p>
         </div>
 
-        {/* Nav Links */}
         <nav className="flex-1 space-y-1 px-2">
           {visibleNavItemsFiltered.map(item => (
             <SidebarNavItem key={item.label} item={item} />
           ))}
         </nav>
 
-        {/* Guest mode indicator */}
         {isGuest && (
           <div className="px-6 mt-auto">
             <div className="bg-[#eff4ff] border border-[#c6c6cd] rounded-lg p-3 text-center">
@@ -308,13 +305,13 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-      </aside>
+      </aside> 
+      */}
 
       {/* ════════════════════════════════════════
-          TOP NAV
-      ════════════════════════════════════════ */}
-      <header className="fixed top-0 right-0 w-[calc(100%-260px)] h-16 bg-white border-b border-[#c6c6cd] flex items-center justify-between px-6 z-40">
-        {/* Search */}
+          TOP NAV (COMMENTED OUT)
+         ════════════════════════════════════════ */}
+      {/* <header className="fixed top-0 right-0 w-[calc(100%-260px)] h-16 bg-white border-b border-[#c6c6cd] flex items-center justify-between px-6 z-40">
         <div className="flex items-center flex-1 max-w-xl">
           <div className="relative w-full">
             <MaterialIcon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#76777d]" />
@@ -328,21 +325,18 @@ export default function DashboardPage() {
               className="w-full bg-[#eff4ff] border-none rounded-lg pl-10 pr-16 py-2 focus:ring-2 focus:ring-[#3980f4] outline-none transition-all text-sm"
             />
             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#76777d] bg-[#e5eeff] px-1.5 py-0.5 rounded border border-[#c6c6cd]">
-              ⌘K
+              ⌃K
             </kbd>
           </div>
         </div>
 
-        {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Settings gear linked to account settings route */}
           {!isGuest && (
             <Link to="/accountSettings" className="p-2 text-[#5c5f61] hover:text-[#3980f4] transition-colors">
               <MaterialIcon name="settings" />
             </Link>
           )}
 
-          {/* User name + avatar  OR  guest login link */}
           <div className="flex items-center gap-3 pl-3 border-l border-[#c6c6cd]">
             {isGuest ? (
               <Link
@@ -368,12 +362,14 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </header>
+      </header> 
+      */}
 
       {/* ════════════════════════════════════════
           MAIN CONTENT
-      ════════════════════════════════════════ */}
-      <main className="ml-[260px] pt-16 min-h-screen">
+         ════════════════════════════════════════ */}
+      {/* NOTE: Removed 'ml-[260px]' and 'pt-16' since Sidebar & Top Nav are commented out */}
+      <main className="min-h-screen">
         <div className="max-w-[1280px] mx-auto p-10">
 
           {/* ── Welcome Banner (members only) ── */}
