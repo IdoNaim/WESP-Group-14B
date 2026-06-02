@@ -21,6 +21,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMap
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventImageRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -42,22 +43,22 @@ public class EventController {
 
         // POST /api/events
         @PostMapping
-        public ResponseEntity<Void> createEvent(
+        public ResponseEntity<String> createEvent(
                 @RequestHeader("Authorization") String authHeader,
                 @RequestBody CreateEventRequestDTO body) {
 
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
                         .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
 
-                boolean success = eventService.createEvent(
+                String eventId = eventService.createEvent(
                         authHeader,
                         body.getEvent(),
                         body.getPurchasePolicy(),
                         discounts
                 );
 
-                return success
-                        ? ResponseEntity.status(HttpStatus.CREATED).build()
+                return eventId != null
+                        ? ResponseEntity.status(HttpStatus.CREATED).body(eventId)
                         : ResponseEntity.badRequest().build();
         }
 
@@ -147,6 +148,17 @@ public class EventController {
                 @RequestBody EditEventPriceRequestDTO body) {
 
                 boolean success = eventService.editEventPrice(authHeader, eventId, body.getNewPrice());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
+        // PUT /api/events/{eventId}/image
+        @PutMapping("/{eventId}/image")
+        public ResponseEntity<Void> editEventImage(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventImageRequestDTO body) {
+
+                boolean success = eventService.editEventImage(authHeader, eventId, body.getNewImageUrl());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 

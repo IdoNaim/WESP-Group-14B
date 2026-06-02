@@ -15,6 +15,8 @@ export interface EventDTO {
     eventLocation?: string | null;
     ticketPrice?: number | null;
     imageUrl?: string | null;
+    minZonePrice?: number | null;
+    maxZonePrice?: number | null;
 }
 
 export interface PurchasePolicyDTO {
@@ -80,13 +82,14 @@ export const eventApi = {
      * POST /api/events
      * Creates a new event with its purchase policy and optional discounts.
      */
-    createEvent: async (token: string, data: CreateEventRequestDTO): Promise<boolean> => {
+    createEvent: async (token: string, data: CreateEventRequestDTO): Promise<string | null> => {
         const response = await fetch(`${BASE_URL}`, {
             method: 'POST',
             headers: getHeaders(token),
             body: JSON.stringify(data),
         });
-        return response.ok; // Returns true if status is 201 Created
+        if (!response.ok) return null;
+        return response.text(); // Returns the created event ID
     },
 
     /**
@@ -195,6 +198,19 @@ export const eventApi = {
             method: 'PUT',
             headers: getHeaders(token),
             body: JSON.stringify(policy),
+        });
+        return response.ok;
+    },
+
+    /**
+     * PUT /api/events/{eventId}/image
+     * Updates the event's photo (base64 data URL or null to remove).
+     */
+    editEventImage: async (token: string, eventId: string | number, newImageUrl: string | null): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${eventId}/image`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify({ newImageUrl }),
         });
         return response.ok;
     },

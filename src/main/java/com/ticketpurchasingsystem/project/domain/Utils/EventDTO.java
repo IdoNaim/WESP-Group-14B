@@ -10,10 +10,12 @@ public record EventDTO(
         Boolean isActive,
         String eventLocation,
         Double ticketPrice,
-        String imageUrl
+        String imageUrl,
+        Double minZonePrice,
+        Double maxZonePrice
 ) {
     public EventDTO(String eventId, Integer companyId, String eventName,
                     Integer eventCapacity, LocalDateTime eventDateTime, Boolean isActive) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null, null);
+        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null, null, null, null);
     }
 }

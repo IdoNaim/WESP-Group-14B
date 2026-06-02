@@ -12,7 +12,7 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 
 public interface IEventService {
-     public boolean createEvent(String sessionToken, EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO);
+     public String createEvent(String sessionToken, EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO);
      public List<EventDTO> getAllActiveEvents();
      public EventDTO searchEvent(String sessionToken, String eventId);
      public List<EventDTO> searchEventsByCompany(String sessionToken, int companyId);
@@ -32,4 +32,5 @@ public interface IEventService {
      public boolean editEventPurchasePolicy(String sessionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO);
      public boolean editEventLocation(String sessionToken, String eventId, String newLocation);
      public boolean editEventPrice(String sessionToken, String eventId, Double newPrice);
+     public boolean editEventImage(String sessionToken, String eventId, String newImageUrl);
 }

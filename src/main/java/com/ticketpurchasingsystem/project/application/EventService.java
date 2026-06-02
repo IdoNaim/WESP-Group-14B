@@ -34,9 +34,9 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean createEvent(String sessionToken, EventDTO eventDTO,
-                               PurchasePolicyDTO purchasePolicyDTO,
-                               List<DiscountDTO> discountPolicyDTO) {
+    public String createEvent(String sessionToken, EventDTO eventDTO,
+                              PurchasePolicyDTO purchasePolicyDTO,
+                              List<DiscountDTO> discountPolicyDTO) {
         return eventHandler.createEvent(sessionToken, eventDTO, purchasePolicyDTO, discountPolicyDTO);
     }
 
@@ -114,6 +114,11 @@ public class EventService implements IEventService {
     @Override
     public boolean editEventPrice(String sessionToken, String eventId, Double newPrice) {
         return eventHandler.editEventPrice(sessionToken, eventId, newPrice);
+    }
+
+    @Override
+    public boolean editEventImage(String sessionToken, String eventId, String newImageUrl) {
+        return eventHandler.editEventImage(sessionToken, eventId, newImageUrl);
     }
 
     @Override

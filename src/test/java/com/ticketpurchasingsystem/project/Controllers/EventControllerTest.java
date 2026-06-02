@@ -59,7 +59,7 @@ class EventControllerTest {
         dto.setPurchasePolicy(mock(PurchasePolicyDTO.class));
 
         // FIXED: Added 4th 'any()' for authHeader
-        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(true);
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn("evt-1");
 
         mockMvc.perform(post("/api/events")
                         .header("Authorization", VALID_AUTH)
@@ -74,7 +74,7 @@ class EventControllerTest {
         dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
 
         // FIXED: Added 4th 'any()' for authHeader
-        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(false);
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(null);
 
         mockMvc.perform(post("/api/events")
                         .header("Authorization", VALID_AUTH)

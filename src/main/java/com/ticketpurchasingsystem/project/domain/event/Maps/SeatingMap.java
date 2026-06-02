@@ -152,6 +152,19 @@ public class SeatingMap {
         return new ArrayList<>(standingAreas.keySet());
     }
 
+    public List<Double> getAllZonePrices() {
+        List<Double> prices = new ArrayList<>();
+        standingAreas.values().forEach(a -> prices.add(a.getPriceForTicket()));
+        java.util.Set<String> seenZones = new java.util.HashSet<>();
+        seats.values().forEach(s -> {
+            String zone = s.getId().split("_")[0];
+            if (seenZones.add(zone)) {
+                prices.add(s.getPriceForTicket());
+            }
+        });
+        return prices;
+    }
+
     public Map<String, Bookable> getPurchaseAreas(){
         Map<String, Bookable> combined = new HashMap<>(seats);
         combined.putAll(standingAreas);

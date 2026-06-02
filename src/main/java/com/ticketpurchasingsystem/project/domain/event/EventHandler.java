@@ -62,9 +62,9 @@ public class EventHandler {
         return token;
     }
 
-    public boolean createEvent(String sessionToken, EventDTO eventDTO,
-                               PurchasePolicyDTO purchasePolicyDTO,
-                               List<DiscountDTO> discountPolicyDTO) {
+    public String createEvent(String sessionToken, EventDTO eventDTO,
+                              PurchasePolicyDTO purchasePolicyDTO,
+                              List<DiscountDTO> discountPolicyDTO) {
         if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
@@ -72,18 +72,18 @@ public class EventHandler {
 
         if (eventDTO.eventDateTime() != null && eventDTO.eventDateTime().isBefore(LocalDateTime.now())) {
             logger.error("Failed to create event: event date cannot be in the past");
-            return false;
+            return null;
         }
 
         if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
             logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
-            return false;
+            return null;
         }
         if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
             logger.error("Failed to create event: minAge cannot be greater than maxAge");
-            return false;
+            return null;
         }
 
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
@@ -140,11 +140,36 @@ public class EventHandler {
             Event savedEvent = eventRepo.save(event);
             eventPublisher.publishEventCreated(savedEvent);
             logger.info("Event created successfully: " + eventDTO.eventName());
-            return true;
+            return savedEvent.getEventId();
         } catch (Exception e) {
             logger.error("Failed to create event: " + eventDTO.eventName() + " | Error: " + e.getMessage());
-            return false;
+            return null;
         }
+    }
+
+    private EventDTO toDTO(Event event) {
+        Double minPrice = null;
+        Double maxPrice = null;
+        if (event.getSeatingMap() != null) {
+            java.util.List<Double> prices = event.getSeatingMap().getAllZonePrices();
+            if (!prices.isEmpty()) {
+                minPrice = prices.stream().mapToDouble(Double::doubleValue).min().getAsDouble();
+                maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().getAsDouble();
+            }
+        }
+        return new EventDTO(
+                event.getEventId(),
+                event.getCompanyId(),
+                event.getEventName(),
+                event.getEventCapacity(),
+                event.getEventDate(),
+                event.isActive(),
+                event.getEventLocation(),
+                event.getTicketPrice(),
+                event.getImageUrl(),
+                minPrice,
+                maxPrice
+        );
     }
 
     public EventDTO searchEvent(String sessionToken, String eventId) {
@@ -158,17 +183,7 @@ public class EventHandler {
             return null;
         }
         logger.info("Event found: " + event.getEventName());
-        return new EventDTO(
-                event.getEventId(),
-                event.getCompanyId(),
-                event.getEventName(),
-                event.getEventCapacity(),
-                event.getEventDate(),
-                event.isActive(),
-                event.getEventLocation(),
-                event.getTicketPrice(),
-                event.getImageUrl()
-        );
+        return toDTO(event);
     }
 
     public List<EventDTO> searchEventsByCompany(String sessionToke, int companyId) {
@@ -178,17 +193,7 @@ public class EventHandler {
         logger.info("Searching events for company ID: " + companyId);
         List<EventDTO> events = eventRepo.findByCompanyId(companyId)
                 .stream()
-                .map(event -> new EventDTO(
-                        event.getEventId(),
-                        event.getCompanyId(),
-                        event.getEventName(),
-                        event.getEventCapacity(),
-                        event.getEventDate(),
-                        event.isActive(),
-                        event.getEventLocation(),
-                        event.getTicketPrice(),
-                        event.getImageUrl()
-                ))
+                .map(this::toDTO)
                 .toList();
         logger.info("Found " + events.size() + " events for company ID: " + companyId);
         return events;
@@ -198,18 +203,24 @@ public class EventHandler {
         logger.info("Fetching all active events");
         return eventRepo.findActiveEvents()
                 .stream()
-                .map(event -> new EventDTO(
-                        event.getEventId(),
-                        event.getCompanyId(),
-                        event.getEventName(),
-                        event.getEventCapacity(),
-                        event.getEventDate(),
-                        event.isActive(),
-                        event.getEventLocation(),
-                        event.getTicketPrice(),
-                        event.getImageUrl()
-                ))
+                .map(this::toDTO)
                 .toList();
+    }
+
+    public boolean editEventImage(String sessionToken, String eventId, String newImageUrl) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setImageUrl(newImageUrl);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event image for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime) {

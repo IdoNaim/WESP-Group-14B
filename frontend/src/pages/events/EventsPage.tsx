@@ -15,6 +15,17 @@ function availabilityLabel(event: EventDTO): string {
     return `${cap}+ AV.`;
 }
 
+function priceDisplay(event: EventDTO): string {
+    const min = event.minZonePrice;
+    const max = event.maxZonePrice;
+    if (min != null) {
+        if (max != null && max !== min) return `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+        return `$${min.toFixed(2)}`;
+    }
+    if (event.ticketPrice != null) return `$${event.ticketPrice.toFixed(2)}`;
+    return 'Free';
+}
+
 export default function EventsPage() {
     const [searchParams] = useSearchParams();
     const searchQuery = searchParams.get('search') ?? '';
@@ -115,7 +126,7 @@ export default function EventsPage() {
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Price</p>
                                                 <p className="font-mono text-lg font-bold text-[#03dbe7]">
-                                                    {event.ticketPrice != null ? `$${event.ticketPrice.toFixed(2)}` : 'Free'}
+                                                    {priceDisplay(event)}
                                                 </p>
                                             </div>
                                             <div className="text-right">
