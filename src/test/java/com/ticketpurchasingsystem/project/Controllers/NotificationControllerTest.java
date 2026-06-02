@@ -24,10 +24,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.ticketpurchasingsystem.project.application.ForbiddenException;
 import com.ticketpurchasingsystem.project.application.INotificationService;
-import com.ticketpurchasingsystem.project.application.NotFoundException;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
+import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
+import com.ticketpurchasingsystem.project.domain.exceptions.NotFoundException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 
 @WebMvcTest(NotificationController.class)
