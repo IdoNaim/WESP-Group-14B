@@ -1,9 +1,14 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '../../api/authApi'; // Make sure this path is correct
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { authApi } from '../../api/authApi';
+import { useAuth } from '../../context/AuthContext';
+
+// Central configuration for landing/dashboard path
+const DEFAULT_REDIRECT_PATH = '/dashboard';
 
 export default function LoginPage() {
     const navigate = useNavigate();
+    const { isMember, loading, ensureGuestToken, loginWithToken } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -12,44 +17,50 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+    // Wait for the session to be resolved before deciding what to render.
+    // Without this guard, the form flashes briefly before the redirect fires.
+    if (loading) {
+        return null;
+    }
+
+    // A logged-in member (user or admin) should never see the login form again.
+    // We use replace so the /login entry is removed from the browser history stack —
+    // pressing Back will not return to this page.
+    if (isMember) {
+        return <Navigate to={DEFAULT_REDIRECT_PATH} replace />;
+    }
+
     const handleLoginSubmit = async (event: FormEvent) => {
         event.preventDefault();
-        console.log('--- [UI START] Login Form Submitted ---');
-        console.log('[UI DATA] Attempting login with Email/ID:', email);
-
         setIsLoading(true);
         setErrorMessage(null);
 
         try {
-            // Step 1
-            console.log('[UI STEP 1] Requesting guest token for login flow...');
-            const guestResponse = await authApi.guestEntry();
-            const guestToken = guestResponse.token;
-            console.log('[UI STEP 1 RESULT] Guest token received:', guestToken);
+            // The backend login endpoint requires a guest token as the caller identity.
+            // ensureGuestToken() creates a fresh guest session and replaces any existing
+            // guest token in context. Guests upgrading to a real account intentionally
+            // discard their old guest session here.
+            const guestToken = await ensureGuestToken();
 
-            // Step 2
-            console.log('[UI STEP 2] Submitting login payload to backend...');
             const result = await authApi.login(guestToken, {
                 userId: email,
-                password: password
+                password: password,
             });
-            console.log('[UI STEP 2 RESULT] Login successful! Backend returned:', result);
 
-            // Step 3
-            console.log('[UI STEP 3] Saving tokens to localStorage and redirecting...');
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('userId', result.userId);
+            // Route all token persistence through loginWithToken so that context
+            // state and localStorage stay in sync in a single call.
+            await loginWithToken(result.token, result.userId);
 
             setEmail('');
             setPassword('');
 
-            navigate('/dashboard');
+            // replace: true removes /login from the history stack so the Back button
+            // does not return the user to the login form after a successful sign-in.
+            navigate(DEFAULT_REDIRECT_PATH, { replace: true });
 
         } catch (error: any) {
-            console.error('[UI CATCH BLOCK] Login flow crashed:', error.message);
             setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
         } finally {
-            console.log('--- [UI END] Login Process Completed ---');
             setIsLoading(false);
         }
     };
@@ -73,8 +84,17 @@ export default function LoginPage() {
                 {/* Ticket Stub Card */}
                 <div className="bg-[#eeefff] rounded-2xl shadow-2xl pt-8 pb-10 px-8 text-[#171f33] transition-all duration-300 transform hover:-translate-y-1">
 
-                    {/* Header Identity */}
-                    <div className="flex flex-col items-center mb-6">
+                    {/* Header Identity & Home Access Button */}
+                    <div className="flex flex-col items-center mb-6 relative">
+                        {/* Clean Home Button pinned to the top right of the card header */}
+                        <Link 
+                            to={DEFAULT_REDIRECT_PATH}
+                            className="absolute right-0 top-0 text-[#8d90a0] hover:text-[#2563eb] transition-colors p-1 flex items-center justify-center rounded-lg hover:bg-gray-200/50"
+                            title="Go to Home/Dashboard"
+                        >
+                            <span className="material-symbols-outlined text-[22px]">home</span>
+                        </Link>
+
                         <div className="text-3xl font-black tracking-tighter text-[#0b1326] mb-1">IDODO TICKETS</div>
                         <p className="text-[11px] font-mono text-[#2563eb] tracking-widest uppercase font-bold">Premium Access Gate</p>
                     </div>

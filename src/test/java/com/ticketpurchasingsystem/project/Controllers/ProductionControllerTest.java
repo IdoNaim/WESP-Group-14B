@@ -191,7 +191,7 @@ class ProductionControllerTest {
     // GET /api/production/companies/{companyId}/roles
     @Test
     void GivenValidRequest_WhenGetRolesTree_ThenReturn200WithBody() throws Exception {
-        RolesTreeDTO rolesTree = new RolesTreeDTO(1, "founder-user", Map.of(), Map.of(), Map.of());
+        RolesTreeDTO rolesTree = new RolesTreeDTO(1, "Test Company", "founder-user", Map.of(), Map.of(), Map.of());
         when(productionService.getRolesTree(VALID_TOKEN, 1)).thenReturn(rolesTree);
 
         mockMvc.perform(get("/api/production/companies/1/roles")
