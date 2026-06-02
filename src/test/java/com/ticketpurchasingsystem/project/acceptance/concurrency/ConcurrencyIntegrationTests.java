@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.when;
 
 import com.ticketpurchasingsystem.project.application.ActiveOrderService;
@@ -49,6 +50,7 @@ import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
@@ -91,6 +93,7 @@ public class ConcurrencyIntegrationTests {
     private IPaymentGateway paymentGatewayMock;
     private IBarCodeGateway barcodeGatewayMock;
 
+    private PaymentDetailsDTO paymentDetailsDTO = new PaymentDetailsDTO("John Doe", "4111111111111111", "12/25", "123");
     private static final String TEST_SECRET = "WESP-Group-14B-Security-Token-Key-32-Characters";
 
     @BeforeEach
@@ -200,7 +203,7 @@ public class ConcurrencyIntegrationTests {
         activeOrderService.addSeatsToActiveOrder(new SessionToken(sessionToken, 1000), order.getOrderId(), List.of(seatIds.get(0)));
 
         // Mock payment and barcode systems
-        when(paymentGatewayMock.pay()).thenReturn(true);
+        when(paymentGatewayMock.pay(any(), anyDouble())).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode-xyz")));
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -214,7 +217,7 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId());
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId(), paymentDetailsDTO);
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
@@ -227,7 +230,7 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId());
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId(), paymentDetailsDTO);
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
