@@ -41,7 +41,7 @@ public class DataLoader implements ApplicationRunner {
         String guestToken2 = userService.guestEntry();
         userService.registerUser("bob", "Bob Jones", "pass456", "bob@example.com",
                 UserGroupDiscount.STUDENT, guestToken2);
-        userService.loginUser("bob", "pass456", guestToken2);
+        String bobToken = userService.loginUser("bob", "pass456", guestToken2);
 
         // Step 3: alice creates a production company
         ProductionCompanyDTO companyDTO = new ProductionCompanyDTO(
@@ -84,5 +84,9 @@ public class DataLoader implements ApplicationRunner {
                 new EventDTO(null, companyId, "Comedy Night 18+", 300,
                         LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
                 adultOnly, noDiscounts);
+
+        // Leave users logged out so they can login normally from the frontend
+        userService.logoutUser("alice", aliceToken);
+        userService.logoutUser("bob", bobToken);
     }
 }
