@@ -34,8 +34,6 @@ export default function NotificationsPage() {
         try {
             await NotificationAPI.markAsRead(id);
         } catch (error) {
-            console.error('API Error: Failed to mark as read:', error);
-            // שחזור במקרה של שגיאה מהשרת
             setNotifications(prev => 
                 prev.map(notif => notif.id === id ? { ...notif, read: false } : notif)
             );
@@ -44,8 +42,6 @@ export default function NotificationsPage() {
 
     const handleMarkAllAsRead = async () => {
         const unreadNotifications = notifications.filter(n => !n.read);
-        
-        // עדכון אופטימי לכל הרשימה
         setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
         
         try {
