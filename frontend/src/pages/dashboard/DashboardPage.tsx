@@ -13,10 +13,10 @@ interface QuickLinkCard {
 
 const QUICK_LINKS: QuickLinkCard[] = [
   { icon: 'explore', title: 'Browse Events', subtitle: 'Discover trending and upcoming events worldwide.', href: '/events' },
-  { icon: 'shopping_bag', title: 'Active Order', subtitle: 'View status of your current pending transactions.', href: '/activeorder/' },
-  { icon: 'receipt_long', title: 'Order History', subtitle: 'Review past purchases and download invoices.', href: '/order-history', memberOnly: true },
+  { icon: 'shopping_bag', title: 'Active Order', subtitle: 'View status of your current pending transactions.', href: '/orders/active' },
+  { icon: 'receipt_long', title: 'Order History', subtitle: 'Review past purchases and download invoices.', href: '/orders/history', memberOnly: true },
   { icon: 'notifications_active', title: 'Notifications', subtitle: 'Stay updated with real-time event alerts.', href: '/notifications', memberOnly: true },
-  { icon: 'monitoring', title: 'My Companies', subtitle: 'Manage your production companies and events.', href: '/companies', memberOnly: true },
+  { icon: 'monitoring', title: 'My Companies', subtitle: 'Manage your production companies and events.', href: '/production-company', memberOnly: true },
   { icon: 'admin_panel_settings', title: 'Admin Panel', subtitle: 'Manage system settings and user permissions.', href: '/admin', memberOnly: true },
 ];
 
