@@ -1,17 +1,20 @@
 package com.ticketpurchasingsystem.project.application;
-import org.springframework.stereotype.Service;
-
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
-
-import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
-import com.ticketpurchasingsystem.project.infrastructure.logging.logLevel;
-import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
-import com.ticketpurchasingsystem.project.infrastructure.logging.logger;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderHandler;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublisher;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
+import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
 public class ActiveOrderService implements IActiveOrderService {
@@ -37,6 +40,12 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderHandler = activeOrderHandler;
         this.authenticationService = authenticationService;
         this.barCodeGateway = barCodeGateway;
+        if(activeOrderRepo == null || activeOrderListener == null || activeOrderPublisher == null || activeOrderHandler == null || authenticationService == null || barCodeGateway == null){
+            logger.error("ActiveOrderService initialization failed: One or more dependencies are null");
+        }
+        // ActiveOrderItem testOrder = new ActiveOrderItem("1", "idonaim56@gmail.com", "1");
+        // testOrder.addSeatIds(List.of("0_1_1"));
+        // activeOrderRepo.save(testOrder);
     }
 
     @Override
@@ -78,6 +87,27 @@ public class ActiveOrderService implements IActiveOrderService {
         activeOrderPublisher.publishOrderCancelled(userId, orderId);
         logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
     }
+
+    @Override
+    public ActiveOrderDTO getActiveOrderByUserId(SessionToken sessionToken, String userId) throws Exception {
+        logger.info("Attempting to retrieve active order for userId: " + userId);
+        if(!authenticationService.validate(sessionToken.getToken())){
+            logger.error("Session validation failed while retrieving active order for userId: " + userId);
+            throw new IllegalArgumentException("Session has ended");
+        }
+        ActiveOrderItem order = activeOrderRepo.findByUserId(userId);
+        if(order == null){
+            logger.warn("No active order found for userId: " + userId);
+            return null;
+        }
+        ActiveOrderDTO orderDTO = activeOrderHandler.getActiveOrderInfo(userId, order);
+        if(orderDTO == null){
+            logger.error("User " + userId + " tried seeing a different user's order: " + order.getOrderId());
+            throw new IllegalArgumentException("you can only view your own active order");
+        }
+        logger.info("Successfully retrieved active order for userId: " + userId);
+        return orderDTO;
+    }  
 
     @Override
     public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken ,String orderId) throws Exception {
@@ -223,7 +253,8 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
 
-    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails, String orderId){
+        double amount = paymentDetails.getAmount();
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         if(!authenticationService.validate(sessionToken.getToken())){
             logger.error("Session validation failed while completing order: " + orderId);
@@ -277,9 +308,10 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("Barcode generation failed. Refund processed.");
         }
 
-        boolean paymentResult = payment(paymentGateway, sessionToken, amount);
-        if(!paymentResult){
+        int transactionId = payment(paymentGateway, sessionToken, paymentDetails);
+        if(transactionId == -1){
             logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
+            barCodeGateway.cancelTickets(barcodesIssued);
             rollbackOrderReservations(sessionToken.getToken(), orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
@@ -321,9 +353,9 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-    private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
+    private int payment(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails) {
         if(authenticationService.validate(sessionToken.getToken())) {
-            return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
+            return paymentGateway.pay(paymentDetails);
         }else{
             logger.error("Session validation failed during payment processing");
             throw new RuntimeException("the session has ended");

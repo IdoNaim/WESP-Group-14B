@@ -192,7 +192,7 @@ public class ActiveOrderController {
         SessionToken sessionToken = toSessionToken(authHeader);
         try {
             List<BarcodeDTO> barcodes = activeOrderService.completeOrder(
-                    paymentGateway, sessionToken, body.getAmount(), orderId);
+                    paymentGateway, sessionToken, body.toPaymentDetails(), orderId);
             List<String> barcodeValues = barcodes.stream()
                     .map(BarcodeDTO::getBarcodeValue)
                     .collect(Collectors.toList());
@@ -203,6 +203,26 @@ public class ActiveOrderController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getActiveOrderByUserId(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String userId) {
+
+        SessionToken sessionToken = toSessionToken(authHeader);
+        try {
+            ActiveOrderDTO order = activeOrderService.getActiveOrderByUserId(sessionToken, userId);
+            return ResponseEntity.ok(order);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
 
