@@ -101,7 +101,9 @@ export const activeOrderApi = {
             headers: getHeaders(token),
         });
         if (!response.ok) return null;
-        return response.json();
+        const text = await response.text();
+        if (!text) return null;
+        return JSON.parse(text) ?? null;
     },
 
     /**
