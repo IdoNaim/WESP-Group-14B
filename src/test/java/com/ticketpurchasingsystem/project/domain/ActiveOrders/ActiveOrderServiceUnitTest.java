@@ -112,6 +112,7 @@ public class ActiveOrderServiceUnitTest {
 
         verify(activeOrderHandlerMock, never()).isUsersOrder(any(), any());
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
+        verify(activeOrderRepoMock, never()).delete(anyString());
     }
     @Test
     void GivenOrderDoesNotBelongToUser_WhenCancelActiveOrder_ThenThrowIllegalArgumentException() {
@@ -129,6 +130,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
+        verify(activeOrderRepoMock, never()).delete(anyString());
     }
 
     @Test
@@ -209,6 +211,9 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(SecurityException.class, () ->
                 activeOrderService.getActiveOrderInfo(VALID_SESSION, ORDER_ID)
         );
+
+        verify(activeOrderRepoMock, never()).update(any());
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -222,6 +227,9 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(IllegalArgumentException.class, () ->
                 activeOrderService.getActiveOrderInfo(VALID_SESSION, null)
         );
+
+        verifyNoInteractions(activeOrderHandlerMock);
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -526,6 +534,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.addSeatsToActiveOrder(VALID_SESSION, ORDER_ID, requestedSeats)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verify(activeOrderPublisherMock, never()).publishReleaseSeats(any(), any(), any(), any());
     }
 
     @Test
@@ -640,6 +649,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.addStandingAreaToActiveOrder(VALID_SESSION, ORDER_ID, AREA_ID, QUANTITY)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(any(), any(), any(), anyInt());
     }
 
     @Test
@@ -759,6 +769,7 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(RuntimeException.class, () ->
                 activeOrderService.completeOrder(paymentGatewayMock, INVALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
+        verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
 
@@ -1093,6 +1104,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
         );
         verifyNoInteractions(activeOrderPublisherMock, activeOrderHandlerMock);
+        verify(activeOrderRepoMock, never()).update(any());
     }
 
     @Test
@@ -1113,6 +1125,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -1214,6 +1227,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertEquals("Unauthorized: Order does not belong to the current user", exception.getMessage());
         verify(paymentGateway, never()).pay(any());
+        verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
     @Test
