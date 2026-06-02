@@ -3,30 +3,48 @@ import { useState, useEffect } from 'react';
 import { eventApi, EventDTO } from '../../api/eventsApi';
 // Make sure to adjust this import path to where your activeOrderApi is located!
 import { activeOrderApi } from '../../api/activeOrderApi';
+import { useAuth } from '../../context/AuthContext';
 
 export default function EventDetailsPage() {
     const { eventId } = useParams();
     const navigate = useNavigate(); // Added for redirection
+    const { isMember } = useAuth();
 
     const [eventData, setEventData] = useState<EventDTO | null>(null);
+    const [policyDesc, setPolicyDesc] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreatingOrder, setIsCreatingOrder] = useState(false); // Loading state for the button
     const [orderError, setOrderError] = useState<string | null>(null); // Error state for failed orders
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isAuthorized] = useState(true);
-
     useEffect(() => {
         const fetchSingleEvent = async () => {
             if (!eventId) return;
             console.log(`--- [UI START] Fetching Event Details for: ${eventId} ---`);
             setIsLoading(true);
+            setErrorMessage(null);
 
             try {
                 const token = localStorage.getItem('token') || '';
                 const data = await eventApi.getEvent(token, eventId);
-                setEventData(data);
+                if (!data) {
+                    setErrorMessage(`The event ID "${eventId}" does not exist or has been removed.`);
+                } else {
+                    setEventData(data);
+                }
                 console.log('[UI STEP 1 RESULT] Event details mapped to state.');
-            } catch (error) {
-                console.error('[UI CATCH BLOCK] Failed to fetch specific event:', error);
+
+                // Fetch event purchase policy description
+                const policyRes = await fetch(`/api/policies/event/${eventId}`, {
+                    headers: { 'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}` }
+                });
+                if (policyRes.ok) {
+                    const policyData = await policyRes.json();
+                    setPolicyDesc(policyData.description || null);
+                }
+            } catch (error: any) {
+                console.error('[UI CATCH BLOCK] Failed to fetch specific event or policy:', error);
+                setErrorMessage(error.message || "Unable to load event details at this time.");
             } finally {
                 setIsLoading(false);
                 console.log('--- [UI END] Event Details Fetch Completed ---');
@@ -74,12 +92,12 @@ export default function EventDetailsPage() {
         );
     }
 
-    if (!eventData) {
+    if (errorMessage || !eventData) {
         return (
             <div className="bg-[#0b1326] text-[#dbe2fd] min-h-screen flex flex-col items-center justify-center p-6">
                 <span className="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
                 <h1 className="text-3xl font-black text-white mb-2">EVENT NOT FOUND</h1>
-                <p className="text-gray-400 mb-6">The event ID "{eventId}" does not exist or has been removed.</p>
+                <p className="text-gray-400 mb-6">{errorMessage || `The event ID "${eventId}" does not exist or has been removed.`}</p>
                 <Link to="/events" className="bg-[#2563eb] text-white px-6 py-3 rounded-lg font-bold text-sm tracking-wider hover:bg-[#0053db] transition-colors">
                     BROWSE ALL EVENTS
                 </Link>
@@ -146,6 +164,16 @@ export default function EventDetailsPage() {
                     </div>
                 </div>
 
+                {policyDesc && policyDesc !== 'No policy' && (
+                    <div className="bg-amber-500/5 border border-amber-500/20 p-8 rounded-xl space-y-3">
+                        <h3 className="text-xl font-bold text-amber-300 flex items-center gap-2">
+                            <span className="material-symbols-outlined">policy</span>
+                            Purchase Policy Summary
+                        </h3>
+                        <p className="text-gray-300 leading-relaxed font-mono text-sm">{policyDesc}</p>
+                    </div>
+                )}
+
                 <div className="bg-[#eeefff] text-[#171f33] p-8 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
                         <p className="text-sm uppercase font-bold opacity-60 mb-1">Standard Admission</p>
@@ -153,7 +181,12 @@ export default function EventDetailsPage() {
                         <p className="text-4xl font-mono font-black">{eventData.ticketPrice ? `$${eventData.ticketPrice}` : 'TBD'}</p>
                     </div>
 
-                    {!isAuthorized ? (
+                    {!isMember ? (
+                        <div className="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-6 py-4 rounded-lg font-bold border border-amber-500/20 text-xs tracking-widest uppercase">
+                            <span className="material-symbols-outlined">lock</span>
+                            SIGN IN AS A MEMBER TO RESERVE TICKETS
+                        </div>
+                    ) : !isAuthorized ? (
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">block</span>
                             PURCHASE UNAVAILABLE

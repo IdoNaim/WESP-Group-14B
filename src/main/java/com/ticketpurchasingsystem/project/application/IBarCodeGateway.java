@@ -1,12 +1,11 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.List;
+
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 
-import java.util.List;
-
 public interface IBarCodeGateway {
-
-
-    public List<BarcodeDTO> issueBarcodes(ActiveOrderDTO activeOrder);
+    List<BarcodeDTO> issueBarcodes(ActiveOrderDTO activeOrder);
+    void cancelTickets(List<BarcodeDTO> barcodes);
 }

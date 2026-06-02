@@ -12,7 +12,7 @@ public interface IUserService {
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) ;
     public String loginUser(String userId, String password, String sessionTokenStr) ;
     public String logoutUser(String userId, String sessionTokenStr) ;
-
+    public String loginAdmin(String userId, String password, String sessionTokenStr);
     public List<UserDTO> getAllUsers() ; 
     public UserDTO getUser(String userId) ; 
     public com.ticketpurchasingsystem.project.domain.User.UserInfo getUserInfo(String userId) ; 
