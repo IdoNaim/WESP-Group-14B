@@ -3,7 +3,9 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import org.springframework.stereotype.Repository;
 
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,7 @@ public class MemoryUserRepo implements IUserRepo {
 
     @Override
     public void store(UserInfo userInfo) {
+        loggerDef.getInstance().info("Storing user: " + userInfo.getId());
         users.put(userInfo.getId(), userInfo);
     }
 
@@ -25,6 +28,7 @@ public class MemoryUserRepo implements IUserRepo {
 
     @Override
     public UserInfo findByID(String userId) {
+        loggerDef.getInstance().info("Finding user by ID: " + userId);
         return users.get(userId);
     }
 

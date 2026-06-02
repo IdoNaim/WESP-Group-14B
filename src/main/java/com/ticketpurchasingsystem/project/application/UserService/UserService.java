@@ -6,17 +6,14 @@ import java.util.stream.Collectors;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
-import com.ticketpurchasingsystem.project.domain.User.UserDTO;
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
-import com.ticketpurchasingsystem.project.domain.User.UserHandler;
-import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
+import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
+import com.ticketpurchasingsystem.project.domain.User.UserHandler;
+import com.ticketpurchasingsystem.project.domain.User.UserInfo;
+import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
-
-import jakarta.annotation.PostConstruct;
-
 @Service
 public class UserService implements IUserService {
 
@@ -30,15 +27,16 @@ public class UserService implements IUserService {
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
+
         //creating admin for testing purposes
         UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
         userRepo.store(newUser);
-        UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
-        UserProduction userProduction = new UserProduction();
-        userProduction.addProduction(1, UserProduction.RoleInProduction.FOUNDER);
-        if( idonaim != null){            idonaim.setUserProduction(userProduction);
-            }
-            userRepo.store(idonaim);
+        // UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
+        // UserProduction userProduction = new UserProduction();
+        // userProduction.addProduction(1, UserProduction.RoleInProduction.FOUNDER);
+        // if( idonaim != null){            idonaim.setUserProduction(userProduction);
+        //     }
+        //     userRepo.store(idonaim);
 
     }
 
