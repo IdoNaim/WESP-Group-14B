@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
@@ -28,7 +29,6 @@ public class HistoryOrderService implements IHistoryOrderService {
         this.authenticationService = authenticationService;
         this.productionService = productionService;
     }
-
 
     public boolean createHistoryOrder(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
         HistoryOrderDTO historyOrderDTO = new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);

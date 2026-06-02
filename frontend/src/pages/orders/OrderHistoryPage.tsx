@@ -10,6 +10,7 @@ interface ExtendedHistoryOrderDTO extends HistoryOrderDTO {
     eventLocation?: string;
     eventImageUrl?: string;
     category?: string;
+    eventDate?: string; // הוספנו את תאריך האירוע
 }
 
 export default function OrderHistory() {
@@ -114,40 +115,11 @@ export default function OrderHistory() {
     const isGuest = !username;
     const companyIds = permissions ? Object.keys(permissions.productionRoles || {}).map(Number) : [];
 
-    // =========================================================================
-    // === DEBUG CODE START ====================================================
-    // =========================================================================
-    
-    // 1. הוספת הזמנת דמה
-    const handleAddMockOrder = (e: React.MouseEvent) => {
-        e.preventDefault(); 
-        setError(null);
-        setIsLoading(false);
-        const newMockOrder: ExtendedHistoryOrderDTO = {
-            orderId: `ORD-DEBUG-${Math.floor(Math.random() * 10000)}`,
-            userId: userId || "user-123",
-            eventId: `EVT-MOCK-${Math.floor(Math.random() * 100)}`,
-            eventName: "Cyberpunk Symphony: Neon Dreams",
-            category: "MUSIC",
-            eventLocation: "Velocity Arena, Sector 7",
-            eventImageUrl: "https://images.unsplash.com/photo-1540039155733-d7696ba45ae7?auto=format&fit=crop&q=80&w=800",
-            companyId: 1,
-            purchaseDate: new Date().toISOString(),
-            price: Math.floor(Math.random() * 200) + 50,
-            seatIds: ["ROW-A Seat-12", "ROW-A Seat-13"],
-            standingAreaQuantities: { "VIP Pit": 1, "General": 2 }
-        };
-        setOrders(prev => [newMockOrder, ...prev]);
-        alert("Mock order added successfully! Scroll down if you can't see it.");
-    };
-
-    // 2. הפעלה/כיבוי של מצב מנהל
     const handleToggleAdmin = (e: React.MouseEvent) => {
         e.preventDefault();
         const isCurrentlyAdmin = permissions?.isAdmin;
         
         if (!isCurrentlyAdmin) {
-            // הפיכה לאדמין
             setPermissions({
                 userId: userId || "user-123",
                 state: "REGISTERED",
@@ -157,7 +129,6 @@ export default function OrderHistory() {
             setSelectedCompanyId(1);
             alert("Admin mode ENABLED. You can now see the 'Company Orders' and 'All System Orders' tabs.");
         } else {
-            // ביטול אדמין
             setPermissions({
                 userId: userId || "user-123",
                 state: "REGISTERED",
@@ -169,10 +140,6 @@ export default function OrderHistory() {
             alert("Admin mode DISABLED.");
         }
     };
-    
-    // =========================================================================
-    // === DEBUG CODE END ======================================================
-    // =========================================================================
 
     return (
         <div className="bg-[#0b1326] text-[#dbe2fd] min-h-screen font-sans overflow-x-hidden pb-32">
@@ -194,15 +161,9 @@ export default function OrderHistory() {
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-[#b4c5ff] uppercase">TicketFlow</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    
-                    {/* כפתורי דיבאג */}
                     <button type="button" onClick={handleToggleAdmin} className="hidden md:flex items-center gap-1 bg-[#e7039a]/10 text-[#e7039a] border border-[#e7039a]/30 px-4 py-2 rounded text-xs font-mono font-bold hover:bg-[#e7039a]/20 transition-colors cursor-pointer z-50 relative" title="Toggle Admin Mode">
                         <span className="material-symbols-outlined text-[16px] pointer-events-none">admin_panel_settings</span>
                         <span className="pointer-events-none">TOGGLE ADMIN</span>
-                    </button>
-                    <button type="button" onClick={handleAddMockOrder} className="hidden md:flex items-center gap-1 bg-[#03dbe7]/10 text-[#03dbe7] border border-[#03dbe7]/30 px-4 py-2 rounded text-xs font-mono font-bold hover:bg-[#03dbe7]/20 transition-colors cursor-pointer z-50 relative" title="Add mock order">
-                        <span className="material-symbols-outlined text-[16px] pointer-events-none">add_box</span>
-                        <span className="pointer-events-none">ADD MOCK ORDER</span>
                     </button>
 
                     {!isGuest ? (
@@ -219,7 +180,6 @@ export default function OrderHistory() {
                     <h2 className="text-4xl md:text-5xl font-black text-white mb-2 uppercase">Order History</h2>
                     <p className="text-gray-400 max-w-xl mb-6">Review your past premium experiences. Secure, encrypted, and immutable ticketing records.</p>
                     
-                    {/* View Controls / Tabs (Only visible if Admin or Manager) */}
                     {(permissions?.isAdmin || companyIds.length > 0) && (
                         <div className="flex gap-6 border-b border-gray-800 w-full mb-4 overflow-x-auto">
                             <button onClick={() => setViewMode('PERSONAL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'PERSONAL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
@@ -261,7 +221,6 @@ export default function OrderHistory() {
                     </div>
                 )}
 
-                {/* ERROR STATE: Shows Clear Error when accessing forbidden history */}
                 {!isLoading && error && (
                     <div className="flex-grow flex items-center justify-center py-10 w-full animate-in fade-in">
                         <div className="bg-[#171f33] border border-red-900/50 p-10 md:p-16 rounded-xl text-center max-w-lg shadow-2xl relative overflow-hidden">
@@ -294,7 +253,6 @@ export default function OrderHistory() {
                     </div>
                 )}
 
-                {/* RICH EVENT CARDS WITH SEAT DETAILS */}
                 {!isLoading && !error && orders.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                         {orders.map((order) => {
@@ -304,8 +262,6 @@ export default function OrderHistory() {
 
                             return (
                                 <div key={order.orderId} className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 hover:border-[#75f5ff]/50 group relative z-10">
-                                    
-                                    {/* Event Image Header */}
                                     <div className="h-48 relative overflow-hidden bg-[#0b1326] border-b border-gray-800">
                                         {order.eventImageUrl ? (
                                             <img src={order.eventImageUrl} alt="Event Cover" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
@@ -324,16 +280,16 @@ export default function OrderHistory() {
                                         </div>
                                     </div>
 
-                                    {/* Card Content & Details */}
                                     <div className="p-5 flex-1 flex flex-col">
                                         <div className="mb-4 border-b border-gray-800 pb-4">
                                             <h3 className="text-xl font-bold leading-tight uppercase mb-2">
                                                 {order.eventName || `Event #${order.eventId}`}
                                             </h3>
                                             <div className="flex flex-col gap-1.5 text-gray-400 text-sm">
+                                                {/* שינינו מ-purchaseDate ל-eventDate עבור הכרטיס */}
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                                                    <span>{formatDate(order.purchaseDate, true)}</span>
+                                                    <span>{order.eventDate ? formatDate(order.eventDate, true) : "Date TBD"}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-[16px]">location_on</span>
@@ -342,7 +298,6 @@ export default function OrderHistory() {
                                             </div>
                                         </div>
 
-                                        {/* EXPLICIT SEAT INFORMATION */}
                                         <div className="mb-6 flex-grow">
                                             {hasSeats && (
                                                 <div className="mb-3">
@@ -375,7 +330,6 @@ export default function OrderHistory() {
                                             )}
                                         </div>
 
-                                        {/* Footer: Price & Action */}
                                         <div className="mt-auto space-y-4">
                                             <div className="flex justify-between items-end border-t border-gray-800 pt-4">
                                                 <div>
@@ -401,7 +355,6 @@ export default function OrderHistory() {
 
             </main>
 
-            {/* MODAL: VIEW TICKET (POPUP) */}
             {selectedTicket && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md bg-[#0b1326]/80 overflow-y-auto animate-in fade-in duration-300">
                     <div className="absolute inset-0" onClick={() => setSelectedTicket(null)}></div>
@@ -424,25 +377,30 @@ export default function OrderHistory() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 border-y border-gray-800 py-6">
+                                {/* תאריך האירוע בולט בפופ אפ */}
+                                <div>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Event Date</p>
+                                    <p className="font-mono text-sm text-[#03dbe7] font-bold">
+                                        {selectedTicket.eventDate ? formatDate(selectedTicket.eventDate, true) : "TBD"}
+                                    </p>
+                                </div>
+                                {/* תאריך הרכישה למטה וקטן יותר */}
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Purchase Date</p>
-                                    <p className="font-mono text-sm text-[#03dbe7] font-bold">{formatDate(selectedTicket.purchaseDate, true)}</p>
+                                    <p className="font-mono text-sm text-[#dbe2fd]">{formatDate(selectedTicket.purchaseDate)}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Location</p>
                                     <p className="font-mono text-sm text-[#dbe2fd]">{selectedTicket.eventLocation || "TBD Sector / Main Arena"}</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Purchaser ID</p>
-                                    <p className="font-mono text-sm text-[#dbe2fd] truncate pr-4">{selectedTicket.userId}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Order ID</p>
-                                    <p className="font-mono text-sm text-white font-bold">{selectedTicket.orderId.substring(0, 12)}</p>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Admissions</p>
+                                    <p className="font-mono text-sm text-white font-bold">
+                                        {getTicketQuantity(selectedTicket).total} Total (Seats: {getTicketQuantity(selectedTicket).seatCount}, Gen: {getTicketQuantity(selectedTicket).standingCount})
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* פירוט כיסאות בתוך הפופ-אפ */}
                             {selectedTicket.seatIds && selectedTicket.seatIds.length > 0 && (
                                 <div className="mb-6">
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-3">Reserved Seats</p>
@@ -456,7 +414,6 @@ export default function OrderHistory() {
                                 </div>
                             )}
 
-                            {/* כפתורי פעולה בתוך הפופ-אפ */}
                             <div className="mt-8 flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-800">
                                 <button className="bg-[#2d3449] hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-bold text-xs tracking-widest transition-colors flex items-center justify-center gap-2 flex-1">
                                     <span className="material-symbols-outlined text-[18px]">download</span> PDF
@@ -467,12 +424,9 @@ export default function OrderHistory() {
                             </div>
                         </div>
 
-                        {/* RIGHT SIDE - BARCODE / QR */}
                         <div className="bg-[#0b1326] p-8 md:p-10 border-t md:border-t-0 md:border-l border-dashed border-gray-700 flex flex-col items-center justify-center relative md:w-[300px] flex-shrink-0">
                             <div className="hidden md:block absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0b1326] rounded-full border-r border-gray-700"></div>
-                            
                             <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-6 text-center">Scan at Entrance</p>
-                            
                             <div className="w-40 h-40 bg-white p-2 rounded-lg mb-6 shadow-[0_0_20px_rgba(3,219,231,0.2)]">
                                 <svg viewBox="0 0 100 100" className="w-full h-full text-black">
                                     <rect width="100" height="100" fill="white"/>
@@ -488,4 +442,3 @@ export default function OrderHistory() {
         </div>
     );
 }
-
