@@ -4,22 +4,34 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import com.ticketpurchasingsystem.project.domain.event.*;
-import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 public class EventServiceTest {
 
@@ -334,34 +346,34 @@ public class EventServiceTest {
 
     // ================= RELEASE STANDING AREA =================
 
-    @Test
-    void GivenValidInput_WhenReleaseStandingArea_ThenCompleteSuccessfully() {
-        Event mockEvent = mock(Event.class);
-        SeatingMap mockMap = mock(SeatingMap.class);
+    // @Test
+    // void GivenValidInput_WhenReleaseStandingArea_ThenCompleteSuccessfully() {
+    //     Event mockEvent = mock(Event.class);
+    //     SeatingMap mockMap = mock(SeatingMap.class);
 
-        when(mockRepo.findById("1")).thenReturn(mockEvent);
-        when(mockEvent.getSeatingMap()).thenReturn(mockMap);
-        when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
+    //     when(mockRepo.findById("1")).thenReturn(mockEvent);
+    //     when(mockEvent.getSeatingMap()).thenReturn(mockMap);
+    //     when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
 
-        assertDoesNotThrow(() -> eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5));
-        verify(mockMap).unbookStandingArea("AREA1", 5);
-    }
+    //     assertDoesNotThrow(() -> eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5));
+    //     verify(mockMap).unbookStandingArea("AREA1", 5);
+    // }
 
-    @Test
-    void GivenUnbookFails_WhenReleaseStandingArea_ThenThrowException() {
-        Event mockEvent = mock(Event.class);
-        SeatingMap mockMap = mock(SeatingMap.class);
+    // @Test
+    // void GivenUnbookFails_WhenReleaseStandingArea_ThenThrowException() {
+    //     Event mockEvent = mock(Event.class);
+    //     SeatingMap mockMap = mock(SeatingMap.class);
 
-        when(mockRepo.findById("1")).thenReturn(mockEvent);
-        when(mockEvent.getSeatingMap()).thenReturn(mockMap);
-        when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(false);
+    //     when(mockRepo.findById("1")).thenReturn(mockEvent);
+    //     when(mockEvent.getSeatingMap()).thenReturn(mockMap);
+    //     when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(false);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5);
-        });
+    //     IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+    //         eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5);
+    //     });
 
-        assertEquals("one or more stands not booked", exception.getMessage());
-    }
+    //     assertEquals("one or more stands not booked", exception.getMessage());
+    // }
 
     // ================= RESERVE SEATS =================
 

@@ -103,6 +103,7 @@ public class SeatingMap {
         }
         if (failedUnbookSeats.length() > 0) {
             loggerDef.getInstance().warn("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
+            
             // throw new IllegalStateException("Failed to unbook seats: " + failedUnbookSeats.substring(0, failedUnbookSeats.length() - 2));
         }
         return true;
