@@ -22,6 +22,8 @@ import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class ProductionService implements IProductionService {
 
@@ -51,6 +53,7 @@ public class ProductionService implements IProductionService {
     @Override
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
+            loggerDef.getInstance().error("createProductionCompany: invalid session token");
             return null;
         }
         String userId = authenticationService.getUser(sessionToken);

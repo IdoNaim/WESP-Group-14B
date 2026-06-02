@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.application.UserService;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
@@ -38,6 +39,7 @@ public class UserService implements IUserService {
         //     userRepo.store(idonaim);
 
     }
+
 
     public String guestEntry() {
         try {

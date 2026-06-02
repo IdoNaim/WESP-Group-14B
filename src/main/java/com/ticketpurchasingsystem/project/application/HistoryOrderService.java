@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
@@ -11,6 +12,9 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class HistoryOrderService implements IHistoryOrderService {
@@ -29,7 +33,6 @@ public class HistoryOrderService implements IHistoryOrderService {
         this.productionService = productionService;
     }
 
-
     public boolean createHistoryOrder(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
         HistoryOrderDTO historyOrderDTO = new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);
         HistoryOrderItem newHistoryOrder = historyOrderHandler.saveHistoryOrder(historyOrderDTO);
@@ -44,10 +47,13 @@ public class HistoryOrderService implements IHistoryOrderService {
     public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
         HistoryOrderDTO historyOrder = null;
         if (isSessionTokenValid(st)){
+            loggerDef.getInstance().info("Getting history order with ID: " + orderId + " for user: " + authenticationService.getUser(st.getToken()));
             HistoryOrderItem item = historyOrderRepo.findByOrderId(orderId);
             if (item != null) {
+                loggerDef.getInstance().info("Found history order: " + item.getOrderId() + " for user: " + item.getUserId());
                 if (authenticationService.isAdmin(st.getToken()) || item.getUserId().equals(authenticationService.getUser(st.getToken()))) {
                     historyOrder = item.makeDTO();
+                    loggerDef.getInstance().info("Returning history order: " + historyOrder.getOrderId() + " for user: " + historyOrder.getUserId());
                 }
             }
         }

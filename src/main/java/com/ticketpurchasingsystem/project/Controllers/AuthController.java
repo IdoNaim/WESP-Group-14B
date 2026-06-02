@@ -26,6 +26,8 @@ import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 
+import jakarta.annotation.PostConstruct;
+
 @RestController
 @RequestMapping("/api/identity")
 public class AuthController {
