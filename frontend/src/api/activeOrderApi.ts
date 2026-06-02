@@ -1,4 +1,3 @@
-// Define your base URL
 const BASE_URL = '/api/orders';
 
 // ==========================================
@@ -33,13 +32,18 @@ export interface CheckoutResponseDTO {
     barcodes: string[];
 }
 
-// You can flesh this out further based on your backend domain models
 export interface ActiveOrderDTO {
     orderId: string;
     userId: string;
     eventId: string;
+    createdAt?: string;
     seatIds?: string[];
     StandingAreaQuantities?: Record<string, number>;
+}
+
+export interface StandingAreaTicketsDTO {
+    areaId: string;
+    quantity: number;
 }
 
 // ==========================================
@@ -82,13 +86,19 @@ export const activeOrderApi = {
         return parseResponse(response);
     },
 
-    getActiveOrderByUserId: async (token: string, userId: string): Promise<ActiveOrderDTO> => {
+    /**
+     * GET /api/orders/user/{userId}
+     * Returns the active order details for a specific user ID.
+     */
+    getActiveOrderByUserId: async (token: string, userId: string): Promise<ActiveOrderDTO | null> => {
         const response = await fetch(`${BASE_URL}/user/${userId}`, {
             method: 'GET',
             headers: getHeaders(token),
         });
-        return parseResponse(response);
+        if (!response.ok) return null;
+        return response.json();
     },
+
     /**
      * GET /api/orders/{orderId}
      * Returns the active order details for the authenticated user.
@@ -164,5 +174,18 @@ export const activeOrderApi = {
             body: JSON.stringify(data),
         });
         return parseResponse(response);
+    },
+
+    /**
+     * PUT /api/orders/{orderId}
+     * Replaces the full ticket selection in the order (for main compatibility).
+     */
+    updateActiveOrder: async (token: string, orderId: string, order: ActiveOrderDTO): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${orderId}`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify(order),
+        });
+        return response.ok;
     }
 };
