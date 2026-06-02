@@ -9,6 +9,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.New
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
 
 @Component
 public class UserApplicationListener {
@@ -38,5 +39,10 @@ public class UserApplicationListener {
     @EventListener
     public void onAppointManagerEvent(AppointManagerEvent event) {
         userService.assignProductionRole(event.getManagerId(), event.getCompany().getCompanyId(), UserProduction.RoleInProduction.MANAGER);
+    }
+
+    @EventListener
+    public void onGetAllUsers(GetAllUsersEvent event) {
+        event.setResult(userService.getAllUsers());
     }
 }

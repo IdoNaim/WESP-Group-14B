@@ -1,16 +1,23 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import ForbiddenAccess from "./ForbiddenAccess/ForbiddenAccess";
 
 export default function RequireAdmin() {
-    const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading } = useAuth();
 
-    if (loading) {
-        return null;
-    }
+  if (loading) {
+    return null;
+  }
 
-    if (!isAdmin) {
-        return <Navigate to="/dashboard" replace />;
-    }
+  if (!isAdmin) {
+    return (
+      <ForbiddenAccess
+        title="Admin Access Required"
+        message="This page is restricted to system administrators."
+        requiredRole="System Admin"
+      />
+    );
+  }
 
-    return <Outlet />;
+  return <Outlet />;
 }
