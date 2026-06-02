@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.ForbiddenException;
-import com.ticketpurchasingsystem.project.application.NotFoundException;
+import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
+import com.ticketpurchasingsystem.project.domain.exceptions.NotFoundException;
 import com.ticketpurchasingsystem.project.application.NotificationService;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;

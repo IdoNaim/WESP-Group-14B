@@ -2,6 +2,7 @@ package com.ticketpurchasingsystem.project.infrastructure;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Repository;
@@ -19,8 +20,8 @@ public class InMemoryNotificationRepo implements INotificationRepo {
     }
 
     @Override
-    public Notification findById(String id) {
-        return store.get(id);
+    public Optional<Notification> findById(String id) {
+        return Optional.ofNullable(store.get(id));
     }
 
     @Override

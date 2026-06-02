@@ -16,9 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
+
 import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMapRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
@@ -26,10 +24,10 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateReques
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -87,6 +85,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
+                // RESOLVED: Cleaned conflict markers and passing standard authHeader to match your other service endpoints
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }

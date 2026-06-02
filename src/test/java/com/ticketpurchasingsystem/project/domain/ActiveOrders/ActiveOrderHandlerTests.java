@@ -204,7 +204,7 @@ public class ActiveOrderHandlerTests {
 
     @Test
     public void GivenNullOrder_WhenAddSeatsToActiveOrder_ThenReturnNull() {
-        assertNull(handler.addSeatsToActiveOrder(mockOrder, null));
+        assertNull(handler.addSeatsToActiveOrder(null, List.of("seat1")));
     }
     @Test
     public void GivenNullSeatList_WhenAddSeatsToActiveOrder_ThenReturnNull(){

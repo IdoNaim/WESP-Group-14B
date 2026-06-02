@@ -1,18 +1,7 @@
-// DashboardPage.tsx
-import React, { useEffect, useState } from 'react'; // 💡 Removed useRef since it's no longer used
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react'; // 💡 Removed useRef since it's no longer used
+import { Link } from 'react-router-dom';
 import { authApi, UserPermissionsDTO } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext'; // 💡 Double check this relative path matches your folder structure!
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface NavItem {
-  label: string;
-  icon: string;
-  href: string;
-  active?: boolean;
-  memberOnly?: boolean;
-}
 
 interface QuickLinkCard {
   icon: string;
@@ -21,18 +10,6 @@ interface QuickLinkCard {
   href: string;
   memberOnly?: boolean;
 }
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Home',          icon: 'home',                 href: '/home',   active: true },
-  { label: 'Events',        icon: 'event',                href: '/events' },
-  { label: 'My Order',      icon: 'shopping_cart',        href: '/activeorder/' },
-  { label: 'Order History', icon: 'history',              href: '/order-history',       memberOnly: true },
-  { label: 'Notifications', icon: 'notifications',        href: '/notifications',       memberOnly: true },
-  { label: 'My Companies',  icon: 'business',             href: '/companies',       memberOnly: true },
-  { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '/admin',       memberOnly: true },
-];
 
 const QUICK_LINKS: QuickLinkCard[] = [
   { icon: 'explore', title: 'Browse Events', subtitle: 'Discover trending and upcoming events worldwide.', href: '/events' },
@@ -76,7 +53,6 @@ function QuickLinkCardComponent({ card }: { card: QuickLinkCard }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
   
   // ── COMMENTED OUT UNUSED SEARCH LOGIC TO FIX LINE 209 ERROR ──
   // const searchRef = useRef<HTMLInputElement>(null);
@@ -136,12 +112,7 @@ export default function DashboardPage() {
   //   return () => window.removeEventListener('keydown', handler);
   // }, []);
 
-  // Filter nav items and quick links based on guest/member/production mode
-  const visibleNavItems = NAV_ITEMS.filter(item => !item.memberOnly || !isGuest);
-  
-  const visibleNavItemsFiltered = visibleNavItems
-    .filter(item => item.label !== 'Admin Panel' || (permissions?.isAdmin ?? false))
-    .filter(item => item.label !== 'My Companies' || isProductionUser);
+
 
   const visibleQuickLinks = QUICK_LINKS
     .filter(card => !card.memberOnly || !isGuest)

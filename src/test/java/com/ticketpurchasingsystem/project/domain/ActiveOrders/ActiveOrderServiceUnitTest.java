@@ -4,6 +4,8 @@ import com.ticketpurchasingsystem.project.application.ActiveOrderService;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
+import com.ticketpurchaseingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
 
 import com.ticketpurchasingsystem.project.application.PaymentDetails;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
@@ -113,36 +115,36 @@ public class ActiveOrderServiceUnitTest {
 
         verify(activeOrderHandlerMock, never()).isUsersOrder(any(), any());
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
+        verify(activeOrderRepoMock, never()).delete(anyString());
     }
-
     @Test
     void GivenOrderDoesNotBelongToUser_WhenCancelActiveOrder_ThenThrowIllegalArgumentException() {
-        // Arrange
         ActiveOrderItem wrongUsersOrder = orderForUser(OTHER_USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(wrongUsersOrder);
-        when(activeOrderHandlerMock.isUsersOrder(USER_ID, wrongUsersOrder)).thenReturn(false);
+        // validateOrderOwnership is void — stub the throw directly
+        doThrow(new IllegalArgumentException("this order does not belong to this user"))
+                .when(activeOrderHandlerMock)
+                .validateOrderOwnership(eq(USER_ID), eq(wrongUsersOrder), anyString());
 
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
                 activeOrderService.cancelActiveOrder(VALID_SESSION, USER_ID, ORDER_ID)
         );
 
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
+        verify(activeOrderRepoMock, never()).delete(anyString());
     }
 
     @Test
     void GivenOrderIsAlreadyProcessing_WhenCancelActiveOrder_ThenThrowIllegalStateException() {
-        // Arrange
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderHandlerMock.isUsersOrder(USER_ID, validOrder)).thenReturn(true);
+        // validateOrderOwnership is void — default mock does nothing (passes), which is correct here
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(false);
 
-        // Act & Assert
         assertThrows(IllegalStateException.class, () ->
                 activeOrderService.cancelActiveOrder(VALID_SESSION, USER_ID, ORDER_ID)
         );
@@ -152,15 +154,13 @@ public class ActiveOrderServiceUnitTest {
 
     @Test
     void GivenValidOrderAndSession_WhenCancelActiveOrder_ThenCancelAndDeleteOrder() {
-        // Arrange
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
-        when(activeOrderHandlerMock.isUsersOrder(USER_ID, validOrder)).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
 
-        // Act & Assert
         assertDoesNotThrow(() ->
                 activeOrderService.cancelActiveOrder(VALID_SESSION, USER_ID, ORDER_ID)
         );
@@ -182,6 +182,7 @@ public class ActiveOrderServiceUnitTest {
         );
 
         verifyNoInteractions(activeOrderRepoMock, activeOrderHandlerMock);
+    
     }
 
     @Test
@@ -214,6 +215,9 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(SecurityException.class, () ->
                 activeOrderService.getActiveOrderInfo(VALID_SESSION, ORDER_ID)
         );
+
+        verify(activeOrderRepoMock, never()).update(any());
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -227,6 +231,9 @@ public class ActiveOrderServiceUnitTest {
         assertThrows(IllegalArgumentException.class, () ->
                 activeOrderService.getActiveOrderInfo(VALID_SESSION, null)
         );
+
+        verifyNoInteractions(activeOrderHandlerMock);
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -302,43 +309,49 @@ public class ActiveOrderServiceUnitTest {
 
     @Test
     void GivenExistingActiveOrderForUser_WhenCreatePendingOrder_ThenThrowIllegalArgumentException() {
-        // Arrange
         ActiveOrderItem existingOrder = orderForUser(USER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(existingOrder);
+        // The handler now owns this validation — stub it to throw as the real impl does
+        doThrow(new IllegalArgumentException("an active order already exists for this user: " + USER_ID))
+                .when(activeOrderHandlerMock)
+                .validatePendingOrderCreation(eq(existingOrder), anyBoolean(), anyString(), anyString());
 
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
                 activeOrderService.createPendingOrder(VALID_SESSION, USER_ID, EVENT_ID)
         );
         verify(activeOrderRepoMock, never()).save(any());
     }
-
+    // Fix 2: GivenInvalidEventId
     @Test
     void GivenInvalidEventId_WhenCreatePendingOrder_ThenThrowRuntimeException() {
-        // Arrange
         String badEventId = "invalid-event-999";
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(badEventId)).thenReturn(false);
+        // Handler receives isValidEvent=false and throws
+        doThrow(new RuntimeException(badEventId + " isnt associated with any existing event"))
+                .when(activeOrderHandlerMock)
+                .validatePendingOrderCreation(isNull(), eq(false), eq(badEventId), eq(USER_ID));
 
-        // Act & Assert
         assertThrows(RuntimeException.class, () ->
                 activeOrderService.createPendingOrder(VALID_SESSION, USER_ID, badEventId)
         );
         verify(activeOrderRepoMock, never()).save(any());
     }
 
+    // Fix 3: GivenHandlerDeniesCreation
     @Test
     void GivenHandlerDeniesCreation_WhenCreatePendingOrder_ThenThrowRuntimeException() {
-        // Arrange
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
-        // Handler returns false (business rules block creation)
-        when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(false);
+        // validatePendingOrderCreation passes (no throw), but canCreateActiveOrder throws
+        doNothing().when(activeOrderHandlerMock)
+                .validatePendingOrderCreation(isNull(), eq(true), eq(EVENT_ID), eq(USER_ID));
+        when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class)))
+                .thenThrow(new RuntimeException("bad order ID"));
 
-        // Act & Assert
         assertThrows(RuntimeException.class, () ->
                 activeOrderService.createPendingOrder(VALID_SESSION, USER_ID, EVENT_ID)
         );
@@ -525,6 +538,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.addSeatsToActiveOrder(VALID_SESSION, ORDER_ID, requestedSeats)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verify(activeOrderPublisherMock, never()).publishReleaseSeats(any(), any(), any(), any());
     }
 
     @Test
@@ -639,6 +653,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.addStandingAreaToActiveOrder(VALID_SESSION, ORDER_ID, AREA_ID, QUANTITY)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(any(), any(), any(), anyInt());
     }
 
     @Test
@@ -708,40 +723,33 @@ public class ActiveOrderServiceUnitTest {
     //------------------------------------------------------------------------------------------------------------------
     @Test
     void GivenValidOrderAndPayment_WhenCompleteOrder_ThenOrderIsRemovedFromRepo() {
-        // Arrange
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
-    
-
-
 
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
 
-        // Act
         List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID);
 
-        // Assert
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
-        }
+    }
 
     @Test
     void GivenValidOrderAndPayment_WhenCompleteOrder_ThenOrderIsRemovedAndPublished() {
-        // Arrange
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
@@ -750,12 +758,9 @@ public class ActiveOrderServiceUnitTest {
 
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
 
-        // Act
         List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID);
 
-        // Assert
         assertNotNull(result);
-
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
     }
@@ -771,6 +776,7 @@ public class ActiveOrderServiceUnitTest {
 
                 activeOrderService.completeOrder(paymentGatewayMock, INVALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
+        verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
 
@@ -789,9 +795,9 @@ public class ActiveOrderServiceUnitTest {
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
 
+    // Fix 5: GivenExpiredOrder — remove unnecessary stubs, use lenient for the others
     @Test
     void GivenExpiredOrder_WhenCompleteOrder_ThenThrowExceptionAndRollback() {
-        // Arrange
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         ActiveOrderItem expiredOrder = orderForUser(USER_ID);
         expiredOrder.setSeatIds(List.of("A-1", "A-2"));
@@ -802,30 +808,24 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(expiredOrder);
-
-        // FIX: Stub the handler to explicitly mark this order as expired
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderHandlerMock.isOrderExpired(expiredOrder)).thenReturn(true);
-        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
-
-        // Stub the fallback guards to allow the rollback to execute
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
         when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
 
-        // Act & Assert
         assertThrows(Exception.class, () ->
 
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
 
-        // Verify Rollback
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("A-1", "A-2"));
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "GA-1", 3);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
 
+    // Fix 6: GivenPaymentFails — remove isUsersOrder stub, use lenient for rollback guards
     @Test
     void GivenPaymentFails_WhenCompleteOrder_ThenThrowIllegalStateExceptionAndRollback() {
-        // Arrange
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         validOrder.setSeatIds(List.of("B-10", "B-11"));
@@ -835,49 +835,44 @@ public class ActiveOrderServiceUnitTest {
         validOrder.setStandingAreaQuantities(standingArea);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
 
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
+        lenient().when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
-        // FIX: Stub the handler to allow the rollback logic to pass its guards
-        when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
-        when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
-
-        // Act & Assert
         assertThrows(Exception.class, () ->
 
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
 
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN,ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
     }
 
+
     @Test
     void GivenBarcodeGenerationFails_WhenCompleteOrder_ThenThrowIllegalStateExceptionAndRollback() {
-        // Arrange
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         validOrder.setSeatIds(List.of("C-1"));
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
-
-        // FIX: Stub the handler to allow the rollback logic to pass its guards
         when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
-        when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
-        // Act & Assert
         assertThrows(Exception.class, () ->
 
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
@@ -891,6 +886,7 @@ public class ActiveOrderServiceUnitTest {
 
 //     --- Concurrency tests for completeOrder ---
 
+    // Fix 7: GivenSameOrder_WhenCompleteOrderTwiceConcurrently — change stub to lenient
     @Test
     void GivenSameOrder_WhenCompleteOrderTwiceConcurrently_ThenOnlyOneSucceedsAndUserChargedOnce() throws InterruptedException {
         ActiveOrderMemRepo realRepo = new ActiveOrderMemRepo();
@@ -902,10 +898,11 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         when(authenticationServiceMock.getUser("valid-token")).thenReturn("userA");
-        when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
+        lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
 
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
@@ -998,6 +995,7 @@ public class ActiveOrderServiceUnitTest {
         verify(paymentGatewayMock, atMostOnce()).pay(any());
     }
 
+    // Fix 8: GivenNDifferentOrders — change the problematic stub to lenient
     @Test
     void GivenNDifferentOrders_WhenCompleteOrderConcurrently_ThenAllSucceedAndAllOrdersRemoved() throws InterruptedException {
         int orderCount = 20;
@@ -1008,15 +1006,18 @@ public class ActiveOrderServiceUnitTest {
 
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
 
+        // Added lenient() to the rest of the stubs to prevent UnnecessaryStubbingException
         lenient().when(authenticationServiceMock.validate(anyString())).thenReturn(true);
         lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
-        when(activeOrderHandlerMock.isUsersOrder(any(),any())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
 
-        when(paymentGatewayMock.pay(any())).thenReturn(50000);
-        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
-        when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
+        lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
+        lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
+        lenient().when(activeOrderHandlerMock.canCreateActiveOrder(any())).thenReturn(true);
+
 
         List<String> generatedOrderIds = Collections.synchronizedList(new ArrayList<>());
         for (int i = 0; i < orderCount; i++) {
@@ -1125,6 +1126,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
         );
         verifyNoInteractions(activeOrderPublisherMock, activeOrderHandlerMock);
+        verify(activeOrderRepoMock, never()).update(any());
     }
 
     @Test
@@ -1145,6 +1147,7 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.updateActiveOrder(VALID_SESSION, newOrderDTO)
         );
         verify(activeOrderRepoMock, never()).update(any());
+        verifyNoInteractions(activeOrderPublisherMock);
     }
 
     @Test
@@ -1218,58 +1221,58 @@ public class ActiveOrderServiceUnitTest {
         verify(activeOrderPublisherMock, never()).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "Zone-B", 4);
         verify(activeOrderRepoMock, never()).update(any());
     }
-    
-    
+
+
+    // Fix 4: GivenOrderBelongingToAnotherUser_WhenCompleteOrder
     @Test
     public void GivenOrderBelongingToAnotherUser_WhenCompleteOrder_ThenThrowException() {
         SessionToken sessionTokenUserA = mock(SessionToken.class);
         when(sessionTokenUserA.getToken()).thenReturn("token_user_a");
-        when(authenticationServiceMock.getUser("token_user_a")).thenReturn("user_a"); 
+        when(authenticationServiceMock.getUser("token_user_a")).thenReturn("user_a");
         when(authenticationServiceMock.validate("token_user_a")).thenReturn(true);
 
         ActiveOrderItem orderBelongingToUserB = new ActiveOrderItem("order1", "user_b", "event1");
-        orderBelongingToUserB.setCreatedAt(new Timestamp(System.currentTimeMillis())); 
-        orderBelongingToUserB.setSeatIds(List.of("VIP-1", "VIP-2")); 
-        
+        orderBelongingToUserB.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        orderBelongingToUserB.setSeatIds(List.of("VIP-1", "VIP-2"));
+
         when(activeOrderRepoMock.findById("order1")).thenReturn(orderBelongingToUserB);
-        when(activeOrderHandlerMock.isUsersOrder("user_a",orderBelongingToUserB)).thenReturn(false); 
+        // validateOrderOwnership calls isUsersOrder then throws — stub it to throw directly
+        doThrow(new IllegalArgumentException("Unauthorized: Order does not belong to the current user"))
+                .when(activeOrderHandlerMock)
+                .validateOrderOwnership(eq("user_a"), eq(orderBelongingToUserB), anyString());
 
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
 
-            activeOrderService.completeOrder(paymentGateway, sessionTokenUserA, validPaymentDetails(), "order1");
-        });
+        Exception exception = assertThrows(IllegalArgumentException.class, () ->
+                activeOrderService.completeOrder(paymentGateway, sessionTokenUserA, validPaymentDetails(), "order1")
+        );
 
         assertEquals("Unauthorized: Order does not belong to the current user", exception.getMessage());
-        
-
         verify(paymentGateway, never()).pay(any());
+        verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
 
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
     @Test
-    public void GivenOrderWithUnreservedSeatingTickets_WhenCompleteOrder_ThenThrowExceptionAndOrderIsUpdated() {
-    // Arrange
+    void GivenOrderWithUnreservedSeatingTickets_WhenCompleteOrder_ThenThrowExceptionAndOrderIsUpdated() {
         ActiveOrderItem order = orderWithSeats(USER_ID);
-        List<String> unreservedSeats = List.of("seat-1"); 
+        List<String> unreservedSeats = List.of("seat-1");
         ActiveOrderItem updatedOrderMock = mock(ActiveOrderItem.class);
+
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(order);
         when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(activeOrderHandlerMock.isUsersOrder(USER_ID, order)).thenReturn(true);
+        // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderPublisherMock.publishCheckSeatsReserved(
                 eq(VALID_TOKEN), eq(ORDER_ID), eq(EVENT_ID), eq(order.getSeatIds())
         )).thenReturn(unreservedSeats);
-
         when(activeOrderHandlerMock.removeSeatsFromActiveOrder(order, unreservedSeats)).thenReturn(updatedOrderMock);
 
-        // Act & Assert
         assertThrows(IllegalStateException.class, () ->
 
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
-
 
         verify(activeOrderHandlerMock, times(1)).removeSeatsFromActiveOrder(order, unreservedSeats);
         verify(activeOrderRepoMock, times(1)).update(updatedOrderMock);
