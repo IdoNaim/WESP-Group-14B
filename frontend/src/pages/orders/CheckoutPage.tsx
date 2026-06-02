@@ -74,6 +74,10 @@ export default function CheckoutPage() {
   const [processState, setProcessState] = useState<CheckoutStatus>('idle');
   const [successBarcodes, setSuccessBarcodes] = useState<string[]>([]);
 
+  // ─── NEW: Age Modal State ─────────────────────────────────────────────────
+  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
+  const [ageInput, setAgeInput] = useState<string>('');
+
   // ─── Payment Field State ───────────────────────────────────────────────────
   const [cardholderName, setCardholderName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -99,6 +103,12 @@ export default function CheckoutPage() {
     fee: 2.50,
     total: 2.50
   });
+
+  // ─── Data parsing (Moved up so handlers can access totalTicketsCount) ──────
+  const rawOrder = order as any;
+  const standingAreaQuantitiesMap = rawOrder?.StandingAreaQuantities || rawOrder?.standingAreaQuantities || rawOrder?.standinAreaQuantities || {};
+  const totalStandingTicketsQty = Object.values(standingAreaQuantitiesMap).reduce((sum: number, qty: any) => sum + Number(qty), 0);
+  const totalTicketsCount = (order?.seatIds?.length || 0) + totalStandingTicketsQty;
 
   // ─── Life Cycle: Data Hydration Pipeline ──────────────────────────────────
   useEffect(() => {
@@ -272,6 +282,48 @@ export default function CheckoutPage() {
     }
   };
 
+  // ─── NEW: Pre-Payment Age Verification ────────────────────────────────────
+  const handleInitiatePayment = () => {
+    // Validate card details BEFORE popping up the age modal
+    setPaymentError('');
+    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+    setIsAgeModalOpen(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    const age = parseInt(ageInput, 10);
+    if (isNaN(age) || age <= 0) {
+      setPaymentError("Please enter a valid age to proceed.");
+      setIsAgeModalOpen(false);
+      return;
+    }
+
+    setIsAgeModalOpen(false);
+
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+
+    if (order && order.eventId) {
+      try {
+        const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age);
+        if (policyViolation) {
+          setPaymentError(`Policy Violation: ${policyViolation}`);
+          return;
+        }
+      } catch (err: any) {
+        setPaymentError(err.message || "Failed to validate event purchase policy.");
+        return;
+      }
+    }
+
+    // If age passes validation, call the original payment routine
+    await handlePayment();
+  };
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
   const formatTime = (totalSeconds: number) => {
     if (totalSeconds <= 0) return 'EXPIRED';
@@ -313,12 +365,6 @@ export default function CheckoutPage() {
       </div>
     </footer>
   );
-
-  // ─── Data parsing ──────────────────────────────────────────────────────────
-  const rawOrder = order as any;
-  const standingAreaQuantitiesMap = rawOrder?.StandingAreaQuantities || rawOrder?.standingAreaQuantities || rawOrder?.standinAreaQuantities || {};
-  const totalStandingTicketsQty = Object.values(standingAreaQuantitiesMap).reduce((sum: number, qty: any) => sum + Number(qty), 0);
-  const totalTicketsCount = (order?.seatIds?.length || 0) + totalStandingTicketsQty;
 
   // ─── View Controller Returns ────────────────────────────────────────────────
   if (isLoading) {
@@ -624,8 +670,9 @@ export default function CheckoutPage() {
                   <span className="material-symbols-outlined text-[#46464b] mb-1">verified_user</span>
                 </div>
                 <div className="pt-6">
+                  {/* MODIFIED: Trigger the new verification flow instead of straight payment */}
                   <button
-                    onClick={handlePayment}
+                    onClick={handleInitiatePayment}
                     disabled={processState === 'processing' || pricing.subtotal === 0}
                     className="w-full bg-[#1a1b20] text-white py-5 font-bold rounded flex items-center justify-center gap-3 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -660,6 +707,41 @@ export default function CheckoutPage() {
 
         </div>
       </main>
+
+      {/* ── Age Verification Modal ── */}
+      {isAgeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4 border border-gray-200">
+            <h3 className="text-lg font-bold text-[#191c20]">Age Verification</h3>
+            <p className="text-sm text-gray-600">Please verify your age against event policies before finalizing your order.</p>
+            <input
+              type="number"
+              value={ageInput}
+              onChange={(e) => setAgeInput(e.target.value)}
+              placeholder="e.g., 25"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#1a1b20]"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmPayment();
+              }}
+            />
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIsAgeModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPayment}
+                className="px-4 py-2 text-sm font-bold text-white bg-[#1a1b20] hover:bg-black rounded transition"
+              >
+                Verify & Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

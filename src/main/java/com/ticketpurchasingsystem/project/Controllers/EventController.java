@@ -23,6 +23,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRe
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
@@ -180,6 +181,18 @@ public class EventController {
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
         }
+        @PostMapping("/{eventId}/validate-policy")
+        public ResponseEntity<String> validatePurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody ValidatePolicyRequestDTO body) {
+                String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+                String violation = eventService.validatePurchasePolicy(token, eventId, body.getQuantity(), body.getUserAge());
+                if (violation == null)
+                        return ResponseEntity.ok().build();
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(violation);
+        }
+        
         @GetMapping("/{eventId}/seating-map")
         public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
                 @RequestHeader("Authorization") String authHeader,
