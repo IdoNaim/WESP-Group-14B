@@ -162,7 +162,6 @@ function buildOrderItemsFromActiveOrder(
   return items;
 }
 
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SeatDot({
@@ -248,15 +247,12 @@ function StandingZoneCard({
   );
 }
 
-// ── PurchaseRules — dynamic from API ─────────────────────────────────────────
-
 function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
   const [open, setOpen] = useState(false);
 
   const rules: string[] = [];
 
   if (policy) {
-    // Quantity rules
     if (policy.minTickets !== null && policy.maxTickets !== null) {
       rules.push(
         policy.isQuantityOr
@@ -269,7 +265,6 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
       rules.push(`Maximum ${policy.maxTickets} ticket(s) per order.`);
     }
 
-    // Age rules
     if (policy.minAge !== null && policy.maxAge !== null) {
       rules.push(
         policy.isAgeOr
@@ -282,7 +277,6 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
       rules.push(`Maximum age requirement: ${policy.maxAge} years old.`);
     }
 
-    // Cross-block composition note (only meaningful when both blocks exist)
     if (
       (policy.minAge !== null || policy.maxAge !== null) &&
       (policy.minTickets !== null || policy.maxTickets !== null)
@@ -295,7 +289,6 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
     }
   }
 
-  // Static rules always shown
   rules.push("Resale strictly through EliteTickets platform only.");
   rules.push(
     `Reserved tickets are held for ${RESERVATION_MINUTES} minutes. Uncompleted orders are released automatically.`
@@ -475,7 +468,10 @@ export default function ReserveTicketsPage() {
 
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // ── Data from API ──
+  // ── NEW: Modal State ──
+  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
+  const [ageInput, setAgeInput] = useState<string>("");
+
   const [event, setEvent] = useState<EventDTO | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
   const [eventError, setEventError] = useState(false);
@@ -483,13 +479,9 @@ export default function ReserveTicketsPage() {
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState(false);
 
-  // ── NEW: Purchase policy state ──
   const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
-
-  // Effective max tickets: use policy value if available, else fall back to default
   const effectiveMaxTickets = purchasePolicy?.maxTickets ?? null;
 
-  // ── Bootstrap: token → user → activeOrder → eventId → event + seatingMap + purchasePolicy ──
   useEffect(() => {
     const token = localStorage.getItem("token") ?? "";
 
@@ -513,7 +505,6 @@ export default function ReserveTicketsPage() {
 
         const { eventId } = activeOrder;
 
-        // Step 3a: fetch event details
         eventApi.getEvent(token, eventId)
           .then((data) => {
             if (!data) { setEventError(true); return; }
@@ -522,20 +513,16 @@ export default function ReserveTicketsPage() {
           .catch(() => setEventError(true))
           .finally(() => setEventLoading(false));
 
-        // Step 3b: fetch purchase policy (non-critical — silently ignored on failure)
         eventApi.getEventPurchasePolicy(token, eventId)
           .then((policy) => {
             if (policy) setPurchasePolicy(policy);
           })
-          .catch(() => {/* non-critical */});
+          .catch(() => {});
 
-        // Step 3c: fetch seating map, then pre-populate order from activeOrder
         eventApi.getEventSeatingMap(token, eventId)
           .then((mapData) => {
-            console.log("seating map response:", mapData);
             if (!mapData) { setMapError(true); return; }
             const { zones: z, standing } = buildZonesFromSeatingMap(mapData, activeOrder);
-            console.log("parsed zones:", z, "standing:", standing);
             setZones(z);
             setStandingZones(standing);
             const items = buildOrderItemsFromActiveOrder(activeOrder, z, standing);
@@ -556,12 +543,10 @@ export default function ReserveTicketsPage() {
       });
   }, []);
 
-  // Compute total selected across all zones + standing
   const totalSelected =
     zones.reduce((acc, z) => acc + z.seats.filter((s) => s.status === "selected").length, 0) +
     standingZones.reduce((acc, z) => acc + z.selected, 0);
 
-  // Timer countdown
   useEffect(() => {
     if (!timerActive) return;
     if (timeLeft <= 0) return;
@@ -569,12 +554,10 @@ export default function ReserveTicketsPage() {
     return () => clearInterval(id);
   }, [timerActive, timeLeft]);
 
-  // Start timer when first item added
   useEffect(() => {
     if (orderItems.length > 0 && !timerActive) setTimerActive(true);
   }, [orderItems, timerActive]);
 
-  // Auto-clear order on expiry
   useEffect(() => {
     if (timeLeft === 0 && orderItems.length > 0) {
       setOrderItems([]);
@@ -588,7 +571,7 @@ export default function ReserveTicketsPage() {
       );
       setStandingZones((prev) => prev.map((z) => ({ ...z, selected: 0 })));
     }
-  }, [timeLeft]);
+  }, [timeLeft, orderItems.length]);
 
   const showBanner = useCallback(
     (type: "success" | "error", message: string) => {
@@ -598,7 +581,6 @@ export default function ReserveTicketsPage() {
     []
   );
 
-  // ── Seat click ──
   const handleSeatClick = useCallback(
     (seat: Seat) => {
       if (timeLeft === 0) return;
@@ -641,7 +623,6 @@ export default function ReserveTicketsPage() {
     [totalSelected, timeLeft, showBanner, effectiveMaxTickets]
   );
 
-  // ── Standing zone ──
   const handleStandingAdd = useCallback(
     (zoneId: string) => {
       if (effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets) {
@@ -686,7 +667,6 @@ export default function ReserveTicketsPage() {
     });
   }, []);
 
-  // ── Remove from order ──
   const handleRemoveItem = useCallback((id: string) => {
     setOrderItems((prev) => prev.filter((i) => i.id !== id));
     setZones((prev) =>
@@ -700,7 +680,6 @@ export default function ReserveTicketsPage() {
     );
   }, []);
 
-  // ── Reserve Tickets via API ──
   const handleReserveTickets = async (): Promise<boolean> => {
     if (!currentOrder) return false;
 
@@ -727,7 +706,6 @@ export default function ReserveTicketsPage() {
     try {
       const success = await activeOrderApi.updateActiveOrder(token, currentOrder.orderId, updatedOrder);
       if (success) {
-        showBanner("success", "Tickets successfully reserved in your active order!");
         return true;
       } else {
         showBanner("error", "Failed to reserve tickets. They might no longer be available.");
@@ -739,33 +717,41 @@ export default function ReserveTicketsPage() {
     }
   };
 
-  // ── Checkout ──
-  const handleCheckout = async () => {
-    const GENERIC_USER_AGE = 25;
+  // ── Open the Age Modal instead of checking right away ──
+  const handleInitiateCheckout = () => {
+    setIsAgeModalOpen(true);
+  };
+
+  // ── Verify Age and Proceed ──
+  const handleConfirmCheckout = async () => {
+    const age = parseInt(ageInput, 10);
+    if (isNaN(age) || age <= 0) {
+      showBanner("error", "Please enter a valid age to proceed.");
+      return;
+    }
+
+    // Close the modal
+    setIsAgeModalOpen(false);
+
     const token = localStorage.getItem("token") ?? "";
-    console.log('[handleCheckout] currentOrder.eventId:', currentOrder?.eventId, 'totalSelected:', totalSelected);
-    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, GENERIC_USER_AGE);
-    console.log('[handleCheckout] policyViolation:', policyViolation);
+    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, age);
+    
     if (policyViolation) {
-      alert(policyViolation);
+      showBanner("error", `Policy Violation: ${policyViolation}`);
       return;
     }
 
     const isSuccess = await handleReserveTickets();
     if (isSuccess) {
-      alert("Proceeding to checkout…");
       navigate(checkoutWindowURL);
-      console.log("got here");
     } else {
-      alert("Unable to reserve tickets for checkout. Please review your selection and try again.");
-      window.location.reload();
+      showBanner("error", "Unable to reserve tickets for checkout. Please review your selection and try again.");
     }
   };
 
-  // ── Render ──
   return (
     <div
-      className="flex flex-col min-h-screen"
+      className="flex flex-col min-h-screen relative"
       style={{ fontFamily: "'Inter', sans-serif", backgroundColor: "#fbf9fb", color: "#1b1b1d" }}
     >
       {/* Nav */}
@@ -842,7 +828,6 @@ export default function ReserveTicketsPage() {
             className="col-span-12 lg:col-span-8 space-y-6 p-8 border rounded-lg"
             style={{ backgroundColor: "#fff", borderColor: "#c5c6cd" }}
           >
-            {/* Event Header */}
             {eventLoading ? (
               <div className="space-y-3 animate-pulse">
                 <div className="h-8 bg-gray-200 rounded w-3/4" />
@@ -974,7 +959,6 @@ export default function ReserveTicketsPage() {
               </div>
             </div>
 
-            {/* ── Dynamic Purchase Rules ── */}
             <PurchaseRules policy={purchasePolicy} />
 
             {effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets && (
@@ -982,7 +966,6 @@ export default function ReserveTicketsPage() {
                 You've reached the maximum of <strong>{effectiveMaxTickets} tickets</strong> per order as per purchase policy.
               </p>
             )}
-
           </section>
 
           {/* ── Right Panel ── */}
@@ -991,7 +974,7 @@ export default function ReserveTicketsPage() {
               items={orderItems}
               timeLeft={timeLeft}
               onRemove={handleRemoveItem}
-              onCheckout={handleCheckout}
+              onCheckout={handleInitiateCheckout}
             />
 
             {event?.location && (
@@ -1010,6 +993,41 @@ export default function ReserveTicketsPage() {
           </aside>
         </div>
       </main>
+
+      {/* ── Age Verification Modal ── */}
+      {isAgeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4 border border-gray-200">
+            <h3 className="text-lg font-bold text-[#0A192F]">Age Verification</h3>
+            <p className="text-sm text-gray-600">Please enter your age to verify event policies before checking out.</p>
+            <input
+              type="number"
+              value={ageInput}
+              onChange={(e) => setAgeInput(e.target.value)}
+              placeholder="e.g., 25"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmCheckout();
+              }}
+            />
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIsAgeModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCheckout}
+                className="px-4 py-2 text-sm font-bold text-white bg-[#0A192F] hover:bg-[#112a4f] rounded transition"
+              >
+                Verify & Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="w-full mt-auto border-t" style={{ borderColor: "#c5c6cd", backgroundColor: "#fff" }}>
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-8 gap-3 mx-auto" style={{ maxWidth: 1280 }}>
