@@ -22,7 +22,6 @@ import com.ticketpurchasingsystem.project.application.ISystemAdminService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
-import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
 @WebMvcTest(AdminController.class)

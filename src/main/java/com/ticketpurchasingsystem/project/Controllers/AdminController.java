@@ -49,12 +49,12 @@ public class AdminController {
 
     // GET /api/admin/users
     @GetMapping("/users")
-    public ResponseEntity<List<UserDTO>> getUsers(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getUsers(@RequestHeader("Authorization") String authHeader) {
         try {
             List<UserDTO> users = adminService.getAllUsers(extractToken(authHeader));
             return ResponseEntity.ok(users);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
     }
 
