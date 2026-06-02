@@ -493,6 +493,9 @@ public class EventHandler {
             logger.warn("Cannot get seating map. Event not found: " + eventId);
             throw new IllegalArgumentException("Invalid EventID");
         }
+        if (event.getSeatingMap() == null) {
+            throw new IllegalStateException("Event has no seating map configured");
+        }
         return event.getSeatingMap().getDTO();
     }
 
