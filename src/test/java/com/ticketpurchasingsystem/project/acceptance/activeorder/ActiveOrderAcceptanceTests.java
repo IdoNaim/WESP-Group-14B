@@ -55,6 +55,7 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandle
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderListener;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
@@ -72,6 +73,7 @@ import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 @ExtendWith(MockitoExtension.class)
 public class ActiveOrderAcceptanceTests {
     private IActiveOrderService activeOrderService;
@@ -142,7 +144,9 @@ public class ActiveOrderAcceptanceTests {
 
         historyOrderRepo = new HistoryOrderRepo();
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
-        ProductionService productionService = new ProductionService(authenticationService, null, null, null);
+        ProductionHandler prodHandler = new ProductionHandler();
+        ProdRepo prodRepo = new ProdRepo();
+        ProductionService productionService = new ProductionService(authenticationService, prodHandler, prodRepo, null);
         historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService);
         historyOrderListener = new HistoryOrderListener(historyOrderRepo, historyOrderService);
 
