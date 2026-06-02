@@ -153,7 +153,12 @@ public class UserService implements IUserService {
             }
             String guestId = authenticationService.getUser(sessionTokenStr);
             UserInfo guestInfo = userRepo.findByID(guestId);
+
             userHandler.validateGuest(guestInfo);
+            UserInfo userInfo = userRepo.findByID("admin-1");
+            System.out.println("searched admin");
+            userHandler.validateUserFound(userInfo);
+            System.out.println("found admin");
             // if we are here, it means that session token is valid
             // the user is not null and a guest so he can login and become a user 
             
@@ -164,6 +169,7 @@ public class UserService implements IUserService {
             }else{
                 throw new RuntimeException("Failed to log in user "+ userId);
             }
+            userHandler.loginUser(userInfo, password, newSessionTokenStr);
             // Delete guest matching the OLD session token before saving the user
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
             authenticationService.logout(sessionTokenStr);
