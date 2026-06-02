@@ -1,6 +1,4 @@
-// מעודכן לפי ה-Controller האמיתי של הפרויקט
 const HISTORY_BASE_URL = '/api/history';
-const PRODUCTION_BASE_URL = '/api/production';
 
 export interface HistoryOrderDTO {
     orderId: string;
@@ -11,6 +9,8 @@ export interface HistoryOrderDTO {
     price: number;
     seatIds: string[];
     standingAreaQuantities: Record<string, number>;
+    
+    // שדות מורחבים לעיצוב העשיר
     eventName?: string;
     eventLocation?: string;
     eventImageUrl?: string;
@@ -33,33 +33,43 @@ const parseResponse = async (response: Response) => {
 };
 
 export const historyOrderApi = {
-    // של המשתמש (HistoryOrderController)
+    
+    // שליפת הזמנות של משתמש ספציפי
     getUserOrders: async (token: string, userId: string): Promise<HistoryOrderDTO[]> => {
         const response = await fetch(`${HISTORY_BASE_URL}?userId=${encodeURIComponent(userId)}`, {
-            method: 'GET', headers: getHeaders(token),
+            method: 'GET', 
+            headers: getHeaders(token),
         });
-        return parseResponse(response);
+        const data = await parseResponse(response);
+        return mapStandingAreas(data);
     },
 
-    // של כל המערכת - אדמין בלבד (HistoryOrderController)
+    // 🔴 התיקון: שליפת הזמנות של חברה ספציפית דרך HistoryOrderController
+    getOrdersByCompany: async (token: string, companyId: number): Promise<HistoryOrderDTO[]> => {
+        const response = await fetch(`${HISTORY_BASE_URL}?companyId=${companyId}`, {
+            method: 'GET', 
+            headers: getHeaders(token),
+        });
+        const data = await parseResponse(response);
+        return mapStandingAreas(data);
+    },
+
+    // שליפת כל ההזמנות במערכת (אדמין בלבד)
     getAllOrders: async (token: string): Promise<HistoryOrderDTO[]> => {
         const response = await fetch(`${HISTORY_BASE_URL}`, {
-            method: 'GET', headers: getHeaders(token),
+            method: 'GET', 
+            headers: getHeaders(token),
         });
-        return parseResponse(response);
-    },
-
-    // 🔴 עודכן: של חברה ספציפית מתוך ה- ProductionController
-    getOrdersByCompany: async (token: string, companyId: number): Promise<HistoryOrderDTO[]> => {
-        const response = await fetch(`${PRODUCTION_BASE_URL}/companies/${companyId}/history`, {
-            method: 'GET', headers: getHeaders(token),
-        });
-        
         const data = await parseResponse(response);
-        // מבצעים מיפוי למקרה שה-Backend מחזיר StandingAreaQuantities עם S גדולה
-        return data.map((item: any) => ({
-            ...item,
-            standingAreaQuantities: item.standingAreaQuantities || item.StandingAreaQuantities || {}
-        }));
+        return mapStandingAreas(data);
     }
+};
+
+// פונקציית עזר למיפוי במקרה שהשרת מחזיר את המפתח עם אות גדולה (StandingAreaQuantities)
+const mapStandingAreas = (data: any[]) => {
+    if (!Array.isArray(data)) return [];
+    return data.map((item: any) => ({
+        ...item,
+        standingAreaQuantities: item.standingAreaQuantities || item.StandingAreaQuantities || {}
+    }));
 };

@@ -12,6 +12,7 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 import jakarta.annotation.PostConstruct;
 
@@ -46,10 +47,13 @@ public class HistoryOrderService implements IHistoryOrderService {
     public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
         HistoryOrderDTO historyOrder = null;
         if (isSessionTokenValid(st)){
+            loggerDef.getInstance().info("Getting history order with ID: " + orderId + " for user: " + authenticationService.getUser(st.getToken()));
             HistoryOrderItem item = historyOrderRepo.findByOrderId(orderId);
             if (item != null) {
+                loggerDef.getInstance().info("Found history order: " + item.getOrderId() + " for user: " + item.getUserId());
                 if (authenticationService.isAdmin(st.getToken()) || item.getUserId().equals(authenticationService.getUser(st.getToken()))) {
                     historyOrder = item.makeDTO();
+                    loggerDef.getInstance().info("Returning history order: " + historyOrder.getOrderId() + " for user: " + historyOrder.getUserId());
                 }
             }
         }
