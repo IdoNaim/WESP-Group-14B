@@ -13,6 +13,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublish
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
+import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -251,7 +252,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
 
-    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId){
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId, PaymentDetailsDTO paymentDetails) {
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         if(!authenticationService.validate(sessionToken.getToken())){
             logger.error("Session validation failed while completing order: " + orderId);
@@ -307,7 +308,7 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("Barcode generation failed. Refund processed.");
         }
 
-        boolean paymentResult = payment(paymentGateway, sessionToken, amount);
+        boolean paymentResult = payment(paymentGateway, sessionToken, amount, paymentDetails);
         if(!paymentResult){
             logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
             rollbackOrderReservations(sessionToken.getToken(), orderDTO);
@@ -351,9 +352,9 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-    private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount) {
+    private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, PaymentDetailsDTO paymentDetails) {
         if(authenticationService.validate(sessionToken.getToken())) {
-            return paymentGateway.pay(); // Placeholder return value, replace with actual payment processing login
+            return paymentGateway.pay(paymentDetails, amount); // Placeholder return value, replace with actual payment processing logic
         }else{
             logger.error("Session validation failed during payment processing");
             throw new RuntimeException("the session has ended");

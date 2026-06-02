@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.tickets.PolicyValidationResult;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.MinAgeRule;
@@ -19,11 +20,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class LegacyInfrastructureTests {
-
+    private PaymentDetailsDTO paymentDetailsDTO = new PaymentDetailsDTO("123456789", "test", "10/10", "333");
     @Test
     public void testPaymentGateway() {
         PaymentGateway gateway = new PaymentGateway();
-        assertTrue(gateway.pay());
+        assertTrue(gateway.pay(paymentDetailsDTO, 10));
         assertTrue(gateway.refund("order-1", 100.0));
     }
 

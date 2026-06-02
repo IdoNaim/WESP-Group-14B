@@ -27,6 +27,10 @@ export interface AddStandingAreaRequestDTO {
 
 export interface CheckoutRequestDTO {
     amount: number;
+    creditCardNumber: string;
+    cardHolderName: string;
+    expirationDate: string; // Format: "MM/YY"
+    cvv: string;
 }
 
 export interface CheckoutResponseDTO {

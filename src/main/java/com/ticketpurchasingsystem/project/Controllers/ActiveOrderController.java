@@ -25,6 +25,7 @@ import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 @RestController
@@ -191,8 +192,14 @@ public class ActiveOrderController {
 
         SessionToken sessionToken = toSessionToken(authHeader);
         try {
+            PaymentDetailsDTO paymentDetails = new PaymentDetailsDTO(
+                    body.getCreditCardNumber(),
+                    body.getCardHolderName(),
+                    body.getExpirationDate(),
+                    body.getCvv()
+            );
             List<BarcodeDTO> barcodes = activeOrderService.completeOrder(
-                    paymentGateway, sessionToken, body.getAmount(), orderId);
+                    paymentGateway, sessionToken, body.getAmount(), orderId, paymentDetails);
             List<String> barcodeValues = barcodes.stream()
                     .map(BarcodeDTO::getBarcodeValue)
                     .collect(Collectors.toList());

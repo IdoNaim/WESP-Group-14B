@@ -303,7 +303,7 @@ class ActiveOrderApiAcceptanceTest {
 
     @Test
     void GivenValidOrderWithSeats_WhenCheckout_ThenReturn200WithBarcodes() throws Exception {
-        when(paymentGatewayMock.pay()).thenReturn(true);
+        when(paymentGatewayMock.pay(any(), anyDouble())).thenReturn(true);
         when(barCodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode-1")));
 
         String orderId = createOrder();
@@ -328,7 +328,7 @@ class ActiveOrderApiAcceptanceTest {
 
     @Test
     void GivenPaymentFails_WhenCheckout_ThenReturn409() throws Exception {
-        when(paymentGatewayMock.pay()).thenReturn(false);
+        when(paymentGatewayMock.pay(any(), anyDouble())).thenReturn(false);
 
         String orderId = createOrder();
         CheckoutRequestDTO checkout = new CheckoutRequestDTO();
