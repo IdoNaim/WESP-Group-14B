@@ -1,23 +1,32 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
-import com.ticketpurchasingsystem.project.application.PaymentDetails;
-import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
-import org.springframework.web.client.RestTemplate;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
-import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
-import com.ticketpurchasingsystem.project.domain.tickets.PolicyValidationResult;
-import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.MinAgeRule;
-import com.ticketpurchasingsystem.project.domain.tickets.PurchaseRuleAdapter;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.Timestamp;
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.ticketpurchasingsystem.project.Controllers.PurchasePolicyController;
+import com.ticketpurchasingsystem.project.application.PaymentDetails;
+import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.rules.MinAgeRule;
+import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.tickets.PolicyValidationResult;
+import com.ticketpurchasingsystem.project.domain.tickets.PurchaseRuleAdapter;
 
 public class LegacyInfrastructureTests {
 
