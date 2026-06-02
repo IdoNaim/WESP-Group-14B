@@ -85,6 +85,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
+                // RESOLVED: Cleaned conflict markers and passing standard authHeader to match your other service endpoints
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
@@ -223,5 +224,4 @@ public class EventController {
                         ? ResponseEntity.ok(seatingMap)
                         : ResponseEntity.notFound().build();
         }
-
 }
