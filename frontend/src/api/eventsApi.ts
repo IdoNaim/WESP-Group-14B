@@ -11,11 +11,7 @@ export interface EventDTO {
     eventName: string;
     eventCapacity?: number;
     eventDateTime?: string; // ISO 8601 string recommended (e.g., "2026-10-24T21:00:00")
-<<<<<<< HEAD
     eventLocation?: string;
-=======
-    location?: string;
->>>>>>> aa2ad2b1ccbc0c0ec7f0157ca3d781933a0c5c42
     isPublished?: boolean;
     // Add any other fields your Java EventDTO contains
 }
@@ -239,11 +235,7 @@ export const eventApi = {
         return response.ok;
     },
 
-<<<<<<< HEAD
     /**
-=======
-     /**
->>>>>>> aa2ad2b1ccbc0c0ec7f0157ca3d781933a0c5c42
      * GET /api/events/{eventId}/purchase-policy
      * Retrieves the purchase policy for a specific event.
      */

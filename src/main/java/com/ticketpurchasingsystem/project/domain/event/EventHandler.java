@@ -472,7 +472,17 @@ public class EventHandler {
         return area != null && area.getAvalibleSeatNumber() >= quantity;
     }
 
-
+    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            logger.warn("Cannot get purchase policy. Event not found: " + eventId);
+            throw new IllegalArgumentException("Invalid EventID");
+        }
+        return event.getPurchasePolicy().getDTO();
+    }
 
 
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {

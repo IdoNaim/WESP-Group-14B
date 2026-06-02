@@ -150,7 +150,8 @@ public class EventService implements IEventService {
 
     @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
-        return eventHandler.getEventSeatingMap( sessionToken,  eventId);
+        return eventHandler.getEventSeatingMap(sessionToken, eventId);
+    }
 
 
 
