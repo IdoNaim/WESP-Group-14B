@@ -11,7 +11,4 @@ public class MinAgeRule implements IPurchaseRule {
     public boolean validate(PurchaseContext context) {
         return context.getUserAge() >= minAge;
     }
-    public int getMinAge() {
-        return minAge;
-    }
 }

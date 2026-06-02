@@ -11,10 +11,4 @@ public class AndRule implements IPurchaseRule{
     public boolean validate(PurchaseContext context) {
         return component1.validate(context) && component2.validate(context);
     }
-    public IPurchaseRule getComponent1() {
-        return component1;
-    }
-    public IPurchaseRule getComponent2() {
-        return component2;
-    }
 }

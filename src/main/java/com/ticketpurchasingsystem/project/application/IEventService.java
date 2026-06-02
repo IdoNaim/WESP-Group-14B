@@ -9,7 +9,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 
 
 public interface IEventService {
@@ -34,7 +33,4 @@ public interface IEventService {
      public boolean editEventLocation(String sessionToken, String eventId, String newLocation);
      public boolean editEventPrice(String sessionToken, String eventId, Double newPrice);
      public boolean editEventImage(String sessionToken, String eventId, String newImageUrl);
-     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
-     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
-     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge);
 }

@@ -57,10 +57,6 @@ public class StandingArea implements Bookable {
     public boolean isbooked(String orderId) {
         return true;
     }
-
-    public int getCapacity() {
-        return capacity;
-    }
 //    public String getDesc(){
 //        return desc;
 //    }

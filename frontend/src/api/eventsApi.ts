@@ -6,7 +6,7 @@ const BASE_URL = '/api/events';
 // ==========================================
 
 export interface EventDTO {
-    eventId?: string | number;
+    eventId?: string;
     companyId?: number;
     eventName: string;
     eventCapacity: number;
@@ -20,11 +20,11 @@ export interface EventDTO {
 }
 
 export interface PurchasePolicyDTO {
-    minTickets: number | null;
-    maxTickets: number | null;
+    minTickets?: number | null;
+    maxTickets?: number | null;
     isQuantityOr: boolean;
-    minAge: number | null;
-    maxAge: number | null;
+    minAge?: number | null;
+    maxAge?: number | null;
     isAgeOr: boolean;
     isAgeAndQuantityOr: boolean;
 }
@@ -55,27 +55,9 @@ export interface SeatingAreaConfig {
     price: number;
 }
 
-export interface AssignedSeatDTO {
-    id: string;
-    isBooked: boolean;
-    orderId?: string;
-    priceForTicket: number;
-}
-export interface StandingAreaDTO {
-    areaId: string;
-    availableSeats: number;
-    capacity: number;
-    priceForTicket: number;
-}
-
 export interface StandingAreaConfig {
     capacity: number;
     price: number;
-}
-
-export interface SeatingMapDTO {
-    assignedSeats: AssignedSeatDTO[];
-    standingAreas: StandingAreaDTO[];
 }
 
 export interface ConfigureSeatingMapRequestDTO {
@@ -244,55 +226,5 @@ export const eventApi = {
             body: JSON.stringify(data),
         });
         return response.ok;
-    },
-
-     /**
-     * GET /api/events/{eventId}/purchase-policy
-     * Retrieves the purchase policy for a specific event.
-     */
-    getEventPurchasePolicy: async (token: string, eventId: string | number): Promise<PurchasePolicyDTO | null> => {
-        const response = await fetch(`${BASE_URL}/${eventId}/purchase-policy`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        if (!response.ok) return null;
-        return response.json();
-    },
-
-    /**
-     * GET /api/events/{eventId}/seating-map
-     * Retrieves the seating map for a specific event.
-     */
-    getEventSeatingMap: async (token: string, eventId: string | number): Promise<SeatingMapDTO | null> => {
-        const response = await fetch(`${BASE_URL}/${eventId}/seating-map`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        if (!response.ok) return null;
-        return response.json();
-    },
-
-    /**
-     * POST /api/events/{eventId}/validate-policy
-     * Validates the purchase policy for the given quantity and user age.
-     * Returns true if the purchase is allowed, false otherwise.
-     */
-    validatePurchasePolicy: async (
-        token: string,
-        eventId: string | number,
-        quantity: number,
-        userAge: number
-    ): Promise<string | null> => {
-        console.log('[validatePurchasePolicy] eventId:', eventId, 'quantity:', quantity, 'userAge:', userAge);
-        const response = await fetch(`${BASE_URL}/${eventId}/validate-policy`, {
-            method: 'POST',
-            headers: getHeaders(token),
-            body: JSON.stringify({ quantity, userAge }),
-        });
-        const bodyText = await response.text();
-        console.log('[validatePurchasePolicy] status:', response.status, 'body:', bodyText);
-        if (response.status === 422) return bodyText;
-        if (!response.ok) return 'Failed to validate purchase policy.';
-        return null;
     }
 };

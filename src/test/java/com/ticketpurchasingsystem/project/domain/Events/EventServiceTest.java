@@ -4,35 +4,22 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.ticketpurchasingsystem.project.domain.event.*;
+import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 public class EventServiceTest {
 
@@ -60,7 +47,7 @@ public class EventServiceTest {
     // ================= AUTHENTICATION FAILURE TEST =================
     @Test
     void GivenInvalidToken_WhenAnyMethodCalled_ThenThrowIllegalArgumentException() {
-        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), "test location", true);
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -78,7 +65,7 @@ public class EventServiceTest {
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnEventId() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -100,7 +87,7 @@ public class EventServiceTest {
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(15);
@@ -120,7 +107,7 @@ public class EventServiceTest {
     @Test
     void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnNull() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -140,7 +127,7 @@ public class EventServiceTest {
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnNull() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -169,7 +156,7 @@ public class EventServiceTest {
         when(mockEvent.getEventCapacity()).thenReturn(100);
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
-        when(mockEvent.getEventLocation()).thenReturn("test location");
+
         when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         EventDTO result = eventService.searchEvent(VALID_TOKEN, "1");
@@ -177,7 +164,6 @@ public class EventServiceTest {
         assertNotNull(result);
         assertEquals("Concert", result.eventName());
         assertEquals(100, result.eventCapacity());
-        assertEquals("test location", result.location());
     }
 
     @Test

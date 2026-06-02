@@ -71,7 +71,5 @@ public class AssignedSeat implements Bookable {
         return true; // Price updated successfully
     }
 
-    public String getOrderId() {
-        return orderId;
-    }
+
 }

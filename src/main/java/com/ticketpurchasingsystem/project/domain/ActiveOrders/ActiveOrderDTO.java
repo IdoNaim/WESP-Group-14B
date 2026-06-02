@@ -5,16 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class ActiveOrderDTO {
     private String orderId;
     private String userId;
     private String eventId;
     private Timestamp createdAt;
     private List<String> seatIds;
-
-    @JsonProperty("StandingAreaQuantities")
     private HashMap<String, Integer> StandingAreaQuantities;
 
     public ActiveOrderDTO(String orderId, String userId, String eventId, Timestamp createdAt, List<String> seatIds, HashMap<String,Integer> standingAreaQuantities) {
@@ -68,8 +64,8 @@ public class ActiveOrderDTO {
     public void setSeatIds(List<String> seatIds){
         this.seatIds = seatIds;
     }
-    public void setStandingAreaQuantities(HashMap<String, Integer> StandingAreaQuantities){
-        this.StandingAreaQuantities = StandingAreaQuantities;
+    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities){
+        this.StandingAreaQuantities = standingAreaQuantities;
     }
 
 

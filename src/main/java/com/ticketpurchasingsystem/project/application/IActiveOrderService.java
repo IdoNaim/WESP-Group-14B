@@ -1,9 +1,7 @@
 package com.ticketpurchasingsystem.project.application;
 import java.util.List;
 
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public interface  IActiveOrderService {
@@ -16,5 +14,4 @@ public interface  IActiveOrderService {
     public void updateActiveOrder(SessionToken sessionToken, ActiveOrderDTO order);
     public boolean saveOrder(ActiveOrderItem order);
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails, String orderId);
-    public ActiveOrderDTO getActiveOrderByUserId(SessionToken sessionToken, String userId) throws Exception;
 }

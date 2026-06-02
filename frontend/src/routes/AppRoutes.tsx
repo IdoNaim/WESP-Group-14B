@@ -46,7 +46,6 @@ export default function AppRoutes() {
           {/* Public routes - guests and members */}
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:eventId" element={<EventDetailsPage />} />
-          {/* <Route path="reserve/:eventId/:userId" element={<ReserveTicketPage/>} /> */}
           <Route
             path="/events/:eventId/reserve"
             element={<ReserveTicketPage />}

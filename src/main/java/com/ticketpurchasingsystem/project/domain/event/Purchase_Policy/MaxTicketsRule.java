@@ -12,7 +12,4 @@ public class MaxTicketsRule implements IPurchaseRule {
     public boolean validate(PurchaseContext context) {
         return context.getRequestedAmount() <= limit;
     }
-    public int getLimit() {
-        return limit;
-    }
 }

@@ -48,7 +48,7 @@ class ViewEventDetailsAcceptanceTest {
 
         // 4. Seed an event
         // Notice the updated PurchasePolicyDTO constructor signature matching your record!
-        EventDTO newEvent = new EventDTO(null,42, "Cyberpunk Symphony", 500, LocalDateTime.now().plusDays(10),"test location", true);
+        EventDTO newEvent = new EventDTO(null,42, "Cyberpunk Symphony", 500, LocalDateTime.now().plusDays(10), true);
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, null, null, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());

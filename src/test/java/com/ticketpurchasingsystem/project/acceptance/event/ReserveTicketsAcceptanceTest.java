@@ -48,7 +48,7 @@ class ReserveTicketsAcceptanceTest {
         eventService = new EventService(new EventRepo(), simplePublisher, authService);
 
         // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
-        EventDTO newEvent = new EventDTO(null,42, "Rock Concert", 100, LocalDateTime.now().plusDays(5),"test locaion", true);
+        EventDTO newEvent = new EventDTO(null,42, "Rock Concert", 100, LocalDateTime.now().plusDays(5), true);
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, 0, 120, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
