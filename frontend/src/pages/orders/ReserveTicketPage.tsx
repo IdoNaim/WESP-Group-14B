@@ -862,12 +862,12 @@ export default function ReserveTicketsPage() {
                       </span>
                     </>
                   )}
-                  {event.location && (
+                  {event.eventLocation && (
                     <span className="flex items-center gap-1">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path d="M12 21s-8-5.686-8-11A8 8 0 0 1 20 10c0 5.314-8 11-8 11z" /><circle cx="12" cy="10" r="3" />
                       </svg>
-                      {event.location}
+                      {event.eventLocation}
                     </span>
                   )}
                 </div>
@@ -977,7 +977,7 @@ export default function ReserveTicketsPage() {
               onCheckout={handleInitiateCheckout}
             />
 
-            {event?.location && (
+            {event?.eventLocation && (
               <div className="p-4 border rounded flex items-center gap-4 bg-white" style={{ borderColor: "#c5c6cd" }}>
                 <div className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center shrink-0">
                   <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -985,7 +985,7 @@ export default function ReserveTicketsPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: "#0A192F" }}>{event.location}</p>
+                  <p className="font-semibold text-sm" style={{ color: "#0A192F" }}>{event.eventLocation}</p>
                   <p className="text-xs mt-0.5" style={{ color: "#5d5f5f" }}>Event venue</p>
                 </div>
               </div>
