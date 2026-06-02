@@ -145,4 +145,8 @@ public class EventService implements IEventService {
     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
         return eventHandler.getEventPurchasePolicy(sessionToken, eventId);
     }
+    @Override
+    public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
+        return eventHandler.validatePurchasePolicy(sessionToken, eventId, quantity, userAge);
+    }
 }

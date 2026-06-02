@@ -24,6 +24,7 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateReques
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventImageRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -222,6 +223,18 @@ public class EventController {
                 return purchasePolicy != null
                         ? ResponseEntity.ok(purchasePolicy)
                         : ResponseEntity.notFound().build();
+        }
+        // POST /api/events/{eventId}/validate-policy
+        @PostMapping("/{eventId}/validate-policy")
+        public ResponseEntity<String> validatePurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody ValidatePolicyRequestDTO body) {
+                String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+                String violation = eventService.validatePurchasePolicy(token, eventId, body.getQuantity(), body.getUserAge());
+                if (violation == null)
+                        return ResponseEntity.ok().build();
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(violation);
         }
 
 }
