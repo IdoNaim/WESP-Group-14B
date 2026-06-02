@@ -7,9 +7,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
-import com.ticketpurchasingsystem.project.domain.Utils.AssignedSeatDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.StandingAreaDTO;
 public class SeatingMap {
     private ConcurrentMap<String,AssignedSeat> seats;
     private ConcurrentMap<String, StandingArea> standingAreas;
@@ -155,23 +152,23 @@ public class SeatingMap {
         return new ArrayList<>(standingAreas.keySet());
     }
 
+    public List<Double> getAllZonePrices() {
+        List<Double> prices = new ArrayList<>();
+        standingAreas.values().forEach(a -> prices.add(a.getPriceForTicket()));
+        java.util.Set<String> seenZones = new java.util.HashSet<>();
+        seats.values().forEach(s -> {
+            String zone = s.getId().split("_")[0];
+            if (seenZones.add(zone)) {
+                prices.add(s.getPriceForTicket());
+            }
+        });
+        return prices;
+    }
+
     public Map<String, Bookable> getPurchaseAreas(){
         Map<String, Bookable> combined = new HashMap<>(seats);
         combined.putAll(standingAreas);
         return combined;
-    }
-    public SeatingMapDTO getDTO(){
-        List<AssignedSeatDTO> assignedSeatsDTO = new ArrayList<>();
-        for(AssignedSeat seat : seats.values()){
-            if(seat != null)
-                assignedSeatsDTO.add(new AssignedSeatDTO(seat.getId(), seat.isBooked(), seat.getOrderId(), seat.getPriceForTicket()));
-        }
-        List<StandingAreaDTO> standingAreasDTO = new ArrayList<>();
-        for(StandingArea area : standingAreas.values()){
-            if(area != null)
-                standingAreasDTO.add(new StandingAreaDTO(area.getId(), area.getAvalibleSeatNumber(), area.getCapacity(), area.getPriceForTicket()));
-        }
-        return new SeatingMapDTO(assignedSeatsDTO, standingAreasDTO);
     }
 
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){

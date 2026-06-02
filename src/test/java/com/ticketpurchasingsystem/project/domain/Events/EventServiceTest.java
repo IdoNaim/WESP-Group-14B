@@ -60,7 +60,7 @@ public class EventServiceTest {
     // ================= AUTHENTICATION FAILURE TEST =================
     @Test
     void GivenInvalidToken_WhenAnyMethodCalled_ThenThrowIllegalArgumentException() {
-        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), "test location", true);
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -76,9 +76,9 @@ public class EventServiceTest {
 
     // ================= CREATE EVENT =================
     @Test
-    void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
+    void GivenValidInput_WhenCreateEvent_ThenReturnEventId() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -86,9 +86,13 @@ public class EventServiceTest {
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
 
-        boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
+        Event mockSaved = mock(Event.class);
+        when(mockSaved.getEventId()).thenReturn("evt-1");
+        when(mockRepo.save(any(Event.class))).thenReturn(mockSaved);
 
-        assertTrue(result);
+        String result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
+
+        assertNotNull(result);
         verify(mockRepo).save(any(Event.class));
         verify(mockPublisher).publishEventCreated(any());
     }
@@ -96,7 +100,7 @@ public class EventServiceTest {
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(15);
@@ -104,9 +108,9 @@ public class EventServiceTest {
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
 
-        boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
+        String result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
-        assertFalse(result);
+        assertNull(result);
 
         // Complete State Verification: System state unmutated on rule violation
         verify(mockRepo, never()).save(any(Event.class));
@@ -114,9 +118,9 @@ public class EventServiceTest {
     }
 
     @Test
-    void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnFalse() {
+    void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnNull() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -124,9 +128,9 @@ public class EventServiceTest {
         when(policyDTO.minAge()).thenReturn(65);
         when(policyDTO.maxAge()).thenReturn(18);
 
-        boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
+        String result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
-        assertFalse(result);
+        assertNull(result);
 
         // Complete State Verification
         verify(mockRepo, never()).save(any(Event.class));
@@ -134,9 +138,9 @@ public class EventServiceTest {
     }
 
     @Test
-    void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
+    void GivenRepoFailure_WhenCreateEvent_ThenReturnNull() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), "test location", true);
+                LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -146,9 +150,9 @@ public class EventServiceTest {
 
         doThrow(new RuntimeException()).when(mockRepo).save(any());
 
-        boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
+        String result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
-        assertFalse(result);
+        assertNull(result);
 
         // Complete State Verification: Ensure event was never published if database execution failed
         verify(mockPublisher, never()).publishEventCreated(any());
@@ -165,7 +169,7 @@ public class EventServiceTest {
         when(mockEvent.getEventCapacity()).thenReturn(100);
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
-        when(mockEvent.getEventLocation()).thenReturn("test location");
+
         when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         EventDTO result = eventService.searchEvent(VALID_TOKEN, "1");
@@ -173,7 +177,6 @@ public class EventServiceTest {
         assertNotNull(result);
         assertEquals("Concert", result.eventName());
         assertEquals(100, result.eventCapacity());
-        assertEquals("test location", result.location());
     }
 
     @Test

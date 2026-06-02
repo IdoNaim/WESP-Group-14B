@@ -8,7 +8,6 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -63,9 +62,9 @@ public class EventHandler {
         return token;
     }
 
-    public boolean createEvent(String sessionToken, EventDTO eventDTO,
-                               PurchasePolicyDTO purchasePolicyDTO,
-                               List<DiscountDTO> discountPolicyDTO) {
+    public String createEvent(String sessionToken, EventDTO eventDTO,
+                              PurchasePolicyDTO purchasePolicyDTO,
+                              List<DiscountDTO> discountPolicyDTO) {
         if(!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
@@ -73,18 +72,18 @@ public class EventHandler {
 
         if (eventDTO.eventDateTime() != null && eventDTO.eventDateTime().isBefore(LocalDateTime.now())) {
             logger.error("Failed to create event: event date cannot be in the past");
-            return false;
+            return null;
         }
 
         if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
             logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
-            return false;
+            return null;
         }
         if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
             logger.error("Failed to create event: minAge cannot be greater than maxAge");
-            return false;
+            return null;
         }
 
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
@@ -133,18 +132,44 @@ public class EventHandler {
                 discountPolicy,
                 0
         );
-        event.setEventLocation(eventDTO.location());
+        event.setEventLocation(eventDTO.eventLocation());
         event.setTicketPrice(eventDTO.ticketPrice());
+        event.setImageUrl(eventDTO.imageUrl());
 
         try {
             Event savedEvent = eventRepo.save(event);
             eventPublisher.publishEventCreated(savedEvent);
             logger.info("Event created successfully: " + eventDTO.eventName());
-            return true;
+            return savedEvent.getEventId();
         } catch (Exception e) {
             logger.error("Failed to create event: " + eventDTO.eventName() + " | Error: " + e.getMessage());
-            return false;
+            return null;
         }
+    }
+
+    private EventDTO toDTO(Event event) {
+        Double minPrice = null;
+        Double maxPrice = null;
+        if (event.getSeatingMap() != null) {
+            java.util.List<Double> prices = event.getSeatingMap().getAllZonePrices();
+            if (!prices.isEmpty()) {
+                minPrice = prices.stream().mapToDouble(Double::doubleValue).min().getAsDouble();
+                maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().getAsDouble();
+            }
+        }
+        return new EventDTO(
+                event.getEventId(),
+                event.getCompanyId(),
+                event.getEventName(),
+                event.getEventCapacity(),
+                event.getEventDate(),
+                event.isActive(),
+                event.getEventLocation(),
+                event.getTicketPrice(),
+                event.getImageUrl(),
+                minPrice,
+                maxPrice
+        );
     }
 
     public EventDTO searchEvent(String sessionToken, String eventId) {
@@ -158,16 +183,7 @@ public class EventHandler {
             return null;
         }
         logger.info("Event found: " + event.getEventName());
-        return new EventDTO(
-                event.getEventId(),
-                event.getCompanyId(),
-                event.getEventName(),
-                event.getEventCapacity(),
-                event.getEventDate(),
-                event.isActive(),
-                event.getEventLocation(),
-                event.getTicketPrice()
-        );
+        return toDTO(event);
     }
 
     public List<EventDTO> searchEventsByCompany(String sessionToke, int companyId) {
@@ -177,19 +193,34 @@ public class EventHandler {
         logger.info("Searching events for company ID: " + companyId);
         List<EventDTO> events = eventRepo.findByCompanyId(companyId)
                 .stream()
-                .map(event -> new EventDTO(
-                        event.getEventId(),
-                        event.getCompanyId(),
-                        event.getEventName(),
-                        event.getEventCapacity(),
-                        event.getEventDate(),
-                        event.isActive(),
-                        event.getEventLocation(),
-                        event.getTicketPrice()
-                ))
+                .map(this::toDTO)
                 .toList();
         logger.info("Found " + events.size() + " events for company ID: " + companyId);
         return events;
+    }
+
+    public List<EventDTO> getAllActiveEvents() {
+        logger.info("Fetching all active events");
+        return eventRepo.findActiveEvents()
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    public boolean editEventImage(String sessionToken, String eventId, String newImageUrl) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) return false;
+            event.setImageUrl(newImageUrl);
+            eventRepo.save(event);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to edit event image for ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime) {
@@ -470,59 +501,5 @@ public class EventHandler {
         if (event == null || event.getSeatingMap() == null) return false;
         StandingArea area = event.getSeatingMap().getArea(areaId);
         return area != null && area.getAvalibleSeatNumber() >= quantity;
-    }
-
-    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
-        if (!authenticationService.validate(extractToken(sessionToken))) {
-            throw new IllegalArgumentException("Invalid session token");
-        }
-        Event event = eventRepo.findById(eventId);
-        if (event == null) {
-            logger.warn("Cannot get purchase policy. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
-        }
-        return event.getPurchasePolicy().getDTO();
-    }
-
-    public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
-        if (!authenticationService.validate(extractToken(sessionToken))) {
-            throw new IllegalArgumentException("Invalid session token");
-        }
-        Event event = eventRepo.findById(eventId);
-        if (event == null) {
-            logger.warn("Cannot get seating map. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
-        }
-        return event.getSeatingMap().getDTO();
-    }
-
-    public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
-        if (!authenticationService.validate(extractToken(sessionToken))) {
-            throw new IllegalArgumentException("Invalid session token");
-        }
-        Event event = eventRepo.findById(eventId);
-        if (event == null) {
-            throw new IllegalArgumentException("Invalid EventID");
-        }
-        PurchaseContext context = new PurchaseContext(quantity, userAge);
-        if (event.getPurchasePolicy().validate(context)) {
-            return null;
-        }
-        return buildPolicyViolationMessage(event.getPurchasePolicy().getDTO(), quantity, userAge);
-    }
-
-    private String buildPolicyViolationMessage(PurchasePolicyDTO dto, int quantity, int userAge) {
-        List<String> violations = new ArrayList<>();
-        if (dto.minTickets() != null && quantity < dto.minTickets())
-            violations.add("minimum " + dto.minTickets() + " ticket(s) required");
-        if (dto.maxTickets() != null && quantity > dto.maxTickets())
-            violations.add("maximum " + dto.maxTickets() + " ticket(s) allowed");
-        if (dto.minAge() != null && userAge < dto.minAge())
-            violations.add("minimum age " + dto.minAge() + " required");
-        if (dto.maxAge() != null && userAge > dto.maxAge())
-            violations.add("maximum age " + dto.maxAge() + " required");
-        if (violations.isEmpty())
-            return "Purchase policy requirements not met.";
-        return "Purchase policy violated: " + String.join(", ", violations) + ".";
     }
 }

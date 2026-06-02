@@ -59,11 +59,11 @@ class EventControllerTest {
     @Test
     void GivenValidRequest_WhenCreateEvent_ThenReturn201() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7),"test location", true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
         dto.setPurchasePolicy(mock(PurchasePolicyDTO.class));
 
         // FIXED: Added 4th 'any()' for authHeader
-        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(true);
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn("evt-1");
 
         mockMvc.perform(post("/api/events")
                         .header("Authorization", VALID_AUTH)
@@ -75,10 +75,10 @@ class EventControllerTest {
     @Test
     void GivenServiceFailure_WhenCreateEvent_ThenReturn400() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7),"test location", true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
 
         // FIXED: Added 4th 'any()' for authHeader
-        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(false);
+        when(eventService.createEvent(any(), any(), any(), any())).thenReturn(null);
 
         mockMvc.perform(post("/api/events")
                         .header("Authorization", VALID_AUTH)
@@ -92,10 +92,10 @@ class EventControllerTest {
 
     @Test
     void GivenExistingEvent_WhenGetEvent_ThenReturn200WithBody() throws Exception {
-        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14),"test location", true);
+        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
 
         // FIXED: Added eq(VALID_AUTH)
-        when(eventService.searchEvent(eq("valid-token"), eq("evt-1"))).thenReturn(event);
+        when(eventService.searchEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(event);
 
         mockMvc.perform(get("/api/events/evt-1")
                         .header("Authorization", VALID_AUTH))
@@ -120,12 +120,11 @@ class EventControllerTest {
     @Test
     void GivenCompanyWithEvents_WhenGetEventsByCompany_ThenReturn200WithList() throws Exception {
         List<EventDTO> events = List.of(
-                new EventDTO("evt-1", 1, "Event A", 200, LocalDateTime.now().plusDays(5), "test location", true),
-                new EventDTO("evt-2", 1, "Event B", 300, LocalDateTime.now().plusDays(10), "test location", true));
+                new EventDTO("evt-1",1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
+                new EventDTO("evt-2",1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
 
-
-        // CHANGE eq(VALID_AUTH) TO any() HERE:
-        when(eventService.searchEventsByCompany(any(), eq(1))).thenReturn(events);
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.searchEventsByCompany(eq(VALID_AUTH), eq(1))).thenReturn(events);
 
         mockMvc.perform(get("/api/events")
                         .param("companyId", "1")
