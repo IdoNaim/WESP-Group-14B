@@ -321,6 +321,20 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     const [dateTime, setDateTime] = useState('');
     const [location, setLocation] = useState('');
     const [ticketPrice, setTicketPrice] = useState('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const result = ev.target?.result as string;
+            setImageUrl(result);
+            setImagePreview(result);
+        };
+        reader.readAsDataURL(file);
+    };
 
     const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
 
@@ -352,6 +366,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     eventDateTime: new Date(dateTime).toISOString().slice(0, 19),
                     eventLocation: location || null,
                     ticketPrice: ticketPrice !== '' ? Number(ticketPrice) : null,
+                    imageUrl: imageUrl ?? null,
                 },
                 purchasePolicy: policyDTO,
             });
@@ -404,6 +419,30 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                             <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
                                 value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
                         </div>
+                    </div>
+
+                    {/* Image upload */}
+                    <div className="space-y-2">
+                        <label className={labelCls}>Event Photo <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="flex items-center gap-2 bg-[#0b1326] border border-gray-600 hover:border-[#00dbe7] rounded-lg px-3 py-2.5 transition-colors text-sm text-gray-400 group-hover:text-[#00dbe7]">
+                                <span className="material-symbols-outlined text-[18px]">upload</span>
+                                {imagePreview ? 'Change photo' : 'Upload photo'}
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </label>
+                        {imagePreview && (
+                            <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-700">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => { setImageUrl(null); setImagePreview(null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

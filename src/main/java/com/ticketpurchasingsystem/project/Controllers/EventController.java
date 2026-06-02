@@ -73,6 +73,13 @@ public class EventController {
                         : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
+        // GET /api/events/active — public, no auth required
+        @GetMapping("/active")
+        public ResponseEntity<List<EventDTO>> getAllActiveEvents() {
+                List<EventDTO> events = eventService.getAllActiveEvents();
+                return ResponseEntity.ok(events != null ? events : Collections.emptyList());
+        }
+
         // GET /api/events?companyId=123
         @GetMapping
         public ResponseEntity<List<EventDTO>> getEventsByCompany(

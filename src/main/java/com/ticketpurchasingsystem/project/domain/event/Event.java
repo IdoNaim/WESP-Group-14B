@@ -40,6 +40,8 @@ public class Event {
 
     private Double ticketPrice;
 
+    private String imageUrl;
+
     private int version = 0;
 
 
@@ -90,6 +92,7 @@ public class Event {
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
         this.eventLocation = other.eventLocation;
         this.ticketPrice = other.ticketPrice;
+        this.imageUrl = other.imageUrl;
     }
 
 
@@ -156,6 +159,9 @@ public class Event {
 
     public Double getTicketPrice() { return ticketPrice; }
     public void setTicketPrice(Double ticketPrice) { this.ticketPrice = ticketPrice; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public ITicketPurchaseRule getTicketPurchasePolicy() {
         return ticketPurchasePolicy;

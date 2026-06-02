@@ -14,6 +14,7 @@ export interface EventDTO {
     isActive?: boolean;
     eventLocation?: string | null;
     ticketPrice?: number | null;
+    imageUrl?: string | null;
 }
 
 export interface PurchasePolicyDTO {
@@ -86,6 +87,16 @@ export const eventApi = {
             body: JSON.stringify(data),
         });
         return response.ok; // Returns true if status is 201 Created
+    },
+
+    /**
+     * GET /api/events/active
+     * Retrieves all active events (public, no auth required).
+     */
+    getAllActiveEvents: async (): Promise<EventDTO[]> => {
+        const response = await fetch(`${BASE_URL}/active`, { method: 'GET' });
+        if (!response.ok) return [];
+        return response.json();
     },
 
     /**

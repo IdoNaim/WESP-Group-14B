@@ -41,6 +41,11 @@ public class EventService implements IEventService {
     }
 
     @Override
+    public List<EventDTO> getAllActiveEvents() {
+        return eventHandler.getAllActiveEvents();
+    }
+
+    @Override
     public EventDTO searchEvent(String sessionToken, String eventId) {
         return eventHandler.searchEvent(sessionToken, eventId);
     }

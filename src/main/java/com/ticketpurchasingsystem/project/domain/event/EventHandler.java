@@ -134,6 +134,7 @@ public class EventHandler {
         );
         event.setEventLocation(eventDTO.eventLocation());
         event.setTicketPrice(eventDTO.ticketPrice());
+        event.setImageUrl(eventDTO.imageUrl());
 
         try {
             Event savedEvent = eventRepo.save(event);
@@ -165,7 +166,8 @@ public class EventHandler {
                 event.getEventDate(),
                 event.isActive(),
                 event.getEventLocation(),
-                event.getTicketPrice()
+                event.getTicketPrice(),
+                event.getImageUrl()
         );
     }
 
@@ -184,11 +186,30 @@ public class EventHandler {
                         event.getEventDate(),
                         event.isActive(),
                         event.getEventLocation(),
-                        event.getTicketPrice()
+                        event.getTicketPrice(),
+                        event.getImageUrl()
                 ))
                 .toList();
         logger.info("Found " + events.size() + " events for company ID: " + companyId);
         return events;
+    }
+
+    public List<EventDTO> getAllActiveEvents() {
+        logger.info("Fetching all active events");
+        return eventRepo.findActiveEvents()
+                .stream()
+                .map(event -> new EventDTO(
+                        event.getEventId(),
+                        event.getCompanyId(),
+                        event.getEventName(),
+                        event.getEventCapacity(),
+                        event.getEventDate(),
+                        event.isActive(),
+                        event.getEventLocation(),
+                        event.getTicketPrice(),
+                        event.getImageUrl()
+                ))
+                .toList();
     }
 
     public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime) {

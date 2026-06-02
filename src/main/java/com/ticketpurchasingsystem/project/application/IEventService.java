@@ -13,6 +13,7 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 public interface IEventService {
      public boolean createEvent(String sessionToken, EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO);
+     public List<EventDTO> getAllActiveEvents();
      public EventDTO searchEvent(String sessionToken, String eventId);
      public List<EventDTO> searchEventsByCompany(String sessionToken, int companyId);
      public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime);
