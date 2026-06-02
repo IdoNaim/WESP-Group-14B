@@ -1,0 +1,195 @@
+@use "../../styles/app-theme" as theme;
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__header {
+    background: white;
+    border-radius: 1.25rem;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  &__eyebrow {
+    margin: 0 0 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: theme.$app-primary;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 2rem;
+    color: theme.$app-text-dark;
+  }
+
+  &__subtitle {
+    margin: 0.5rem 0 0;
+    color: rgba(23, 31, 51, 0.7);
+  }
+
+  &__error {
+    padding: 1rem;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 0.75rem;
+    font-weight: 700;
+  }
+
+  &__stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  &__stat-card {
+    text-align: left;
+    background: white;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    cursor: pointer;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+
+    &:hover {
+      border-color: rgba(37, 99, 235, 0.3);
+    }
+
+    &--static {
+      cursor: default;
+    }
+  }
+
+  &__stat-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: rgba(23, 31, 51, 0.65);
+    margin-bottom: 0.5rem;
+  }
+
+  &__stat-value {
+    font-size: 1.7rem;
+    color: theme.$app-text-dark;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__tab {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 999px;
+    background: white;
+    color: theme.$app-text-dark;
+    padding: 0.65rem 1rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:hover {
+      border-color: theme.$app-primary;
+    }
+
+    &--active {
+      background: theme.$app-primary;
+      color: white;
+      border-color: theme.$app-primary;
+    }
+  }
+
+  &__panel {
+    background: white;
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  &__muted {
+    color: rgba(23, 31, 51, 0.65);
+    font-weight: 600;
+  }
+
+  &__overview {
+    h2 {
+      margin-top: 0;
+    }
+  }
+
+  &__action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  &__action-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+
+    h3 {
+      margin: 0 0 0.5rem;
+    }
+
+    p {
+      margin: 0;
+      color: rgba(23, 31, 51, 0.7);
+    }
+
+    &--disabled {
+      opacity: 0.65;
+    }
+  }
+
+  &__table-wrapper {
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.85rem;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(23, 31, 51, 0.6);
+      background: #f8fafc;
+    }
+
+    td {
+      font-size: 0.9rem;
+      color: theme.$app-text-dark;
+    }
+  }
+}
+
+@media (max-width: 1000px) {
+  .admin-page {
+    &__stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__action-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

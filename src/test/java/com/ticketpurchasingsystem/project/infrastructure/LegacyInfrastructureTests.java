@@ -1,6 +1,9 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
+import com.ticketpurchasingsystem.project.Controllers.PurchasePolicyController;
+import com.ticketpurchasingsystem.project.application.PaymentDetails;
 import com.ticketpurchasingsystem.project.application.PurchasePolicyService;
+import org.springframework.web.client.RestTemplate;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
@@ -11,7 +14,6 @@ import com.ticketpurchasingsystem.project.domain.tickets.PurchaseRuleAdapter;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.ticketpurchasingsystem.project.Controllers.PurchasePolicyController;
 
 import java.sql.Timestamp;
 import java.util.*;
@@ -23,28 +25,51 @@ public class LegacyInfrastructureTests {
     private PaymentDetailsDTO paymentDetailsDTO = new PaymentDetailsDTO("123456789", "test", "10/10", "333");
     @Test
     public void testPaymentGateway() {
-        PaymentGateway gateway = new PaymentGateway();
-        assertTrue(gateway.pay(paymentDetailsDTO, 10));
-        assertTrue(gateway.refund("order-1", 100.0));
+//<<<<<<< HEAD
+//        PaymentGateway gateway = new PaymentGateway();
+//        assertTrue(gateway.pay(paymentDetailsDTO, 10));
+//        assertTrue(gateway.refund("order-1", 100.0));
+//=======
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
+                .thenReturn("50000")  // pay
+                .thenReturn("1")      // refund
+                .thenReturn("OK");    // handshake
+
+        PaymentGateway gateway = new PaymentGateway(restTemplate);
+        PaymentDetails details = new PaymentDetails(100.0, "USD", "4111111111111111",
+                "12", "2028", "John Doe", "123", "ID-001");
+
+        int txId = gateway.pay(details);
+        assertTrue(txId >= 10000 && txId <= 100000);
+        assertEquals(1, gateway.refund(txId));
+        assertTrue(gateway.handshake());
+//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
     }
 
     @Test
     public void testBarCodeGateway() {
-        BarCodeGateway gateway = new BarCodeGateway();
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
+                .thenReturn("TIX-AAA-0001")
+                .thenReturn("TIX-BBB-0002")
+                .thenReturn("TIX-CCC-0003");
 
-        List<String> seatIds = List.of("SeatA", "SeatB");
+        BarCodeGateway gateway = new BarCodeGateway(restTemplate);
+
+        // seat IDs must follow zone_row_seat format used by AssignedSeat
+        List<String> seatIds = List.of("0_1_1", "0_1_2");
         HashMap<String, Integer> standingQuantities = new HashMap<>();
-        standingQuantities.put("Area1", 2);
+        standingQuantities.put("1", 3);
 
         ActiveOrderDTO order = new ActiveOrderDTO("order1", "user1", "event1",
                 new Timestamp(System.currentTimeMillis()), seatIds, standingQuantities);
 
         List<BarcodeDTO> barcodes = gateway.issueBarcodes(order);
-        assertEquals(4, barcodes.size());
-        assertEquals("order1-SeatA", barcodes.get(0).getBarcodeValue());
-        assertEquals("order1-SeatB", barcodes.get(1).getBarcodeValue());
-        assertEquals("order1-Area1-0", barcodes.get(2).getBarcodeValue());
-        assertEquals("order1-Area1-1", barcodes.get(3).getBarcodeValue());
+        assertEquals(3, barcodes.size());
+        assertEquals("TIX-AAA-0001", barcodes.get(0).getBarcodeValue());
+        assertEquals("TIX-BBB-0002", barcodes.get(1).getBarcodeValue());
+        assertEquals("TIX-CCC-0003", barcodes.get(2).getBarcodeValue());
     }
 
     @Test
@@ -174,8 +199,7 @@ public class LegacyInfrastructureTests {
         assertEquals(HttpStatus.OK, resCompany.getStatusCode());
 
         // 17. Company assignment failure
-        doThrow(new IllegalArgumentException("Company not found")).when(mockService).assignPolicyToCompany(anyInt(),
-                any());
+        doThrow(new IllegalArgumentException("Company not found")).when(mockService).assignPolicyToCompany(anyInt(), any());
         ResponseEntity<String> resCompanyFail = controller.assignPolicyToCompany(999, reqAgeMin);
         assertEquals(HttpStatus.BAD_REQUEST, resCompanyFail.getStatusCode());
     }
@@ -203,29 +227,25 @@ public class LegacyInfrastructureTests {
         assertEquals("Age limit: Min=18, Max=60", resAge.getBody().getDescription());
 
         // MIN_TICKETS adapter
-        PurchaseRuleAdapter minAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "MIN_TICKETS", null, null, 2, null,
-                null);
+        PurchaseRuleAdapter minAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "MIN_TICKETS", null, null, 2, null, null);
         when(mockService.getPolicyByEvent("event_min")).thenReturn(minAdapter);
         ResponseEntity<PurchasePolicyController.PolicyResponse> resMin = controller.getPolicyByEvent("event_min");
         assertEquals("Min tickets: 2", resMin.getBody().getDescription());
 
         // MAX_TICKETS adapter
-        PurchaseRuleAdapter maxAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "MAX_TICKETS", null, null, null,
-                10, null);
+        PurchaseRuleAdapter maxAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "MAX_TICKETS", null, null, null, 10, null);
         when(mockService.getPolicyByEvent("event_max")).thenReturn(maxAdapter);
         ResponseEntity<PurchasePolicyController.PolicyResponse> resMax = controller.getPolicyByEvent("event_max");
         assertEquals("Max tickets: 10", resMax.getBody().getDescription());
 
         // AND adapter
-        PurchaseRuleAdapter andAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "AND", null, null, null, null,
-                List.of(ageAdapter, minAdapter));
+        PurchaseRuleAdapter andAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "AND", null, null, null, null, List.of(ageAdapter, minAdapter));
         when(mockService.getPolicyByEvent("event_and")).thenReturn(andAdapter);
         ResponseEntity<PurchasePolicyController.PolicyResponse> resAnd = controller.getPolicyByEvent("event_and");
         assertEquals("AND(Age limit: Min=18, Max=60, Min tickets: 2)", resAnd.getBody().getDescription());
 
         // OR adapter
-        PurchaseRuleAdapter orAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "OR", null, null, null, null,
-                List.of(ageAdapter, minAdapter));
+        PurchaseRuleAdapter orAdapter = new PurchaseRuleAdapter(new MinAgeRule(18), "OR", null, null, null, null, List.of(ageAdapter, minAdapter));
         when(mockService.getPolicyByEvent("event_or")).thenReturn(orAdapter);
         ResponseEntity<PurchasePolicyController.PolicyResponse> resOr = controller.getPolicyByEvent("event_or");
         assertEquals("OR(Age limit: Min=18, Max=60, Min tickets: 2)", resOr.getBody().getDescription());
@@ -245,7 +265,7 @@ public class LegacyInfrastructureTests {
         when(mockService.getPolicyByCompany(2)).thenThrow(new IllegalArgumentException("Not found"));
         ResponseEntity<PurchasePolicyController.PolicyResponse> resCompanyEx = controller.getPolicyByCompany(2);
         assertEquals(HttpStatus.NOT_FOUND, resCompanyEx.getStatusCode());
-
+        
         // PolicyResponse setter test
         PurchasePolicyController.PolicyResponse responseObj = new PurchasePolicyController.PolicyResponse("desc");
         responseObj.setDescription("new desc");

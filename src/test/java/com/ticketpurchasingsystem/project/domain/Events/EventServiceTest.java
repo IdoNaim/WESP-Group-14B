@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.mockito.ArgumentMatchers.any;
+
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -39,7 +40,6 @@ public class EventServiceTest {
     private IEventRepo mockRepo;
     private AuthenticationService mockAuthService;
     private EventAggregatePublisher mockPublisher;
-    private EventAggregateListener mockListener;
 
     private final String VALID_TOKEN = "valid-session-token";
     private final String INVALID_TOKEN = "invalid-session-token";
@@ -68,6 +68,10 @@ public class EventServiceTest {
         });
 
         assertEquals("Invalid session token", exception.getMessage());
+
+        // Complete State Verification: No database changes or event messages broadcasted
+        verify(mockRepo, never()).save(any(Event.class));
+        verify(mockPublisher, never()).publishEventCreated(any());
     }
 
     // ================= CREATE EVENT =================
@@ -95,7 +99,7 @@ public class EventServiceTest {
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
-        when(policyDTO.minTickets()).thenReturn(15); // Invalid condition
+        when(policyDTO.minTickets()).thenReturn(15);
         when(policyDTO.maxTickets()).thenReturn(5);
         when(policyDTO.minAge()).thenReturn(18);
         when(policyDTO.maxAge()).thenReturn(60);
@@ -103,7 +107,10 @@ public class EventServiceTest {
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
         assertFalse(result);
-        verify(mockRepo, never()).save(any(Event.class)); // Verifies it fails fast
+
+        // Complete State Verification: System state unmutated on rule violation
+        verify(mockRepo, never()).save(any(Event.class));
+        verify(mockPublisher, never()).publishEventCreated(any());
     }
 
     @Test
@@ -114,13 +121,16 @@ public class EventServiceTest {
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
         when(policyDTO.maxTickets()).thenReturn(10);
-        when(policyDTO.minAge()).thenReturn(65); // Invalid condition
+        when(policyDTO.minAge()).thenReturn(65);
         when(policyDTO.maxAge()).thenReturn(18);
 
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
         assertFalse(result);
+
+        // Complete State Verification
         verify(mockRepo, never()).save(any(Event.class));
+        verify(mockPublisher, never()).publishEventCreated(any());
     }
 
     @Test
@@ -139,10 +149,12 @@ public class EventServiceTest {
         boolean result = eventService.createEvent(VALID_TOKEN, dto, policyDTO, Collections.emptyList());
 
         assertFalse(result);
+
+        // Complete State Verification: Ensure event was never published if database execution failed
+        verify(mockPublisher, never()).publishEventCreated(any());
     }
 
     // ================= SEARCH EVENT =================
-
     @Test
     void GivenExistingEvent_WhenSearchEvent_ThenReturnDTO() {
         Event mockEvent = mock(Event.class);
@@ -173,7 +185,6 @@ public class EventServiceTest {
     }
 
     // ================= SEARCH EVENTS BY COMPANY =================
-
     @Test
     void GivenEventsExist_WhenSearchEventsByCompany_ThenReturnList() {
         Event event = mock(Event.class);
@@ -203,7 +214,6 @@ public class EventServiceTest {
     }
 
     // ================= EDIT EVENT DATE =================
-
     @Test
     void GivenExistingEvent_WhenEditEventDate_ThenUpdateAndReturnTrue() {
         Event mockEvent = mock(Event.class);
@@ -229,10 +239,10 @@ public class EventServiceTest {
     }
 
     // ================= REMOVE EVENT =================
-
     @Test
     void GivenExistingEvent_WhenRemoveEvent_ThenDeleteAndReturnTrue() {
         Event mockEvent = mock(Event.class);
+        when(mockEvent.getEventName()).thenReturn("Concert");
         when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         boolean result = eventService.removeEvent(VALID_TOKEN, "1");
@@ -252,7 +262,6 @@ public class EventServiceTest {
     }
 
     // ================= EDIT EVENT CAPACITY =================
-
     @Test
     void GivenExistingEvent_WhenEditEventInventory_ThenUpdateAndReturnTrue() {
         Event mockEvent = mock(Event.class);
@@ -276,9 +285,10 @@ public class EventServiceTest {
 
         assertFalse(result);
         verify(mockRepo, never()).save(any());
+        verify(mockPublisher, never()).publishCapacityChanged(anyString(), anyInt());
     }
-    // ================= CONFIGURE SEATING MAP =================
 
+    // ================= CONFIGURE SEATING MAP =================
     @Test
     void GivenValidConfigs_WhenConfigureSeatingMap_ThenReturnSeatingMap() {
         SeatingAreaConfig seatingConfig = mock(SeatingAreaConfig.class);
@@ -296,12 +306,9 @@ public class EventServiceTest {
         SeatingMap result = eventService.configureSeatingMap(VALID_TOKEN, seatingAreas, standingAreas);
 
         assertNotNull(result);
-        // Depending on your SeatingMap implementation, you could assert sizes here
-        // e.g., assertEquals(1, result.getSeatingAreas().size());
     }
 
     // ================= RELEASE SEATS =================
-
     @Test
     void GivenValidInput_WhenReleaseSeats_ThenCompleteSuccessfully() {
         Event mockEvent = mock(Event.class);
@@ -325,6 +332,9 @@ public class EventServiceTest {
         });
 
         assertEquals("Invalid EventID", exception.getMessage());
+
+        // Complete State Verification
+        verify(mockRepo, never()).save(any(Event.class));
     }
 
     @Test
@@ -342,22 +352,24 @@ public class EventServiceTest {
         });
 
         assertEquals("one or more seats not booked", exception.getMessage());
+
+        // Complete State Verification
+        verify(mockRepo, never()).save(any(Event.class));
     }
 
     // ================= RELEASE STANDING AREA =================
+    @Test
+    void GivenValidInput_WhenReleaseStandingArea_ThenCompleteSuccessfully() {
+        Event mockEvent = mock(Event.class);
+        SeatingMap mockMap = mock(SeatingMap.class);
 
-    // @Test
-    // void GivenValidInput_WhenReleaseStandingArea_ThenCompleteSuccessfully() {
-    //     Event mockEvent = mock(Event.class);
-    //     SeatingMap mockMap = mock(SeatingMap.class);
+         when(mockRepo.findById("1")).thenReturn(mockEvent);
+         when(mockEvent.getSeatingMap()).thenReturn(mockMap);
+         when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
 
-    //     when(mockRepo.findById("1")).thenReturn(mockEvent);
-    //     when(mockEvent.getSeatingMap()).thenReturn(mockMap);
-    //     when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(true);
-
-    //     assertDoesNotThrow(() -> eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5));
-    //     verify(mockMap).unbookStandingArea("AREA1", 5);
-    // }
+         assertDoesNotThrow(() -> eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5));
+         verify(mockMap).unbookStandingArea("AREA1", 5);
+     }
 
     // @Test
     // void GivenUnbookFails_WhenReleaseStandingArea_ThenThrowException() {
@@ -372,11 +384,18 @@ public class EventServiceTest {
     //         eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5);
     //     });
 
-    //     assertEquals("one or more stands not booked", exception.getMessage());
-    // }
+    //<<<<<<< HEAD
+    //    //     assertEquals("one or more stands not booked", exception.getMessage());
+    //    // }
+    //=======
+    //        assertEquals("one or more stands not booked", exception.getMessage());
+    //
+    //        // Complete State Verification
+    //        verify(mockRepo, never()).save(any(Event.class));
+    //    }
+    //>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
 
     // ================= RESERVE SEATS =================
-
     @Test
     void GivenValidInput_WhenReserveSeats_ThenReturnTrue() {
         Event mockEvent = mock(Event.class);
@@ -407,11 +426,14 @@ public class EventServiceTest {
             eventService.reserveSeats(VALID_TOKEN, "ORDER1", "1", seatIds);
         });
 
+        // Changed to match production spelling: "occured"
         assertEquals("cannot book seats, problem occured", exception.getMessage());
+
+        // State Verification remains intact
+        verify(mockRepo, never()).save(any(Event.class));
     }
 
     // ================= RESERVE STANDING AREA =================
-
     @Test
     void GivenValidInput_WhenReserveStandingArea_ThenReturnTrue() {
         Event mockEvent = mock(Event.class);
@@ -419,14 +441,12 @@ public class EventServiceTest {
 
         when(mockRepo.findById("1")).thenReturn(mockEvent);
         when(mockEvent.getSeatingMap()).thenReturn(mockMap);
-
-        // Note: Testing the current logic which uses bookStandingArea inside reserveStandingArea
-        when(mockMap.bookStandingArea("AREA1",null, 5)).thenReturn(true);
+        when(mockMap.bookStandingArea("AREA1", null, 5)).thenReturn(true);
 
         boolean result = eventService.reserveStandingArea(VALID_TOKEN, "1", "AREA1", 5);
 
         assertTrue(result);
-        verify(mockMap).bookStandingArea("AREA1", null,5);
+        verify(mockMap).bookStandingArea("AREA1", null, 5);
     }
 
     @Test
@@ -436,23 +456,25 @@ public class EventServiceTest {
 
         when(mockRepo.findById("1")).thenReturn(mockEvent);
         when(mockEvent.getSeatingMap()).thenReturn(mockMap);
-        when(mockMap.unbookStandingArea("AREA1", 5)).thenReturn(false);
+        when(mockMap.bookStandingArea("AREA1", null, 5)).thenReturn(false);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             eventService.reserveStandingArea(VALID_TOKEN, "1", "AREA1", 5);
         });
 
+        // Changed to match production spelling: "occured"
         assertEquals("cannot book standing area, problem occured", exception.getMessage());
+
+        // State Verification remains intact
+        verify(mockRepo, never()).save(any(Event.class));
     }
 
     // ================= CHECK SEATS RESERVED =================
-
     @Test
     void GivenMixedSeatStatus_WhenCheckSeatsReserved_ThenReturnUnreservedList() {
         Event mockEvent = mock(Event.class);
         SeatingMap mockMap = mock(SeatingMap.class);
 
-        // Mock seats
         AssignedSeat bookedSeat = mock(AssignedSeat.class);
         when(bookedSeat.isbooked("ORDER1")).thenReturn(true);
 
@@ -470,11 +492,7 @@ public class EventServiceTest {
         List<String> result = eventService.checkSeatsReserved(VALID_TOKEN, "ORDER1", "1", seatIds);
 
         assertNotNull(result);
-
-        // NOTE: If you fix the missing braces {} bug in your code, this test will pass by
-        // asserting that only "A2" is returned. Until then, both might be returned depending
-        // on how Java executes the un-braced statement. Assuming you fix it:
-        // assertEquals(1, result.size());
-        // assertTrue(result.contains("A2"));
+        assertEquals(1, result.size());
+        assertTrue(result.contains("A2"));
     }
 }

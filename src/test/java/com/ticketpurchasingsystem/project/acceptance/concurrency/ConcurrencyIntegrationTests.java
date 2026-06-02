@@ -67,6 +67,7 @@ import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
+import com.ticketpurchasingsystem.project.application.PaymentDetails;
 
 public class ConcurrencyIntegrationTests {
 
@@ -203,7 +204,8 @@ public class ConcurrencyIntegrationTests {
         activeOrderService.addSeatsToActiveOrder(new SessionToken(sessionToken, 1000), order.getOrderId(), List.of(seatIds.get(0)));
 
         // Mock payment and barcode systems
-        when(paymentGatewayMock.pay(any(), anyDouble())).thenReturn(true);
+
+        when(paymentGatewayMock.pay(any())).thenReturn(50000);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode-xyz")));
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -217,7 +219,8 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId(), paymentDetailsDTO);
+
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId());
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
@@ -230,7 +233,8 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), 100.0, order.getOrderId(), paymentDetailsDTO);
+
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId());
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();

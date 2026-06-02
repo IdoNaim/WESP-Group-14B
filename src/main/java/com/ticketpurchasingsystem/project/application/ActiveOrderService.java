@@ -252,7 +252,9 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
 
-    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, String orderId, PaymentDetailsDTO paymentDetails) {
+
+    public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails, String orderId){
+        double amount = paymentDetails.getAmount();
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         if(!authenticationService.validate(sessionToken.getToken())){
             logger.error("Session validation failed while completing order: " + orderId);
@@ -308,9 +310,11 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("Barcode generation failed. Refund processed.");
         }
 
-        boolean paymentResult = payment(paymentGateway, sessionToken, amount, paymentDetails);
-        if(!paymentResult){
+
+        int transactionId = payment(paymentGateway, sessionToken, paymentDetails);
+        if(transactionId == -1){
             logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
+            barCodeGateway.cancelTickets(barcodesIssued);
             rollbackOrderReservations(sessionToken.getToken(), orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
@@ -352,11 +356,10 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
-    private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, PaymentDetailsDTO paymentDetails) {
+
+    private int payment(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails) {
         if(authenticationService.validate(sessionToken.getToken())) {
-            logger.info("Processing payment for session: " + sessionToken.getToken() + " with amount: " + amount+
-             " of cardholder: "+ paymentDetails.getCardHolderName());
-            return paymentGateway.pay(paymentDetails, amount); // Placeholder return value, replace with actual payment processing logic
+            return paymentGateway.pay(paymentDetails);
         }else{
             logger.error("Session validation failed during payment processing");
             throw new RuntimeException("the session has ended");

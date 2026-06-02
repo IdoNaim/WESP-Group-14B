@@ -199,7 +199,7 @@ public class ActiveOrderController {
                     body.getCvv()
             );
             List<BarcodeDTO> barcodes = activeOrderService.completeOrder(
-                    paymentGateway, sessionToken, body.getAmount(), orderId, paymentDetails);
+                    paymentGateway, sessionToken, body.toPaymentDetails(), orderId);
             List<String> barcodeValues = barcodes.stream()
                     .map(BarcodeDTO::getBarcodeValue)
                     .collect(Collectors.toList());
