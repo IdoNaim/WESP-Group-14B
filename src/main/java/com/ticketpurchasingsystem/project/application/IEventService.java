@@ -6,6 +6,7 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -33,4 +34,6 @@ public interface IEventService {
      public boolean editEventLocation(String sessionToken, String eventId, String newLocation);
      public boolean editEventPrice(String sessionToken, String eventId, Double newPrice);
      public boolean editEventImage(String sessionToken, String eventId, String newImageUrl);
+     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
+
 }

@@ -8,6 +8,7 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;

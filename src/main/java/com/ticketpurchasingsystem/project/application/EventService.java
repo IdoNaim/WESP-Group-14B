@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -134,5 +135,10 @@ public class EventService implements IEventService {
     @Override
     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
         return eventHandler.checkStandingAreaAvailability(eventId, areaId, quantity);
+    }
+    
+    @Override
+    public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
+        return eventHandler.getEventSeatingMap(sessionToken, eventId);
     }
 }
