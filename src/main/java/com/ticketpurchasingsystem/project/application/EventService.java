@@ -136,9 +136,13 @@ public class EventService implements IEventService {
     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
         return eventHandler.checkStandingAreaAvailability(eventId, areaId, quantity);
     }
-    
+
     @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
         return eventHandler.getEventSeatingMap(sessionToken, eventId);
+    }
+    @Override
+    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
+        return eventHandler.getEventPurchasePolicy(sessionToken, eventId);
     }
 }

@@ -211,6 +211,17 @@ public class EventController {
                         ? ResponseEntity.ok(seatingMap)
                         : ResponseEntity.notFound().build();
         }
-        
+        @GetMapping("/{eventId}/purchase-policy")
+        public ResponseEntity<PurchasePolicyDTO> getEventPurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                PurchasePolicyDTO purchasePolicy = eventService.getEventPurchasePolicy(token, eventId);
+                return purchasePolicy != null
+                        ? ResponseEntity.ok(purchasePolicy)
+                        : ResponseEntity.notFound().build();
+        }
 
 }

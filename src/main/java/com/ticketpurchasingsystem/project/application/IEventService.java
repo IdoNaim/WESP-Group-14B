@@ -35,5 +35,7 @@ public interface IEventService {
      public boolean editEventPrice(String sessionToken, String eventId, Double newPrice);
      public boolean editEventImage(String sessionToken, String eventId, String newImageUrl);
      public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
+     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
+
 
 }
