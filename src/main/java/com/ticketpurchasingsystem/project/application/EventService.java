@@ -11,12 +11,11 @@ import org.springframework.stereotype.Service;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-<<<<<<< HEAD
+
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.*;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
-=======
->>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
+
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -222,46 +221,15 @@ public class EventService implements IEventService {
 //<<<<<<< HEAD
     @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
-        if (!authenticationService.validate(sessionToken)) {
-            throw new IllegalArgumentException("Invalid session token");
-        }
-        Event event = eventRepo.findById(eventId);
-        if (event == null) {
-            logger.warn("Cannot get seating map. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
-        }
-        return event.getSeatingMap().getDTO();
+        return eventHandler.getEventSeatingMap( sessionToken,  eventId);
+
     }
 
     @Override
     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
-        if (!authenticationService.validate(sessionToken)) {
-            throw new IllegalArgumentException("Invalid session token");
-        }
-        Event event = eventRepo.findById(eventId);
-        if (event == null) {
-            throw new IllegalArgumentException("Invalid EventID");
-        }
-        PurchaseContext context = new PurchaseContext(quantity, userAge);
-        if (event.getPurchasePolicy().validate(context)) {
-            return null;
-        }
-        return buildPolicyViolationMessage(event.getPurchasePolicy().getDTO(), quantity, userAge);
+        return eventHandler.validatePurchasePolicy(sessionToken, eventId, quantity, userAge);
     }
-    private String buildPolicyViolationMessage(PurchasePolicyDTO dto, int quantity, int userAge) {
-        List<String> violations = new ArrayList<>();
-        if (dto.minTickets() != null && quantity < dto.minTickets())
-            violations.add("minimum " + dto.minTickets() + " ticket(s) required");
-        if (dto.maxTickets() != null && quantity > dto.maxTickets())
-            violations.add("maximum " + dto.maxTickets() + " ticket(s) allowed");
-        if (dto.minAge() != null && userAge < dto.minAge())
-            violations.add("minimum age " + dto.minAge() + " required");
-        if (dto.maxAge() != null && userAge > dto.maxAge())
-            violations.add("maximum age " + dto.maxAge() + " required");
-        if (violations.isEmpty())
-            return "Purchase policy requirements not met.";
-        return "Purchase policy violated: " + String.join(", ", violations) + ".";
-    }
+
 }
 //=======
 //}

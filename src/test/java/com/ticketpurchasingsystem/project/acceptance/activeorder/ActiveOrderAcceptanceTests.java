@@ -123,7 +123,6 @@ public class ActiveOrderAcceptanceTests {
     private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,false, 0, 60, true, false);
     private List<DiscountDTO> discounts = new ArrayList<>();
     private LocalDateTime eventDate = LocalDateTime.of(LocalDate.now().plusYears(1), LocalTime.now());
-    private PaymentDetailsDTO paymentDetails = new PaymentDetailsDTO("test", "4111111111111111", "12/25", "123");
 
 
     private PaymentDetails paymentDetailsFor(double amount) {

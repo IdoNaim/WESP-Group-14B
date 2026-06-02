@@ -192,12 +192,7 @@ public class ActiveOrderController {
 
         SessionToken sessionToken = toSessionToken(authHeader);
         try {
-            PaymentDetailsDTO paymentDetails = new PaymentDetailsDTO(
-                    body.getCreditCardNumber(),
-                    body.getCardHolderName(),
-                    body.getExpirationDate(),
-                    body.getCvv()
-            );
+
             List<BarcodeDTO> barcodes = activeOrderService.completeOrder(
                     paymentGateway, sessionToken, body.toPaymentDetails(), orderId);
             List<String> barcodeValues = barcodes.stream()

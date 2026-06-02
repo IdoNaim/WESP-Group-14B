@@ -4,11 +4,11 @@ import com.ticketpurchasingsystem.project.application.ActiveOrderService;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
-<<<<<<< HEAD
-import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
-=======
+//<<<<<<< HEAD
+//import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
+//=======
 import com.ticketpurchasingsystem.project.application.PaymentDetails;
->>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
+//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +64,7 @@ public class ActiveOrderServiceUnitTest {
     public static final int COMPANY_ID = 789;
     private static final int QUANTITY = 3;
     private static final double AMOUNT = 100.0;
-    private PaymentDetailsDTO paymentDetails = new PaymentDetailsDTO("111111111", "ido", "12/2","333");
+//    private PaymentDetailsDTO paymentDetails = new PaymentDetailsDTO("111111111", "ido", "12/2","333");
 
     private static final SessionToken VALID_SESSION = new SessionToken(VALID_TOKEN, 9999999999L);
     private static final SessionToken INVALID_SESSION = new SessionToken(INVALID_TOKEN, 9999999999L);
