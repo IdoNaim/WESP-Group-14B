@@ -291,3 +291,4 @@ function NotificationItem({ notification, onMarkRead, onMarkUnread }: Notificati
         </div>
     );
 }
+

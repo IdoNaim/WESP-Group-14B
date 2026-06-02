@@ -8,6 +8,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -215,5 +220,45 @@ public class GetCompanyPurchaseHistoryTest {
 
         // Assert
         verify(authenticationService).getUser(VALID_TOKEN);
+    }
+
+    // ── Concurrency tests ────────────────────────────────────────────────────
+
+    @Test
+    public void GivenMultipleOwners_WhenConcurrentGetPurchaseHistory_ThenAllSucceed() throws InterruptedException {
+        // Arrange
+        int threads = 10;
+        ProductionCompany company = companyWithFounderAndOwner();
+        when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
+        when(authenticationService.getUser(VALID_TOKEN)).thenReturn(FOUNDER_ID);
+        when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(company));
+        when(productionEventPublisher.publishGetCompanyHistoryEvent(COMPANY_ID)).thenReturn(Collections.emptyList());
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threads);
+        AtomicInteger successCount = new AtomicInteger(0);
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    List<HistoryOrderItem> result = productionService.getCompanyPurchaseHistory(VALID_TOKEN, COMPANY_ID);
+                    if (result != null) successCount.incrementAndGet();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        doneLatch.await(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Assert
+        assertEquals(threads, successCount.get(), "All concurrent purchase-history reads must succeed");
     }
 }

@@ -1,8 +1,13 @@
 package com.ticketpurchasingsystem.project.domain.ProductionTest;
+
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.domain.Production.*;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -29,11 +34,11 @@ public class RemoveManagerTest {
     private ProductionHandler productionHandler;
     private ProductionService productionService;
 
-    private static final String VALID_TOKEN   = "valid-token";
+    private static final String VALID_TOKEN = "valid-token";
     private static final String INVALID_TOKEN = "bad-token";
-    private static final String FOUNDER_ID    = "user123";
-    private static final String MANAGER_ID    = "user345";
-    private static final Integer COMPANY_ID   = 1;
+    private static final String FOUNDER_ID = "user123";
+    private static final String MANAGER_ID = "user345";
+    private static final Integer COMPANY_ID = 1;
 
     @BeforeEach
     void setUp() {
@@ -148,9 +153,9 @@ public class RemoveManagerTest {
     public void Given10ConcurrentThreadsWithValidToken_WhenRemoveManager_ThenAtLeastOneSucceeds()
             throws InterruptedException {
         int threads = 10;
-        CountDownLatch startLatch   = new CountDownLatch(1);
-        CountDownLatch doneLatch    = new CountDownLatch(threads);
-        AtomicInteger successCount  = new AtomicInteger(0);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threads);
+        AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger saveCallCount = new AtomicInteger(0);
 
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
@@ -162,7 +167,8 @@ public class RemoveManagerTest {
             return Optional.of(c);
         });
         when(prodRepo.save(any())).thenAnswer(inv -> {
-            if (saveCallCount.incrementAndGet() == 1) return inv.getArgument(0);
+            if (saveCallCount.incrementAndGet() == 1)
+                return inv.getArgument(0);
             throw new OptimisticLockingFailureException("concurrent");
         });
 
@@ -261,5 +267,68 @@ public class RemoveManagerTest {
                 FOUNDER_ID, COMPANY_ID, MANAGER_ID, null);
 
         assertNull(result);
+    }
+
+    // Concurrency test only one succeeds
+
+    private static final String CONC_SECRET = "my-super-secret-key-for-testing!";
+
+    private record ConcurrencyStack(AuthenticationService auth, ProdRepo repo, ProductionService service) {
+    }
+
+    private ConcurrencyStack buildRealStack() {
+        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        DomainAuthService domainAuth = new DomainAuthService(sessionRepo);
+        ReflectionTestUtils.setField(domainAuth, "secret", CONC_SECRET);
+        domainAuth.init();
+        AuthenticationService realAuth = new AuthenticationService(domainAuth, sessionRepo);
+        ProdRepo realRepo = new ProdRepo();
+        ProductionService svc = new ProductionService(realAuth, new ProductionHandler(), realRepo,
+                productionEventPublisher);
+        return new ConcurrencyStack(realAuth, realRepo, svc);
+    }
+
+    @Test
+    public void GivenMultipleThreads_WhenConcurrentRemoveSameManager_ThenOnlyOneSucceeds() throws Exception {
+        // Arrange
+        lenient().when(productionEventPublisher.publishIsUserRegisteredEvent(any())).thenReturn(true);
+        ConcurrencyStack stack = buildRealStack();
+        String founderToken = stack.auth().login(FOUNDER_ID);
+        stack.service().createProductionCompany(founderToken,
+                new ProductionCompanyDTO("Remove Co", "desc", "remove@co.com"));
+        int companyId = stack.repo().findByName("Remove Co").get().getCompanyId();
+        stack.service().appointManager(founderToken, companyId, "same-manager",
+                Set.of(ManagerPermission.INVENTORY_MANAGEMENT));
+
+        int threadCount = 5;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    String token = stack.auth().login(FOUNDER_ID);
+                    boolean result = stack.service().removeManager(token, companyId, "same-manager");
+                    if (result)
+                        successCount.incrementAndGet();
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        // Act
+        startLatch.countDown();
+        assertTrue(doneLatch.await(15, TimeUnit.SECONDS));
+        executor.shutdown();
+
+        // Assert
+        assertEquals(1, successCount.get(),
+                "Only one thread must succeed when all race to remove the same manager — subsequent attempts find no manager to remove");
     }
 }

@@ -4,6 +4,12 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -336,5 +342,147 @@ public class HistoryOrderAcceptanceTests {
         // 4. Assertion: System returns empty list
         assertNotNull(history);
         assertTrue(history.isEmpty(), "Admin should receive empty list when company has no purchase history");
+    }
+
+    // ─── Concurrency Tests ───────────────────────────────────────────────────
+
+    @Test
+    public void GivenMultipleUsers_WhenConcurrentCreateHistoryOrder_ThenAllOrdersAreSaved() throws Exception {
+        int threadCount = 3;
+        String[] userIds = {"itay", "eden", "tomer"};
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final String userId = userIds[i];
+            final String orderId = "order-" + userId;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    boolean saved = historyOrderService.createHistoryOrder(
+                            orderId, userId, "event-10", 10,
+                            new Timestamp(System.currentTimeMillis()),
+                            100.0, List.of("A1"), new HashMap<>());
+                    if (saved) successCount.incrementAndGet();
+                    else failureCount.incrementAndGet();
+                } catch (Exception e) {
+                    failureCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS), "Concurrent history order creation must complete without deadlock");
+        executor.shutdown();
+
+        assertEquals(3, successCount.get(), "All three orders must be saved successfully");
+        assertNotNull(historyOrderRepo.findByOrderId("order-itay"), "itay's order must exist");
+        assertNotNull(historyOrderRepo.findByOrderId("order-eden"), "eden's order must exist");
+        assertNotNull(historyOrderRepo.findByOrderId("order-tomer"), "tomer's order must exist");
+    }
+
+    @Test
+    public void GivenSameOrderId_WhenConcurrentCreate_ThenExactlyOneOrderExists() throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        // Two threads try to save different data under the same orderId
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                historyOrderService.createHistoryOrder(
+                        "duplicate-order", "itay", "event-10", 10,
+                        new Timestamp(System.currentTimeMillis()),
+                        100.0, List.of("A1"), new HashMap<>());
+                successCount.incrementAndGet();
+            } catch (Exception ignored) {
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                historyOrderService.createHistoryOrder(
+                        "duplicate-order", "eden", "event-10", 10,
+                        new Timestamp(System.currentTimeMillis()),
+                        200.0, List.of("B1"), new HashMap<>());
+                successCount.incrementAndGet();
+            } catch (Exception ignored) {
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent create must complete without deadlock");
+
+        HistoryOrderItem stored = historyOrderRepo.findByOrderId("duplicate-order");
+        assertNotNull(stored, "The order must exist after concurrent creation");
+        // ConcurrentHashMap last-write wins — exactly one entry is stored per orderId
+        assertEquals(1, historyOrderRepo.findAll().stream()
+                .filter(o -> "duplicate-order".equals(o.getOrderId())).count(),
+                "Exactly one history order with the duplicate orderId must exist — no duplicates allowed");
+    }
+
+    @Test
+    public void GivenConcurrentReadAndWrite_WhenMultipleUsers_ThenReadsReturnConsistentData() throws Exception {
+        // Pre-populate
+        historyOrderService.createHistoryOrder(
+                "pre-order-itay", "itay", "event-10", 10,
+                new Timestamp(System.currentTimeMillis()), 50.0, List.of(), new HashMap<>());
+
+        String tomerToken = authenticationService.login("tomer");
+        SessionToken tomerSession = new SessionToken(tomerToken, 9999999999L);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(3);
+        CopyOnWriteArrayList<Integer> readSizes = new CopyOnWriteArrayList<>();
+        AtomicInteger writeErrors = new AtomicInteger(0);
+
+        // Writer thread: eden creates a new order
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                historyOrderService.createHistoryOrder(
+                        "concurrent-order-eden", "eden", "event-10", 10,
+                        new Timestamp(System.currentTimeMillis()), 150.0, List.of("C1"), new HashMap<>());
+            } catch (Exception e) {
+                writeErrors.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        // Reader threads: tomer reads his own orders (may be empty, but must not throw)
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    List<HistoryOrderDTO> result =
+                            historyOrderService.getAllHistoryOrdersByUser(tomerSession, "tomer");
+                    readSizes.add(result != null ? result.size() : -1);
+                } catch (Exception e) {
+                    readSizes.add(-1);
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent read/write must complete without deadlock");
+
+        assertEquals(0, writeErrors.get(), "Writer thread must not throw an exception");
+        for (int size : readSizes) {
+            assertTrue(size >= 0, "Reader must return a valid non-null list — no exception");
+        }
     }
 }

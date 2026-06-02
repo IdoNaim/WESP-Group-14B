@@ -7,14 +7,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.ForbiddenException;
-import com.ticketpurchasingsystem.project.application.NotFoundException;
+import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
+import com.ticketpurchasingsystem.project.domain.exceptions.NotFoundException;
 import com.ticketpurchasingsystem.project.application.NotificationService;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
@@ -191,5 +197,200 @@ class NotificationAcceptanceTest {
     void GivenInvalidToken_WhenGetUnreadCount_ThenThrow() {
         assertThrows(UnauthorizedException.class, () ->
                 notificationService.getUnreadCount("bad-token"));
+    }
+
+    // ─── Concurrency Tests ───────────────────────────────────────────────────
+
+    @Test
+    void GivenMultipleAdmins_WhenConcurrentCreateNotification_ThenAllNotificationsHaveUniqueIds() throws Exception {
+        int threadCount = 3;
+        String[] targets = {"itay", "eden", "tomer"};
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CopyOnWriteArrayList<String> createdIds = new CopyOnWriteArrayList<>();
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        for (int i = 0; i < threadCount; i++) {
+            final String target = targets[i];
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    NotificationDTO dto = notificationService.createNotification(
+                            adminToken, target, "Concurrent message for " + target);
+                    createdIds.add(dto.getId());
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(10, TimeUnit.SECONDS), "Concurrent creates must complete without deadlock");
+        executor.shutdown();
+
+        assertEquals(0, errorCount.get(), "No errors must occur during concurrent notification creation");
+        assertEquals(threadCount, createdIds.size(), "Each thread must have created a notification");
+        assertEquals(threadCount, createdIds.stream().distinct().count(),
+                "All created notification IDs must be unique");
+    }
+
+    @Test
+    void GivenAdminAndNonAdmin_WhenConcurrentCreateNotification_ThenOnlyAdminSucceeds() throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        // Thread 1: valid admin token — must succeed
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                notificationService.createNotification(adminToken, "tomer", "Admin message to tomer");
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        // Thread 2: non-admin user token — must be rejected with ForbiddenException
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                notificationService.createNotification(userToken, "tomer", "Non-admin message to tomer");
+                successCount.incrementAndGet();
+            } catch (ForbiddenException e) {
+                failureCount.incrementAndGet();
+            } catch (Exception e) {
+                failureCount.incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent access must complete without deadlock");
+
+        assertEquals(1, successCount.get(), "Only the admin thread must succeed");
+        assertEquals(1, failureCount.get(), "The non-admin thread must be rejected");
+    }
+
+    @Test
+    void GivenUnreadNotification_WhenConcurrentMarkAsRead_ThenExactlyOneThreadMarksItFirst() throws Exception {
+        NotificationDTO created = notificationService.createNotification(adminToken, "alice", "itay sent this");
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        AtomicInteger trueCount = new AtomicInteger(0);
+        AtomicInteger falseCount = new AtomicInteger(0);
+
+        // Two threads both try to mark the same notification as read simultaneously
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    boolean result = notificationService.markAsRead(userToken, created.getId());
+                    if (result) trueCount.incrementAndGet();
+                    else falseCount.incrementAndGet();
+                } catch (Exception e) {
+                    falseCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent markAsRead must complete without deadlock");
+
+        // Correct thread-safe behavior: exactly one thread marks it as read first (returns true),
+        // the second finds it already read (returns false).
+        assertEquals(1, trueCount.get(),
+                "Exactly one thread must be the first to mark the notification as read");
+        assertEquals(1, falseCount.get(),
+                "The second thread must find the notification already read");
+    }
+
+    @Test
+    void GivenNotificationsForMultipleUsers_WhenConcurrentGetNotifications_ThenEachUserGetsOnlyTheirOwn()
+            throws Exception {
+        // Pre-create notifications: 2 for alice (itay), 1 for bob (eden)
+        notificationService.createNotification(adminToken, "alice", "itay msg 1");
+        notificationService.createNotification(adminToken, "alice", "itay msg 2");
+        notificationService.createNotification(adminToken, "bob",   "eden msg 1");
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        CopyOnWriteArrayList<Integer> aliceSizes = new CopyOnWriteArrayList<>();
+        CopyOnWriteArrayList<Integer> bobSizes   = new CopyOnWriteArrayList<>();
+
+        // Thread 1: alice (itay) reads her notifications
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                List<NotificationDTO> result = notificationService.getNotificationsForUser(userToken);
+                aliceSizes.add(result.size());
+            } catch (Exception e) {
+                aliceSizes.add(-1);
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        // Thread 2: bob (eden) reads his notifications
+        new Thread(() -> {
+            try {
+                startLatch.await();
+                List<NotificationDTO> result = notificationService.getNotificationsForUser(otherUserToken);
+                bobSizes.add(result.size());
+            } catch (Exception e) {
+                bobSizes.add(-1);
+            } finally {
+                doneLatch.countDown();
+            }
+        }).start();
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent reads must complete without deadlock");
+
+        assertEquals(2, (int) aliceSizes.get(0), "alice (itay) must see exactly her 2 notifications");
+        assertEquals(1, (int) bobSizes.get(0),   "bob (eden) must see exactly his 1 notification");
+    }
+
+    @Test
+    void GivenSameUser_WhenConcurrentCreateSameMessage_ThenBothNotificationsStoredWithUniqueIds()
+            throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+        CopyOnWriteArrayList<String> ids = new CopyOnWriteArrayList<>();
+        AtomicInteger errorCount = new AtomicInteger(0);
+
+        // Two admin threads send the identical message to tomer at the same time
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    NotificationDTO dto = notificationService.createNotification(
+                            adminToken, "tomer", "Duplicate message to tomer");
+                    ids.add(dto.getId());
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent identical creates must complete without deadlock");
+
+        assertEquals(0, errorCount.get(), "Both create calls must succeed");
+        assertEquals(2, ids.size(), "Both notifications must be stored");
+        assertEquals(2, ids.stream().distinct().count(),
+                "Both notifications must have different IDs — AtomicLong counter guarantees uniqueness");
     }
 }

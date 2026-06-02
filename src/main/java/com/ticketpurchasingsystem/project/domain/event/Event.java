@@ -1,16 +1,17 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import java.time.LocalDateTime;
+
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
-
-import java.time.LocalDateTime;
-
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
 public class Event {
@@ -34,7 +35,13 @@ public class Event {
 
     private ITicketPurchaseRule ticketPurchasePolicy;
 
+    private String eventLocation;
+
+    private Double ticketPrice;
+
     private int version = 0;
+
+    private String location;
 
 
     public Event(
@@ -42,6 +49,7 @@ public class Event {
             String eventName,
             int eventCapacity,
             LocalDateTime eventDate,
+            String location,
             EventPurchasePolicy purchasePolicy,
             EventDiscountPolicy discountPolicy,
             int version
@@ -67,6 +75,19 @@ public class Event {
         this.discountPolicy = discountPolicy;
         this.isActive = true;
         this.version = version;
+        this.location = location;
+    }
+
+    public Event(
+            int companyId,
+            String eventName,
+            int eventCapacity,
+            LocalDateTime eventDate,
+            EventPurchasePolicy purchasePolicy,
+            EventDiscountPolicy discountPolicy,
+            int version
+    ) {
+        this(companyId, eventName, eventCapacity, eventDate, null, purchasePolicy, discountPolicy, version);
     }
 
     // COPY CONSTRUCTOR: Required for Event::new to work in your Streams
@@ -77,13 +98,22 @@ public class Event {
         this.eventCapacity = other.eventCapacity;
         this.isActive = other.isActive;
         this.eventDate = other.eventDate;
+        this.location = other.location;
         this.seatingMap = other.seatingMap;
         this.discountPolicy = other.discountPolicy;
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
+        this.eventLocation = other.eventLocation;
+        this.ticketPrice = other.ticketPrice;
     }
 
+    public String getLocation() {
+        return location;
+    }
+    public void setLocation(String location) {
+        this.location = location;
+    }
 
     // ---------------- GETTERS ----------------
 
@@ -143,6 +173,12 @@ public class Event {
 
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 
+    public String getEventLocation() { return eventLocation; }
+    public void setEventLocation(String eventLocation) { this.eventLocation = eventLocation; }
+
+    public Double getTicketPrice() { return ticketPrice; }
+    public void setTicketPrice(Double ticketPrice) { this.ticketPrice = ticketPrice; }
+
     public ITicketPurchaseRule getTicketPurchasePolicy() {
         return ticketPurchasePolicy;
     }
@@ -155,17 +191,45 @@ public class Event {
         return purchasePolicy;
     }
 
-    public void setPurchasePolicy(PurchasePolicyDTO purchasePolicyDTO){
-        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
-        IPurchaseRule minAgeRule = new MinAgeRule(purchasePolicyDTO.minAge());
-        IPurchaseRule maxAgeRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
-        IPurchaseRule minTicketsRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
-        IPurchaseRule maxTicketsRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
-        purchasePolicy.addRule(minAgeRule);
-        purchasePolicy.addRule(maxAgeRule);
-        purchasePolicy.addRule(minTicketsRule);
-        purchasePolicy.addRule(maxTicketsRule);
-        this.purchasePolicy = purchasePolicy;
+    public void setPurchasePolicy(PurchasePolicyDTO dto) {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
 
+        // Build age block (null-safe: only create if at least one age rule exists)
+        IPurchaseRule ageBlock = null;
+        if (dto.minAge() != null && dto.maxAge() != null) {
+            IPurchaseRule minAge = new MinAgeRule(dto.minAge());
+            IPurchaseRule maxAge = new MaxAgeRule(dto.maxAge());
+            ageBlock = dto.isAgeOr() ? new OrRule(minAge, maxAge) : new AndRule(minAge, maxAge);
+        } else if (dto.minAge() != null) {
+            ageBlock = new MinAgeRule(dto.minAge());
+        } else if (dto.maxAge() != null) {
+            ageBlock = new MaxAgeRule(dto.maxAge());
+        }
+
+        // Build quantity block
+        IPurchaseRule quantityBlock = null;
+        if (dto.minTickets() != null && dto.maxTickets() != null) {
+            IPurchaseRule minTickets = new MinTicketsRule(dto.minTickets());
+            IPurchaseRule maxTickets = new MaxTicketsRule(dto.maxTickets());
+            quantityBlock = dto.isQuantityOr() ? new OrRule(minTickets, maxTickets) : new AndRule(minTickets, maxTickets);
+        } else if (dto.minTickets() != null) {
+            quantityBlock = new MinTicketsRule(dto.minTickets());
+        } else if (dto.maxTickets() != null) {
+            quantityBlock = new MaxTicketsRule(dto.maxTickets());
+        }
+
+        // Combine age block and quantity block into the root rule
+        if (ageBlock != null && quantityBlock != null) {
+            IPurchaseRule root = dto.isAgeAndQuantityOr()
+                    ? new OrRule(ageBlock, quantityBlock)
+                    : new AndRule(ageBlock, quantityBlock);
+            policy.addRule(root);
+        } else if (ageBlock != null) {
+            policy.addRule(ageBlock);
+        } else if (quantityBlock != null) {
+            policy.addRule(quantityBlock);
+        }
+
+        this.purchasePolicy = policy;
     }
 }
