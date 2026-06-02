@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
 import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
-import { authApi } from '../../api/authApi';
 
 type UserRole = 'FOUNDER' | 'OWNER' | 'MANAGER';
 
@@ -613,15 +612,6 @@ export default function ProductionCompanyPage() {
     const numericId = Number(companyId);
     const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        const token = localStorage.getItem('token') ?? '';
-        const userId = localStorage.getItem('userId') ?? '';
-        try { await authApi.logout(token, userId); } catch { /* ignore */ }
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
-        navigate('/login');
-    };
-
     const [activeTab, setActiveTab] = useState<Tab>('TEAM');
     const [rolesTree, setRolesTree] = useState<api.RolesTreeDTO | null>(null);
     const [memberInfo, setMemberInfo] = useState<api.MemberInfo | null>(null);
@@ -829,7 +819,7 @@ export default function ProductionCompanyPage() {
             <div className="bg-[#eeefff] text-[#171f33] px-6 md:px-10 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/production-company')}
                         className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[#2563eb] transition-colors"
                         title="Back to My Companies"
                     >
@@ -857,20 +847,6 @@ export default function ProductionCompanyPage() {
                         <StatCard label="MANAGERS" value={managerCount} color="text-[#00c896]" />
                         <StatCard label="ORDERS" value={history.length} color="text-[#00c896]" />
                     </div>
-                    <button
-                        onClick={() => navigate('/profile')} //TODO: CONNECT TO THE PROFILE PAGE
-                        className="flex items-center gap-2 border border-gray-400 hover:border-[#2563eb] text-gray-500 hover:text-[#2563eb] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">account_circle</span>
-                        MY PROFILE
-                    </button>
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 border border-gray-400 hover:border-red-400 text-gray-500 hover:text-red-500 px-4 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">logout</span>
-                        LOGOUT
-                    </button>
                 </div>
             </div>
 
