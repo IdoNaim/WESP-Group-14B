@@ -89,21 +89,15 @@ public class DataLoader implements ApplicationRunner {
                         LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
                 adultOnly, noDiscounts);
 
-        // ====================================================================================
-        // === התיקון: יוצרים את ההזמנה לפני שמנסים לשלוף אותה ===============================
-        // ====================================================================================
         
-        // 1. קודם מוסיפים את ההזמנה להיסטוריה של Bob
         historyOrderService.createHistoryOrder("order1", "bob", "1", companyId, new Timestamp(System.currentTimeMillis()), 100.0, List.of("A1", "A2"), new HashMap<>());
         loggerDef.getInstance().info("Successfully created history order 'order1' for bob.");
 
-        // 2. עכשיו בודקים את ה-Controller (שולפים את ההזמנה שכבר קיימת)
         HistoryOrderController historyOrderController = new HistoryOrderController(historyOrderService);
         //get all by company
         ResponseEntity<?> response = historyOrderController.getOrdersByCompany("Bearer " + aliceToken, companyId);
         loggerDef.getInstance().info("History Order Response: " + response.getBody());
 
-        // 3. מתנתקים (כדי שיוכלו להתחבר מה-React)
         userService.logoutUser("alice", aliceToken);
         userService.logoutUser("bob", bobToken);
 

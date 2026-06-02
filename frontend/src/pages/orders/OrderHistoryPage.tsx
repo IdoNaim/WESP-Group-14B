@@ -20,7 +20,6 @@ export default function OrderHistory() {
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [selectedTicket, setSelectedTicket] = useState<HistoryOrderDTO | null>(null);
 
-    // 1. טעינת פרטי המשתמש וההרשאות (isAdmin & productionRoles)
     useEffect(() => {
         const initUser = async () => {
             try {
@@ -47,7 +46,6 @@ export default function OrderHistory() {
         initUser();
     }, []);
 
-    // 2. טעינת ההזמנות לפי הטאב שנבחר
     useEffect(() => {
         if (!userId) return;
 
@@ -109,7 +107,6 @@ export default function OrderHistory() {
 
     const isGuest = !username;
     
-    // חישוב הרשאות לתצוגה
     const isAdmin = permissions?.isAdmin === true;
     const companyIds = permissions ? Object.keys(permissions.productionRoles || {}).map(Number) : [];
     const isCompanyManager = companyIds.length > 0;
@@ -150,21 +147,21 @@ export default function OrderHistory() {
                     <h2 className="text-4xl md:text-5xl font-black text-white mb-2 uppercase">Order History</h2>
                     <p className="text-gray-400 max-w-xl mb-6">Review your past premium experiences. Secure, encrypted, and immutable ticketing records.</p>
                     
-                    {/* 🔴 TABS: מוצגים רק אם יש הרשאות רלוונטיות */}
+                    
                     {(isAdmin || isCompanyManager) && (
                         <div className="flex gap-6 border-b border-gray-800 w-full mb-4 overflow-x-auto">
                             <button onClick={() => setViewMode('PERSONAL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'PERSONAL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                 My Personal Orders
                             </button>
                             
-                            {/* יופיע רק למנהלי חברה */}
+                            
                             {isCompanyManager && (
                                 <button onClick={() => setViewMode('COMPANY')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'COMPANY' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     Company Orders
                                 </button>
                             )}
                             
-                            {/* יופיע רק לאדמין */}
+                        
                             {isAdmin && (
                                 <button onClick={() => setViewMode('ALL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'ALL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     All System Orders

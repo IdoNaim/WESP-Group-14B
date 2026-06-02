@@ -10,7 +10,6 @@ export interface HistoryOrderDTO {
     seatIds: string[];
     standingAreaQuantities: Record<string, number>;
     
-    // שדות מורחבים לעיצוב העשיר
     eventName?: string;
     eventLocation?: string;
     eventImageUrl?: string;
@@ -34,7 +33,6 @@ const parseResponse = async (response: Response) => {
 
 export const historyOrderApi = {
     
-    // שליפת הזמנות של משתמש ספציפי
     getUserOrders: async (token: string, userId: string): Promise<HistoryOrderDTO[]> => {
         const response = await fetch(`${HISTORY_BASE_URL}?userId=${encodeURIComponent(userId)}`, {
             method: 'GET', 
@@ -44,7 +42,6 @@ export const historyOrderApi = {
         return mapStandingAreas(data);
     },
 
-    // 🔴 התיקון: שליפת הזמנות של חברה ספציפית דרך HistoryOrderController
     getOrdersByCompany: async (token: string, companyId: number): Promise<HistoryOrderDTO[]> => {
         const response = await fetch(`${HISTORY_BASE_URL}?companyId=${companyId}`, {
             method: 'GET', 
@@ -54,7 +51,6 @@ export const historyOrderApi = {
         return mapStandingAreas(data);
     },
 
-    // שליפת כל ההזמנות במערכת (אדמין בלבד)
     getAllOrders: async (token: string): Promise<HistoryOrderDTO[]> => {
         const response = await fetch(`${HISTORY_BASE_URL}`, {
             method: 'GET', 
@@ -65,7 +61,6 @@ export const historyOrderApi = {
     }
 };
 
-// פונקציית עזר למיפוי במקרה שהשרת מחזיר את המפתח עם אות גדולה (StandingAreaQuantities)
 const mapStandingAreas = (data: any[]) => {
     if (!Array.isArray(data)) return [];
     return data.map((item: any) => ({
