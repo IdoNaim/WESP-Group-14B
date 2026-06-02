@@ -1,41 +1,72 @@
 package com.ticketpurchasingsystem.project.acceptance.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ticketpurchasingsystem.project.Controllers.ActiveOrderController;
-import com.ticketpurchasingsystem.project.Controllers.apidto.AddSeatsRequestDTO;
-import com.ticketpurchasingsystem.project.Controllers.apidto.AddStandingAreaRequestDTO;
-import com.ticketpurchasingsystem.project.Controllers.apidto.CheckoutRequestDTO;
-import com.ticketpurchasingsystem.project.Controllers.apidto.CreateOrderRequestDTO;
-import com.ticketpurchasingsystem.project.application.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
-import com.ticketpurchasingsystem.project.domain.HistoryOrder.*;
-import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
-import com.ticketpurchasingsystem.project.domain.event.*;
-import com.ticketpurchasingsystem.project.domain.event.Maps.*;
-import com.ticketpurchasingsystem.project.infrastructure.*;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ticketpurchasingsystem.project.Controllers.ActiveOrderController;
+import com.ticketpurchasingsystem.project.Controllers.apidto.AddSeatsRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.AddStandingAreaRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.CheckoutRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.CreateOrderRequestDTO;
+import com.ticketpurchasingsystem.project.application.ActiveOrderService;
+import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.EventService;
+import com.ticketpurchasingsystem.project.application.HistoryOrderService;
+import com.ticketpurchasingsystem.project.application.IActiveOrderService;
+import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
+import com.ticketpurchasingsystem.project.application.IEventService;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
+import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.CompletedOrderEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.GetCompanyIdEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsUpToPolicyEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsValidEventIDEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.SeatReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReservationEvent;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderHandler;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublisher;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderListener;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
+import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
+import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
+import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
 class ActiveOrderApiAcceptanceTest {
 
@@ -106,7 +137,7 @@ class ActiveOrderApiAcceptanceTest {
         PurchasePolicyDTO policy = new PurchasePolicyDTO(0, 10, false, 0, 100, false, false);
         List<DiscountDTO> discounts = Collections.emptyList();
         EventDTO eventDTO = new EventDTO(null, 1, "Test Event", 100,
-                LocalDateTime.now().plusDays(30), true);
+                LocalDateTime.now().plusDays(30), "test location", true);
         eventService.createEvent(userToken, eventDTO, policy, discounts);
         List<EventDTO> events = eventService.searchEventsByCompany(userToken, 1);
         eventId = events.get(0).eventId();
@@ -303,7 +334,7 @@ class ActiveOrderApiAcceptanceTest {
 
     @Test
     void GivenValidOrderWithSeats_WhenCheckout_ThenReturn200WithBarcodes() throws Exception {
-        when(paymentGatewayMock.pay()).thenReturn(true);
+        when(paymentGatewayMock.pay(any())).thenReturn(50000);
         when(barCodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode-1")));
 
         String orderId = createOrder();
@@ -328,7 +359,7 @@ class ActiveOrderApiAcceptanceTest {
 
     @Test
     void GivenPaymentFails_WhenCheckout_ThenReturn409() throws Exception {
-        when(paymentGatewayMock.pay()).thenReturn(false);
+        when(paymentGatewayMock.pay(any())).thenReturn(-1);
 
         String orderId = createOrder();
         CheckoutRequestDTO checkout = new CheckoutRequestDTO();

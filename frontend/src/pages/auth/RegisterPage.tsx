@@ -2,6 +2,9 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 
+// Central configuration for landing/dashboard path
+const DEFAULT_REDIRECT_PATH = '/dashboard';
+
 export default function RegisterPage() {
     const navigate = useNavigate();
 
@@ -74,7 +77,17 @@ export default function RegisterPage() {
             <main className="w-full max-w-sm z-10 relative">
                 <div className="bg-[#eeefff] rounded-2xl shadow-2xl pt-8 pb-10 px-8 text-[#171f33] transition-all duration-300 transform hover:-translate-y-1">
 
-                    <div className="flex flex-col items-center mb-6">
+                    {/* Header Identity & Home Access Button */}
+                    <div className="flex flex-col items-center mb-6 relative">
+                        {/* Clean Home Button pinned to the top right of the card header */}
+                        <Link 
+                            to={DEFAULT_REDIRECT_PATH}
+                            className="absolute right-0 top-0 text-[#8d90a0] hover:text-[#2563eb] transition-colors p-1 flex items-center justify-center rounded-lg hover:bg-gray-200/50"
+                            title="Go to Home/Dashboard"
+                        >
+                            <span className="material-symbols-outlined text-[22px]">home</span>
+                        </Link>
+
                         <div className="text-3xl font-black tracking-tighter text-[#0b1326] mb-1">ELITE TICKETS</div>
                         <p className="text-[11px] font-mono text-[#2563eb] tracking-widest uppercase font-bold">Claim Access Pass</p>
                     </div>

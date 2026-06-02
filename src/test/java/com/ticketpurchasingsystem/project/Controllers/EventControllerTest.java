@@ -1,5 +1,28 @@
 package com.ticketpurchasingsystem.project.Controllers;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMapRequestDTO;
@@ -10,25 +33,6 @@ import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(EventController.class)
 @Import(SecurityConfig.class)
@@ -55,7 +59,7 @@ class EventControllerTest {
     @Test
     void GivenValidRequest_WhenCreateEvent_ThenReturn201() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7),"test location", true));
         dto.setPurchasePolicy(mock(PurchasePolicyDTO.class));
 
         // FIXED: Added 4th 'any()' for authHeader
@@ -71,7 +75,7 @@ class EventControllerTest {
     @Test
     void GivenServiceFailure_WhenCreateEvent_ThenReturn400() throws Exception {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7), true));
+        dto.setEvent(new EventDTO(null,1, "Concert Night", 500, LocalDateTime.now().plusDays(7),"test location", true));
 
         // FIXED: Added 4th 'any()' for authHeader
         when(eventService.createEvent(any(), any(), any(), any())).thenReturn(false);
@@ -88,10 +92,10 @@ class EventControllerTest {
 
     @Test
     void GivenExistingEvent_WhenGetEvent_ThenReturn200WithBody() throws Exception {
-        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14), true);
+        EventDTO event = new EventDTO("evt-1", 1, "Rock Festival", 1000, LocalDateTime.now().plusDays(14),"test location", true);
 
         // FIXED: Added eq(VALID_AUTH)
-        when(eventService.searchEvent(eq(VALID_AUTH), eq("evt-1"))).thenReturn(event);
+        when(eventService.searchEvent(eq("valid-token"), eq("evt-1"))).thenReturn(event);
 
         mockMvc.perform(get("/api/events/evt-1")
                         .header("Authorization", VALID_AUTH))
@@ -116,11 +120,11 @@ class EventControllerTest {
     @Test
     void GivenCompanyWithEvents_WhenGetEventsByCompany_ThenReturn200WithList() throws Exception {
         List<EventDTO> events = List.of(
-                new EventDTO("evt-1", 1, "Event A", 200, LocalDateTime.now().plusDays(5), true),
-                new EventDTO("evt-2", 1, "Event B", 300, LocalDateTime.now().plusDays(10), true));
+                new EventDTO("evt-1",1, "Event A", 200, LocalDateTime.now().plusDays(5),"test location", true),
+                new EventDTO("evt-2",1, "Event B", 300, LocalDateTime.now().plusDays(10),"test location", true));
 
-        // CHANGE eq(VALID_AUTH) TO any() HERE:
-        when(eventService.searchEventsByCompany(any(), eq(1))).thenReturn(events);
+        // FIXED: Added eq(VALID_AUTH)
+        when(eventService.searchEventsByCompany(eq(VALID_AUTH), eq(1))).thenReturn(events);
 
         mockMvc.perform(get("/api/events")
                         .param("companyId", "1")

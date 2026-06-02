@@ -23,11 +23,6 @@ export const navItems: NavItem[] = [
     visibility: "all",
   },
   {
-    label: "Checkout",
-    path: "/checkout",
-    visibility: "all",
-  },
-  {
     label: "Order History",
     path: "/orders/history",
     visibility: "member",
@@ -38,9 +33,9 @@ export const navItems: NavItem[] = [
     visibility: "member",
   },
   {
-    label: "Production Company",
+    label: "My Companies",
     path: "/production-company",
-    visibility: "production",
+    visibility: "member",
   },
   {
     label: "Purchase Policies",
