@@ -1,18 +1,17 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
+import java.time.LocalDateTime;
+
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
-
-import java.time.LocalDateTime;
-
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
 public class Event {
@@ -44,12 +43,15 @@ public class Event {
 
     private int version = 0;
 
+    private String location;
+
 
     public Event(
             int companyId,
             String eventName,
             int eventCapacity,
             LocalDateTime eventDate,
+            String location,
             EventPurchasePolicy purchasePolicy,
             EventDiscountPolicy discountPolicy,
             int version
@@ -75,6 +77,19 @@ public class Event {
         this.discountPolicy = discountPolicy;
         this.isActive = true;
         this.version = version;
+        this.location = location;
+    }
+
+    public Event(
+            int companyId,
+            String eventName,
+            int eventCapacity,
+            LocalDateTime eventDate,
+            EventPurchasePolicy purchasePolicy,
+            EventDiscountPolicy discountPolicy,
+            int version
+    ) {
+        this(companyId, eventName, eventCapacity, eventDate, null, purchasePolicy, discountPolicy, version);
     }
 
     // COPY CONSTRUCTOR: Required for Event::new to work in your Streams
@@ -85,6 +100,7 @@ public class Event {
         this.eventCapacity = other.eventCapacity;
         this.isActive = other.isActive;
         this.eventDate = other.eventDate;
+        this.location = other.location;
         this.seatingMap = other.seatingMap;
         this.discountPolicy = other.discountPolicy;
         this.purchasePolicy = other.purchasePolicy;
@@ -95,6 +111,12 @@ public class Event {
         this.imageUrl = other.imageUrl;
     }
 
+    public String getLocation() {
+        return location;
+    }
+    public void setLocation(String location) {
+        this.location = location;
+    }
 
     // ---------------- GETTERS ----------------
 
@@ -175,45 +197,45 @@ public class Event {
         return purchasePolicy;
     }
 
-    public void setPurchasePolicy(PurchasePolicyDTO purchasePolicyDTO){
-        EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
+    public void setPurchasePolicy(PurchasePolicyDTO dto) {
+        EventPurchasePolicy policy = new EventPurchasePolicy();
 
-        // Build age sub-rule respecting isAgeOr flag
-        IPurchaseRule ageRule = null;
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null) {
-            IPurchaseRule minA = new MinAgeRule(purchasePolicyDTO.minAge());
-            IPurchaseRule maxA = new MaxAgeRule(purchasePolicyDTO.maxAge());
-            ageRule = purchasePolicyDTO.isAgeOr() ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
-        } else if (purchasePolicyDTO.minAge() != null) {
-            ageRule = new MinAgeRule(purchasePolicyDTO.minAge());
-        } else if (purchasePolicyDTO.maxAge() != null) {
-            ageRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
+        // Build age block (null-safe: only create if at least one age rule exists)
+        IPurchaseRule ageBlock = null;
+        if (dto.minAge() != null && dto.maxAge() != null) {
+            IPurchaseRule minAge = new MinAgeRule(dto.minAge());
+            IPurchaseRule maxAge = new MaxAgeRule(dto.maxAge());
+            ageBlock = dto.isAgeOr() ? new OrRule(minAge, maxAge) : new AndRule(minAge, maxAge);
+        } else if (dto.minAge() != null) {
+            ageBlock = new MinAgeRule(dto.minAge());
+        } else if (dto.maxAge() != null) {
+            ageBlock = new MaxAgeRule(dto.maxAge());
         }
 
-        // Build quantity sub-rule respecting isQuantityOr flag
-        IPurchaseRule quantityRule = null;
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null) {
-            IPurchaseRule minT = new MinTicketsRule(purchasePolicyDTO.minTickets());
-            IPurchaseRule maxT = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
-            quantityRule = purchasePolicyDTO.isQuantityOr() ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
-        } else if (purchasePolicyDTO.minTickets() != null) {
-            quantityRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
-        } else if (purchasePolicyDTO.maxTickets() != null) {
-            quantityRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
+        // Build quantity block
+        IPurchaseRule quantityBlock = null;
+        if (dto.minTickets() != null && dto.maxTickets() != null) {
+            IPurchaseRule minTickets = new MinTicketsRule(dto.minTickets());
+            IPurchaseRule maxTickets = new MaxTicketsRule(dto.maxTickets());
+            quantityBlock = dto.isQuantityOr() ? new OrRule(minTickets, maxTickets) : new AndRule(minTickets, maxTickets);
+        } else if (dto.minTickets() != null) {
+            quantityBlock = new MinTicketsRule(dto.minTickets());
+        } else if (dto.maxTickets() != null) {
+            quantityBlock = new MaxTicketsRule(dto.maxTickets());
         }
 
-        // Combine age and quantity rules respecting isAgeAndQuantityOr flag
-        if (ageRule != null && quantityRule != null) {
-            IPurchaseRule combined = purchasePolicyDTO.isAgeAndQuantityOr()
-                    ? new OrRule(ageRule, quantityRule)
-                    : new AndRule(ageRule, quantityRule);
-            purchasePolicy.addRule(combined);
-        } else if (ageRule != null) {
-            purchasePolicy.addRule(ageRule);
-        } else if (quantityRule != null) {
-            purchasePolicy.addRule(quantityRule);
+        // Combine age block and quantity block into the root rule
+        if (ageBlock != null && quantityBlock != null) {
+            IPurchaseRule root = dto.isAgeAndQuantityOr()
+                    ? new OrRule(ageBlock, quantityBlock)
+                    : new AndRule(ageBlock, quantityBlock);
+            policy.addRule(root);
+        } else if (ageBlock != null) {
+            policy.addRule(ageBlock);
+        } else if (quantityBlock != null) {
+            policy.addRule(quantityBlock);
         }
 
-        this.purchasePolicy = purchasePolicy;
+        this.purchasePolicy = policy;
     }
 }
