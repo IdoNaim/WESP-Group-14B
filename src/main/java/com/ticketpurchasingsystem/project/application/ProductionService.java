@@ -50,36 +50,6 @@ public class ProductionService implements IProductionService {
         // loggerDef.getInstance().info("Test company created and saved.");
     }
 
-    @PostConstruct
-    public void init() {
-        //make admin company manager:
-        String adminUserId = "admin";
-
-        //login as admin to ensure the user exists and we have a valid session token for subsequent operations
-        String adminToken = authenticationService.login(adminUserId, "adminpass");
-        if (adminToken == null) {
-            loggerDef.getInstance().error("Failed to login as admin user during ProductionService initialization");
-            return;
-        }
-        //create new company
-        ProductionCompanyDTO companyDetails = new ProductionCompanyDTO("Admin Company", "A company for admin operations", "admin@example.com");
-        Integer companyId = createProductionCompany(adminUserId, companyDetails);
-        if (companyId != null) {
-            loggerDef.getInstance().info("Admin company created with ID: " + companyId);
-            //appoint admin as manager with all permissions
-            boolean appointed = appointManager(adminUserId, companyId, adminUserId, Set.of(ManagerPermission.values()));
-            if (appointed) {
-                loggerDef.getInstance().info("Admin user appointed as manager of admin company with all permissions");
-            } else {
-                loggerDef.getInstance().error("Failed to appoint admin user as manager of admin company");
-            }
-        } else {
-            loggerDef.getInstance().error("Failed to create admin company");
-        }
-        //logout admin after setup
-        authenticationService.logout(adminToken);
-    }
-
     @Override
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {

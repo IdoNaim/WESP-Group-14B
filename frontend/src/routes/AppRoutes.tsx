@@ -73,8 +73,8 @@ export default function AppRoutes() {
           </Route>
 
           //history Order:
-          <Route path="/orders-history" element={<OrderHistoryPage />} />
-          
+          <Route path="/orders/history" element={<OrderHistoryPage />} />
+
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

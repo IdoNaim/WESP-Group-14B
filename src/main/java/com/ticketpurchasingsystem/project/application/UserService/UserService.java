@@ -42,22 +42,6 @@ public class UserService implements IUserService {
 
     }
 
-    @PostConstruct
-    private void init() {
-        UserInfo newUser = userHandler.registerUser("admin", "Admin User", "admin@example.com", "admin123", UserGroupDiscount.NONE);
-        userRepo.store(newUser);
-        userPublisher.publishUserCreated("admin");
-
-        loggerDef.getInstance().info("Admin user created with ID: admin and password: admin123");
-
-        //regular user for testing
-        UserInfo regularUser = userHandler.registerUser("user1", "Regular User", "user1@example.com", "user123", UserGroupDiscount.NONE);
-        userRepo.store(regularUser);
-        userPublisher.publishUserCreated("user1");
-
-        
-    }
-
 
     public String guestEntry() {
         try {

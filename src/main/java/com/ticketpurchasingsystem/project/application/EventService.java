@@ -3,13 +3,10 @@ package com.ticketpurchasingsystem.project.application;
 import java.time.LocalDateTime;
 import java.util.List;
 
-<<<<<<< HEAD
-import org.springframework.security.access.prepost.PostAuthorize;
-=======
+
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventHandler;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
->>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;

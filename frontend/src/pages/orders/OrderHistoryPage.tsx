@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { historyOrderApi, HistoryOrderDTO } from './../../api/historyOrderApi';
@@ -417,13 +416,3 @@ export default function OrderHistory() {
         </div>
     );
 }
-=======
-export default function OrderHistoryPage() {
-	return (
-		<div>
-			<h1>Order History</h1>
-			<p>This page is a placeholder until order history is implemented.</p>
-		</div>
-	);
-}
->>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
