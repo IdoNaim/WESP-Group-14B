@@ -369,7 +369,15 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         ? `Zone capacities must total exactly ${eventCapNum}. Currently: ${totalZoneCapacity}.`
         : null;
 
-    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
+    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({
+        minTickets: null,
+        maxTickets: null,
+        isQuantityOr: false,
+        minAge: null,
+        maxAge: null,
+        isAgeOr: false,
+        isAgeAndQuantityOr: false
+    });
 
     const [companyPolicyDesc, setCompanyPolicyDesc] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -719,7 +727,7 @@ function EditEventModal({ event, onClose, onSaved }: {
             if (Number(capacity) !== event.eventCapacity)
                 ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
             const newLoc = location || null;
-            if (newLoc !== (event.eventLocation ?? null))
+            if (newLoc !== (event.location ?? null))
                 ops.push(eventApi.editEventLocation(token, eventId, newLoc));
             if (imageChanged)
                 ops.push(eventApi.editEventImage(token, eventId, imageUrl));
@@ -946,8 +954,9 @@ function EventCard({ event, stats, onEdit, onDelete }: {
     const revenue = event.ticketPrice != null
         ? ticketsSold * event.ticketPrice
         : (stats?.historyRevenue ?? 0);
-    const available = event.eventCapacity - ticketsSold;
-    const soldPct = event.eventCapacity > 0 ? Math.min(100, Math.round((ticketsSold / event.eventCapacity) * 100)) : 0;
+    const capacityVal = event.eventCapacity ?? 0;
+    const available = capacityVal - ticketsSold;
+    const soldPct = capacityVal > 0 ? Math.min(100, Math.round((ticketsSold / capacityVal) * 100)) : 0;
 
     return (
         <div className="bg-[#171f33] border border-gray-800 rounded-2xl p-5 flex flex-col gap-3">
@@ -970,10 +979,10 @@ function EventCard({ event, stats, onEdit, onDelete }: {
                         {formatDate(event.eventDateTime)}
                     </p>
                 )}
-                {event.eventLocation && (
+                {event.location && (
                     <p className="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[13px]">location_on</span>
-                        {event.eventLocation}
+                        {event.location}
                     </p>
                 )}
             </div>

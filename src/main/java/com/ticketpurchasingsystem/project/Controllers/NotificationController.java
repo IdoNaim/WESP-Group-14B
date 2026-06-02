@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ticketpurchasingsystem.project.Controllers.apidto.BroadcastNotificationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateNotificationRequestDTO;
-import com.ticketpurchasingsystem.project.application.ForbiddenException;
 import com.ticketpurchasingsystem.project.application.INotificationService;
-import com.ticketpurchasingsystem.project.application.NotFoundException;
 import com.ticketpurchasingsystem.project.application.UnauthorizedException;
+import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
+import com.ticketpurchasingsystem.project.domain.exceptions.NotFoundException;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 
 @RestController

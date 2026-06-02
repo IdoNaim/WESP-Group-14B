@@ -87,6 +87,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
+                // RESOLVED: Cleaned conflict markers and passing standard authHeader to match your other service endpoints
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
@@ -199,4 +200,41 @@ public class EventController {
                         : ResponseEntity.badRequest().build();
         }
 
+        @GetMapping("/{eventId}/purchase-policy")
+        public ResponseEntity<PurchasePolicyDTO> getEventPurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                PurchasePolicyDTO purchasePolicy = eventService.getEventPurchasePolicy(token, eventId);
+                return purchasePolicy != null
+                        ? ResponseEntity.ok(purchasePolicy)
+                        : ResponseEntity.notFound().build();
+        }
+        // POST /api/events/{eventId}/validate-policy
+        @PostMapping("/{eventId}/validate-policy")
+        public ResponseEntity<String> validatePurchasePolicy(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody ValidatePolicyRequestDTO body) {
+                String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+                String violation = eventService.validatePurchasePolicy(token, eventId, body.getQuantity(), body.getUserAge());
+                if (violation == null)
+                        return ResponseEntity.ok().build();
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(violation);
+        }
+
+        @GetMapping("/{eventId}/seating-map")
+        public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                SeatingMapDTO seatingMap = eventService.getEventSeatingMap(token, eventId);
+                return seatingMap != null
+                        ? ResponseEntity.ok(seatingMap)
+                        : ResponseEntity.notFound().build();
+        }
 }

@@ -24,6 +24,8 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
+import com.ticketpurchasingsystem.project.domain.exceptions.NotFoundException;
 import com.ticketpurchasingsystem.project.domain.notification.INotificationRepo;
 import com.ticketpurchasingsystem.project.domain.notification.Notification;
 
@@ -120,7 +122,7 @@ class NotificationServiceTest {
         when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
         when(mockEvent.getCompanyId()).thenReturn(COMPANY_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
-        when(mockCompany.getOwnerIds()).thenReturn(List.of(USER_ID));
+        when(mockCompany.isOwnerOrManager(USER_ID)).thenReturn(true);
         when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of());
 
         List<NotificationDTO> result = notificationService.createNotificationsForEvent(VALID_TOKEN, EVENT_ID, MESSAGE);
@@ -136,8 +138,7 @@ class NotificationServiceTest {
         when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
         when(mockEvent.getCompanyId()).thenReturn(COMPANY_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
-        when(mockCompany.getOwnerIds()).thenReturn(List.of());
-        when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
+        when(mockCompany.isOwnerOrManager(USER_ID)).thenReturn(false);
 
         assertThrows(ForbiddenException.class, () ->
                 notificationService.createNotificationsForEvent(VALID_TOKEN, EVENT_ID, MESSAGE));
@@ -169,6 +170,7 @@ class NotificationServiceTest {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
+        when(mockCompany.isOwnerOrManager(USER_ID)).thenReturn(true);
         when(mockCompany.getOwnerIds()).thenReturn(List.of(USER_ID));
         when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
 
@@ -182,8 +184,7 @@ class NotificationServiceTest {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(prodRepo.findById(COMPANY_ID)).thenReturn(Optional.of(mockCompany));
-        when(mockCompany.getOwnerIds()).thenReturn(List.of());
-        when(mockCompany.getManagerTree()).thenReturn(java.util.Collections.emptyMap());
+        when(mockCompany.isOwnerOrManager(USER_ID)).thenReturn(false);
 
         assertThrows(ForbiddenException.class, () ->
                 notificationService.createNotificationsForProduction(VALID_TOKEN, COMPANY_ID, MESSAGE));
@@ -239,7 +240,7 @@ class NotificationServiceTest {
         Notification n = new Notification("NOTIF-1", USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(Optional.of(n));
 
         NotificationDTO result = notificationService.getNotificationById(VALID_TOKEN, "NOTIF-1");
 
@@ -250,7 +251,7 @@ class NotificationServiceTest {
     @Test
     void GivenNotificationNotFound_WhenGetById_ThenThrow() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(notificationRepo.findById("NOTIF-X")).thenReturn(null);
+        when(notificationRepo.findById("NOTIF-X")).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () ->
                 notificationService.getNotificationById(VALID_TOKEN, "NOTIF-X"));
@@ -261,7 +262,7 @@ class NotificationServiceTest {
         Notification n = new Notification("NOTIF-1", OTHER_USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(Optional.of(n));
 
         assertThrows(ForbiddenException.class, () ->
                 notificationService.getNotificationById(VALID_TOKEN, "NOTIF-1"));
@@ -274,7 +275,7 @@ class NotificationServiceTest {
         Notification n = new Notification("NOTIF-1", USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(Optional.of(n));
 
         boolean result = notificationService.markAsRead(VALID_TOKEN, "NOTIF-1");
 
@@ -288,7 +289,7 @@ class NotificationServiceTest {
         n.markAsRead();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(Optional.of(n));
 
         boolean result = notificationService.markAsRead(VALID_TOKEN, "NOTIF-1");
 
@@ -301,7 +302,7 @@ class NotificationServiceTest {
         Notification n = new Notification("NOTIF-1", OTHER_USER_ID, MESSAGE);
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        when(notificationRepo.findById("NOTIF-1")).thenReturn(n);
+        when(notificationRepo.findById("NOTIF-1")).thenReturn(Optional.of(n));
 
         assertThrows(ForbiddenException.class, () ->
                 notificationService.markAsRead(VALID_TOKEN, "NOTIF-1"));
@@ -311,7 +312,7 @@ class NotificationServiceTest {
     @Test
     void GivenNotificationNotFound_WhenMarkAsRead_ThenThrow() {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
-        when(notificationRepo.findById("NOTIF-X")).thenReturn(null);
+        when(notificationRepo.findById("NOTIF-X")).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () ->
                 notificationService.markAsRead(VALID_TOKEN, "NOTIF-X"));
@@ -392,7 +393,6 @@ class NotificationServiceTest {
 
     @Test
     void GivenValidArgs_WhenCreateSystemNotification_ThenNoTokenRequired() {
-        // System notifications bypass auth — no stubbing of authenticationService needed
         NotificationDTO result = notificationService.createSystemNotification(USER_ID, MESSAGE);
 
         assertNotNull(result);

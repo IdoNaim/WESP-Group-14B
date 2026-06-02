@@ -145,6 +145,11 @@ export default function EventsPage() {
                                         </Link>
                                     </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="col-span-3 text-center py-20 text-gray-400">
+                                <p className="text-2xl font-bold mb-2">No events found</p>
+                                <p className="text-sm">Try a different search term.</p>
                             </div>
                         ))}
                     </div>

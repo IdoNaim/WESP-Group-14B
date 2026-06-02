@@ -1,4 +1,3 @@
-
 const BASE_URL = '/api/events';
 
 // ==========================================
@@ -27,6 +26,7 @@ export interface PurchasePolicyDTO {
     maxAge?: number | null;
     isAgeOr: boolean;
     isAgeAndQuantityOr: boolean;
+    requiresMembership?: boolean;
 }
 
 export interface DiscountDTO {
@@ -61,8 +61,8 @@ export interface StandingAreaConfig {
 }
 
 export interface ConfigureSeatingMapRequestDTO {
-    seatingAreas?: SeatingAreaConfig[];
-    standingAreas?: StandingAreaConfig[];
+    seatingAreas: any[];
+    standingAreas: any[];
 }
 
 // ==========================================
@@ -72,6 +72,16 @@ const getHeaders = (token: string) => ({
     'Content-Type': 'application/json',
     'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
 });
+
+// Helper: Response parser
+const parseResponse = async (response: Response) => {
+    if (!response.ok) {
+        const err = await response.text();
+        throw new Error(err || `HTTP Error: ${response.status}`);
+    }
+    const text = await response.text();
+    return text ? JSON.parse(text) : {};
+};
 
 // ==========================================
 // API Service Methods
@@ -102,35 +112,42 @@ export const eventApi = {
         return response.json();
     },
 
-    /**
-     * GET /api/events/{eventId}
-     * Retrieves a specific event by its ID.
-     */
     getEvent: async (token: string, eventId: string | number): Promise<EventDTO | null> => {
-        const response = await fetch(`${BASE_URL}/${eventId}`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        if (!response.ok) return null;
-        return response.json();
+        console.log(`[API CALL] GET /api/events/${eventId}`);
+        try {
+            const response = await fetch(`${BASE_URL}/${eventId}`, {
+                method: 'GET',
+                headers: getHeaders(token),
+            });
+
+            const data = await parseResponse(response);
+            console.log(`[API RESULT] Data for ${eventId}:`, data);
+            return data;
+        } catch (error: any) {
+            console.error(`[API ERROR] Failed to fetch event ${eventId}:`, error.message);
+            return null;
+        }
     },
 
-    /**
-     * GET /api/events?companyId={companyId}
-     * Retrieves all events associated with a specific production company.
-     */
     getEventsByCompany: async (token: string, companyId: number): Promise<EventDTO[]> => {
-        const response = await fetch(`${BASE_URL}?companyId=${companyId}`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        if (!response.ok) throw new Error('Failed to fetch events for this company');
-        return response.json();
+        console.log(`[API CALL] GET /api/events?companyId=${companyId}`);
+        try {
+            const response = await fetch(`${BASE_URL}?companyId=${companyId}`, {
+                method: 'GET',
+                headers: getHeaders(token),
+            });
+
+            const data = await parseResponse(response);
+            console.log(`[API RESULT] Events fetched for company ${companyId}:`, data);
+            return data;
+        } catch (error: any) {
+            console.error(`[API ERROR] Failed to fetch events for company ${companyId}:`, error.message);
+            return [];
+        }
     },
 
     /**
      * PUT /api/events/{eventId}/date
-     * Updates the date and time of an existing event.
      */
     editEventDate: async (token: string, eventId: string | number, data: EditEventDateRequestDTO): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}/date`, {
@@ -143,7 +160,6 @@ export const eventApi = {
 
     /**
      * PUT /api/events/{eventId}/capacity
-     * Updates the total capacity for an event.
      */
     editEventCapacity: async (token: string, eventId: string | number, data: EditEventCapacityRequestDTO): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}/capacity`, {
@@ -156,7 +172,6 @@ export const eventApi = {
 
     /**
      * DELETE /api/events/{eventId}
-     * Removes an event from the system.
      */
     removeEvent: async (token: string, eventId: string | number): Promise<boolean> => {
         const response = await fetch(`${BASE_URL}/${eventId}`, {
