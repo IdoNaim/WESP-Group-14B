@@ -460,10 +460,10 @@ function EditEventModal({ event, onClose, onSaved }: {
             const ops: Promise<boolean>[] = [];
 
             if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
-                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: new Date(dateTime).toISOString().slice(0, 19) }));
+                ops.push(eventApi.editEventDate(token, eventId, { newEventDateTime: new Date(dateTime).toISOString().slice(0, 19) }));
 
             if (Number(capacity) !== event.eventCapacity)
-                ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
+                ops.push(eventApi.editEventCapacity(token, eventId, { newEventCapacity: Number(capacity) }));
 
             const newLoc = location || null;
             if (newLoc !== (event.eventLocation ?? null))
