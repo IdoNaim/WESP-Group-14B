@@ -1,7 +1,6 @@
 package com.ticketpurchasingsystem.project.acceptance.user;
 
 import java.lang.reflect.Field;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
