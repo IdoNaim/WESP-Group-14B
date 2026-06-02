@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.application;
+package com.ticketpurchasingsystem.project.domain.exceptions;
 
 public class ForbiddenException extends RuntimeException {
     public ForbiddenException(String message) {
