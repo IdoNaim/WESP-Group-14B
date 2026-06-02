@@ -13,7 +13,6 @@ import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
-import jakarta.annotation.PostConstruct; // (או javax.annotation.PostConstruct בגרסאות ישנות)
 @Service
 public class UserService implements IUserService {
 
@@ -29,19 +28,6 @@ public class UserService implements IUserService {
         this.userPublisher = userPublisher;
         }
 
-    //data test:
-    @PostConstruct
-    public void initTestData() {
-        try {
-            //String encyrptedPassword1 = userHandler.encryptPassword("password1");
-            //userRepo.store(new UserInfo("email1@example.com", "name1", "email1@example.com", "password1", UserGroupDiscount.STUDENT));
-            userRepo.store(userHandler.registerUser("user1", "name1", "email1@example.com", "password1", UserGroupDiscount.STUDENT));
-            userPublisher.publishUserCreated("user1");
-            loggerDef.getInstance().info("Test data created successfully.");
-        } catch (Exception e) {
-            loggerDef.getInstance().error("Failed to create test data: " + e.getMessage());
-        }
-    }
 
     public String guestEntry() {
         try {

@@ -18,8 +18,6 @@ import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.notification.INotificationRepo;
 import com.ticketpurchasingsystem.project.domain.notification.Notification;
 
-import jakarta.annotation.PostConstruct;
-
 @Service
 public class NotificationService implements INotificationService {
 
@@ -40,18 +38,6 @@ public class NotificationService implements INotificationService {
         this.historyOrderRepo = historyOrderRepo;
         this.prodRepo = prodRepo;
         this.eventRepo = eventRepo;
-    }
-
-    //data test:
-    @PostConstruct
-    public void initTestData() {
-        try {
-            //test data
-                System.out.println("Creating test notification...");
-                notificationRepo.save(new Notification(nextId(), "user1", "Your order has been shipped!"));
-        } catch (Exception e) {
-            // Log the error if needed
-        }
     }
 
     private String nextId() {
