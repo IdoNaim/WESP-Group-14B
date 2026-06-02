@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -13,6 +14,7 @@ import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.application.PaymentDetails;
 
 @Component
+@Profile("!dev")
 public class PaymentGateway implements IPaymentGateway {
 
     static final String API_URL = "https://damp-lynna-wsep-1984852e.koyeb.app/";
