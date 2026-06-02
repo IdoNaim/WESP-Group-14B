@@ -16,6 +16,8 @@ import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
 @Component
 public class DataLoader implements ApplicationRunner {
@@ -84,9 +86,15 @@ public class DataLoader implements ApplicationRunner {
                 noRestrictions, noDiscounts);
 
         eventService.createEvent(aliceToken,
-                new EventDTO(null, companyId, "Comedy Night 18+", 300,
+                new EventDTO("1", companyId, "Comedy Night 18+", 300,
                         LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
                 adultOnly, noDiscounts);
+        
+        
+
+        addSeatingMapToEvent(aliceToken, "1",
+                List.of(new SeatingAreaConfig(10, 20, 120.0)),
+                List.of(new StandingAreaConfig(100, 60.0)));
 
         // Leave users logged out so they can login normally from the frontend
         userService.logoutUser("alice", aliceToken);
@@ -96,5 +104,12 @@ public class DataLoader implements ApplicationRunner {
         notificationService.createSystemNotification("alice", "Welcome to the ticket purchasing system, Alice!");
         notificationService.createSystemNotification("bob", "Welcome to the ticket purchasing system, Bob!");
 
+    }
+
+    private void addSeatingMapToEvent(String token, String eventId,
+                                      List<SeatingAreaConfig> seatingAreas,
+                                      List<StandingAreaConfig> standingAreas) {
+        var map = eventService.configureSeatingMap(token, seatingAreas, standingAreas);
+        eventService.editEventSeatingMap(token, eventId, map);
     }
 }
