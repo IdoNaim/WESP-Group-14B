@@ -390,7 +390,7 @@ export default function ActiveOrderPage() {
                       {event?.eventName || 'Unnamed Event'}
                     </h2>
                     <p className="text-white/70 text-xs">
-                      {formatDate(event?.eventDateTime)} • {event?.eventLocation || 'No Location Specified'}
+                      {formatDate(event?.eventDateTime)} • {event?.location || 'No Location Specified'}
                     </p>
                   </div>
                 </div>

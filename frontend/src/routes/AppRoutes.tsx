@@ -26,6 +26,7 @@ import AccountPage from "../pages/user/AccountPage";
 import RequireMember from "../components/auth/RequireMember";
 import RequireProductionUser from "../components/auth/RequireProductionUser";
 import RequireAdmin from "../components/auth/RequireAdmin";
+import CheckoutPage from '../pages/orders/CheckoutPage';
 
 export default function AppRoutes() {
   return (
@@ -44,6 +45,7 @@ export default function AppRoutes() {
           {/* Public routes - guests and members */}
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:eventId" element={<EventDetailsPage />} />
+          <Route path="/checkout" element={<CheckoutPage/>}/>
           {/* <Route path="reserve/:eventId/:userId" element={<ReserveTicketPage/>} /> */}
           <Route
             path="/events/:eventId/reserve"

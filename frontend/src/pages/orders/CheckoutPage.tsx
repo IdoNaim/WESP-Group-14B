@@ -696,7 +696,7 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <p className="font-bold text-sm text-[#191c20]">{eventDetails.eventName}</p>
-                  <p className="text-xs text-[#46464b]">{eventDetails.eventLocation || 'Venue Map Unassigned'}</p>
+                  <p className="text-xs text-[#46464b]">{eventDetails.location || 'Venue Map Unassigned'}</p>
                   <p className="text-xs font-mono mt-1 text-gray-500">
                     {eventDetails.eventDateTime ? new Date(eventDetails.eventDateTime).toLocaleString() : 'Date TBD'}
                   </p>

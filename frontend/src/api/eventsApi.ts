@@ -11,7 +11,7 @@ export interface EventDTO {
     eventName: string;
     eventCapacity?: number;
     eventDateTime?: string; // ISO 8601 string recommended (e.g., "2026-10-24T21:00:00")
-    eventLocation?: string;
+    location?: string;
     isPublished?: boolean;
     // Add any other fields your Java EventDTO contains
 }
