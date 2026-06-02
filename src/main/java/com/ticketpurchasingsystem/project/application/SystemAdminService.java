@@ -14,6 +14,7 @@ import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminPublisher;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminInfo;
 
 @Service
 public class SystemAdminService implements ISystemAdminService {
@@ -29,6 +30,8 @@ public class SystemAdminService implements ISystemAdminService {
         this.adminRepo = adminRepo;
         this.adminPublisher = adminPublisher;
         this.authenticationService = authenticationService;
+
+        adminRepo.save(new AdminInfo("admin", "admin@gmail.com"));
     }
 
     @Override
