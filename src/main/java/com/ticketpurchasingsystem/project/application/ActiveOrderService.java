@@ -354,6 +354,8 @@ public class ActiveOrderService implements IActiveOrderService {
 
     private boolean payment(IPaymentGateway paymentGateway, SessionToken sessionToken, double amount, PaymentDetailsDTO paymentDetails) {
         if(authenticationService.validate(sessionToken.getToken())) {
+            logger.info("Processing payment for session: " + sessionToken.getToken() + " with amount: " + amount+
+             " of cardholder: "+ paymentDetails.getCardHolderName());
             return paymentGateway.pay(paymentDetails, amount); // Placeholder return value, replace with actual payment processing logic
         }else{
             logger.error("Session validation failed during payment processing");
