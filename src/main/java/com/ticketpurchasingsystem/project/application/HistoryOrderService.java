@@ -13,6 +13,8 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class HistoryOrderService implements IHistoryOrderService {
 
@@ -28,6 +30,13 @@ public class HistoryOrderService implements IHistoryOrderService {
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
         this.productionService = productionService;
+    }
+
+
+    @PostConstruct
+    public void init() {
+        //create history order for user1
+        createHistoryOrder("order1", "user1", "event1", 1, new Timestamp(System.currentTimeMillis()), 100.0, List.of("A1", "A2"), new HashMap<>());
     }
 
     public boolean createHistoryOrder(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {

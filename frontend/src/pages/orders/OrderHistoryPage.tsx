@@ -5,18 +5,10 @@ import { authApi, UserProfileDTO, UserPermissionsDTO } from '../../api/authApi';
 
 type ViewMode = 'PERSONAL' | 'COMPANY' | 'ALL';
 
-interface ExtendedHistoryOrderDTO extends HistoryOrderDTO {
-    eventName?: string;
-    eventLocation?: string;
-    eventImageUrl?: string;
-    category?: string;
-    eventDate?: string; // הוספנו את תאריך האירוע
-}
-
 export default function OrderHistory() {
     const navigate = useNavigate();
 
-    const [orders, setOrders] = useState<ExtendedHistoryOrderDTO[]>([]);
+    const [orders, setOrders] = useState<HistoryOrderDTO[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<{ status: number; message: string } | null>(null);
     
@@ -26,8 +18,9 @@ export default function OrderHistory() {
 
     const [viewMode, setViewMode] = useState<ViewMode>('PERSONAL');
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-    const [selectedTicket, setSelectedTicket] = useState<ExtendedHistoryOrderDTO | null>(null);
+    const [selectedTicket, setSelectedTicket] = useState<HistoryOrderDTO | null>(null);
 
+    // 1. טעינת פרטי המשתמש וההרשאות (isAdmin & productionRoles)
     useEffect(() => {
         const initUser = async () => {
             try {
@@ -48,11 +41,13 @@ export default function OrderHistory() {
 
             } catch (err: any) {
                 setError({ status: err.status || 401, message: err.message || "Failed to authenticate." });
+                setIsLoading(false);
             }
         };
         initUser();
     }, []);
 
+    // 2. טעינת ההזמנות לפי הטאב שנבחר
     useEffect(() => {
         if (!userId) return;
 
@@ -64,7 +59,7 @@ export default function OrderHistory() {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error("No token");
 
-                let ordersData: ExtendedHistoryOrderDTO[] = [];
+                let ordersData: HistoryOrderDTO[] = [];
 
                 if (viewMode === 'PERSONAL') {
                     ordersData = await historyOrderApi.getUserOrders(token, userId);
@@ -113,33 +108,11 @@ export default function OrderHistory() {
     };
 
     const isGuest = !username;
+    
+    // חישוב הרשאות לתצוגה
+    const isAdmin = permissions?.isAdmin === true;
     const companyIds = permissions ? Object.keys(permissions.productionRoles || {}).map(Number) : [];
-
-    const handleToggleAdmin = (e: React.MouseEvent) => {
-        e.preventDefault();
-        const isCurrentlyAdmin = permissions?.isAdmin;
-        
-        if (!isCurrentlyAdmin) {
-            setPermissions({
-                userId: userId || "user-123",
-                state: "REGISTERED",
-                isAdmin: true,
-                productionRoles: { 1: "OWNER", 2: "MANAGER" }
-            });
-            setSelectedCompanyId(1);
-            alert("Admin mode ENABLED. You can now see the 'Company Orders' and 'All System Orders' tabs.");
-        } else {
-            setPermissions({
-                userId: userId || "user-123",
-                state: "REGISTERED",
-                isAdmin: false,
-                productionRoles: {}
-            });
-            setViewMode('PERSONAL');
-            setSelectedCompanyId(null);
-            alert("Admin mode DISABLED.");
-        }
-    };
+    const isCompanyManager = companyIds.length > 0;
 
     return (
         <div className="bg-[#0b1326] text-[#dbe2fd] min-h-screen font-sans overflow-x-hidden pb-32">
@@ -161,10 +134,7 @@ export default function OrderHistory() {
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-[#b4c5ff] uppercase">TicketFlow</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button type="button" onClick={handleToggleAdmin} className="hidden md:flex items-center gap-1 bg-[#e7039a]/10 text-[#e7039a] border border-[#e7039a]/30 px-4 py-2 rounded text-xs font-mono font-bold hover:bg-[#e7039a]/20 transition-colors cursor-pointer z-50 relative" title="Toggle Admin Mode">
-                        <span className="material-symbols-outlined text-[16px] pointer-events-none">admin_panel_settings</span>
-                        <span className="pointer-events-none">TOGGLE ADMIN</span>
-                    </button>
+                
 
                     {!isGuest ? (
                         <button onClick={handleLogout} className="bg-[#2d3449] hover:bg-[#171f33] border border-gray-600 text-white px-5 py-2 rounded font-bold text-xs tracking-widest transition-colors z-50 relative">SIGN OUT</button>
@@ -180,17 +150,22 @@ export default function OrderHistory() {
                     <h2 className="text-4xl md:text-5xl font-black text-white mb-2 uppercase">Order History</h2>
                     <p className="text-gray-400 max-w-xl mb-6">Review your past premium experiences. Secure, encrypted, and immutable ticketing records.</p>
                     
-                    {(permissions?.isAdmin || companyIds.length > 0) && (
+                    {/* 🔴 TABS: מוצגים רק אם יש הרשאות רלוונטיות */}
+                    {(isAdmin || isCompanyManager) && (
                         <div className="flex gap-6 border-b border-gray-800 w-full mb-4 overflow-x-auto">
                             <button onClick={() => setViewMode('PERSONAL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'PERSONAL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                 My Personal Orders
                             </button>
-                            {companyIds.length > 0 && (
+                            
+                            {/* יופיע רק למנהלי חברה */}
+                            {isCompanyManager && (
                                 <button onClick={() => setViewMode('COMPANY')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'COMPANY' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     Company Orders
                                 </button>
                             )}
-                            {permissions?.isAdmin && (
+                            
+                            {/* יופיע רק לאדמין */}
+                            {isAdmin && (
                                 <button onClick={() => setViewMode('ALL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'ALL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     All System Orders
                                 </button>
@@ -198,7 +173,7 @@ export default function OrderHistory() {
                         </div>
                     )}
 
-                    {viewMode === 'COMPANY' && companyIds.length > 1 && (
+                    {viewMode === 'COMPANY' && isCompanyManager && companyIds.length > 1 && (
                         <div className="mb-6 flex items-center gap-4 bg-[#171f33] border border-gray-800 p-4 rounded-lg w-max">
                             <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Select Company:</span>
                             <select 
@@ -221,6 +196,7 @@ export default function OrderHistory() {
                     </div>
                 )}
 
+                {/* ERROR STATE: Shows Clear Error when accessing forbidden history */}
                 {!isLoading && error && (
                     <div className="flex-grow flex items-center justify-center py-10 w-full animate-in fade-in">
                         <div className="bg-[#171f33] border border-red-900/50 p-10 md:p-16 rounded-xl text-center max-w-lg shadow-2xl relative overflow-hidden">
@@ -253,13 +229,13 @@ export default function OrderHistory() {
                     </div>
                 )}
 
+                {/* RICH EVENT CARDS WITH SEAT DETAILS */}
                 {!isLoading && !error && orders.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                         {orders.map((order) => {
                             const isRecent = new Date().getTime() - new Date(order.purchaseDate).getTime() < 86400000 * 7; 
                             const hasSeats = order.seatIds && order.seatIds.length > 0;
                             const hasStanding = order.standingAreaQuantities && Object.keys(order.standingAreaQuantities).length > 0;
-
                             return (
                                 <div key={order.orderId} className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 hover:border-[#75f5ff]/50 group relative z-10">
                                     <div className="h-48 relative overflow-hidden bg-[#0b1326] border-b border-gray-800">
@@ -286,7 +262,6 @@ export default function OrderHistory() {
                                                 {order.eventName || `Event #${order.eventId}`}
                                             </h3>
                                             <div className="flex flex-col gap-1.5 text-gray-400 text-sm">
-                                                {/* שינינו מ-purchaseDate ל-eventDate עבור הכרטיס */}
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                                                     <span>{order.eventDate ? formatDate(order.eventDate, true) : "Date TBD"}</span>
@@ -355,6 +330,7 @@ export default function OrderHistory() {
 
             </main>
 
+            {/* MODAL: VIEW TICKET (POPUP) */}
             {selectedTicket && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md bg-[#0b1326]/80 overflow-y-auto animate-in fade-in duration-300">
                     <div className="absolute inset-0" onClick={() => setSelectedTicket(null)}></div>
@@ -377,14 +353,12 @@ export default function OrderHistory() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 border-y border-gray-800 py-6">
-                                {/* תאריך האירוע בולט בפופ אפ */}
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Event Date</p>
                                     <p className="font-mono text-sm text-[#03dbe7] font-bold">
                                         {selectedTicket.eventDate ? formatDate(selectedTicket.eventDate, true) : "TBD"}
                                     </p>
                                 </div>
-                                {/* תאריך הרכישה למטה וקטן יותר */}
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Purchase Date</p>
                                     <p className="font-mono text-sm text-[#dbe2fd]">{formatDate(selectedTicket.purchaseDate)}</p>

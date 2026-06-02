@@ -3,6 +3,7 @@ package com.ticketpurchasingsystem.project.application.UserService;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
@@ -13,6 +14,8 @@ import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class UserService implements IUserService {
@@ -27,6 +30,22 @@ public class UserService implements IUserService {
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
+    }
+
+    @PostConstruct
+    private void init() {
+        UserInfo newUser = userHandler.registerUser("admin", "Admin User", "admin@example.com", "admin123", UserGroupDiscount.NONE);
+        userRepo.store(newUser);
+        userPublisher.publishUserCreated("admin");
+
+        loggerDef.getInstance().info("Admin user created with ID: admin and password: admin123");
+
+        //regular user for testing
+        UserInfo regularUser = userHandler.registerUser("user1", "Regular User", "user1@example.com", "user123", UserGroupDiscount.NONE);
+        userRepo.store(regularUser);
+        userPublisher.publishUserCreated("user1");
+
+        
     }
 
 

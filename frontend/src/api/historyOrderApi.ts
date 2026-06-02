@@ -1,5 +1,6 @@
 // מעודכן לפי ה-Controller האמיתי של הפרויקט
-const BASE_URL = '/api/history';
+const HISTORY_BASE_URL = '/api/history';
+const PRODUCTION_BASE_URL = '/api/production';
 
 export interface HistoryOrderDTO {
     orderId: string;
@@ -10,15 +11,16 @@ export interface HistoryOrderDTO {
     price: number;
     seatIds: string[];
     standingAreaQuantities: Record<string, number>;
+    eventName?: string;
+    eventLocation?: string;
+    eventImageUrl?: string;
+    category?: string;
+    eventDate?: string;
 }
 
 const getHeaders = (token?: string) => {
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-    };
-    if (token) {
-        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-    }
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     return headers;
 };
 
@@ -31,40 +33,33 @@ const parseResponse = async (response: Response) => {
 };
 
 export const historyOrderApi = {
-    
-    // GET /api/history?userId={userId}
+    // של המשתמש (HistoryOrderController)
     getUserOrders: async (token: string, userId: string): Promise<HistoryOrderDTO[]> => {
-        const response = await fetch(`${BASE_URL}?userId=${encodeURIComponent(userId)}`, {
-            method: 'GET',
-            headers: getHeaders(token),
+        const response = await fetch(`${HISTORY_BASE_URL}?userId=${encodeURIComponent(userId)}`, {
+            method: 'GET', headers: getHeaders(token),
         });
         return parseResponse(response);
     },
 
-    // GET /api/history/{orderId}
-    getOrderById: async (token: string, orderId: string): Promise<HistoryOrderDTO> => {
-        const response = await fetch(`${BASE_URL}/${encodeURIComponent(orderId)}`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        return parseResponse(response);
-    },
-
-    // GET /api/history?companyId={companyId}
-    getOrdersByCompany: async (token: string, companyId: number): Promise<HistoryOrderDTO[]> => {
-        const response = await fetch(`${BASE_URL}?companyId=${companyId}`, {
-            method: 'GET',
-            headers: getHeaders(token),
-        });
-        return parseResponse(response);
-    },
-
-    // GET /api/history (Admin Only)
+    // של כל המערכת - אדמין בלבד (HistoryOrderController)
     getAllOrders: async (token: string): Promise<HistoryOrderDTO[]> => {
-        const response = await fetch(`${BASE_URL}`, {
-            method: 'GET',
-            headers: getHeaders(token),
+        const response = await fetch(`${HISTORY_BASE_URL}`, {
+            method: 'GET', headers: getHeaders(token),
         });
         return parseResponse(response);
+    },
+
+    // 🔴 עודכן: של חברה ספציפית מתוך ה- ProductionController
+    getOrdersByCompany: async (token: string, companyId: number): Promise<HistoryOrderDTO[]> => {
+        const response = await fetch(`${PRODUCTION_BASE_URL}/companies/${companyId}/history`, {
+            method: 'GET', headers: getHeaders(token),
+        });
+        
+        const data = await parseResponse(response);
+        // מבצעים מיפוי למקרה שה-Backend מחזיר StandingAreaQuantities עם S גדולה
+        return data.map((item: any) => ({
+            ...item,
+            standingAreaQuantities: item.standingAreaQuantities || item.StandingAreaQuantities || {}
+        }));
     }
 };
