@@ -12,4 +12,7 @@ public class MaxAgeRule implements IPurchaseRule {
     public boolean validate(PurchaseContext context) {
         return context.getUserAge() <= maxAge;
     }
+    public int getMaxAge() {
+        return maxAge;
+    }
 }

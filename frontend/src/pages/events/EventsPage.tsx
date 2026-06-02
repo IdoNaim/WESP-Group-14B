@@ -119,10 +119,10 @@ export default function EventsPage() {
                                             </p>
                                         </div>
 
-                                        {event.eventLocation && (
+                                        {event.location && (
                                             <div className="flex items-center gap-2 mb-4 text-gray-400">
                                                 <span className="material-symbols-outlined text-sm">location_on</span>
-                                                <p className="text-sm">{event.eventLocation}</p>
+                                                <p className="text-sm">{event.location}</p>
                                             </div>
                                         )}
 
