@@ -127,7 +127,7 @@ export default function MyCompaniesPage() {
     }, []);
 
     const handleCompanyCreated = (companyId: number) => {
-        navigate(`/company/${companyId}`);
+        navigate(`/production-company/${companyId}`);
     };
 
     if (loading) {
@@ -219,7 +219,7 @@ export default function MyCompaniesPage() {
                         {companies.map(company => (
                             <button
                                 key={company.companyId}
-                                onClick={() => navigate(`/company/${company.companyId}`)}
+                                onClick={() => navigate(`/production-company/${company.companyId}`)}
                                 className="bg-[#171f33] border border-gray-800 hover:border-[#2563eb]/50 rounded-2xl p-5 text-left transition-all group hover:shadow-lg hover:shadow-[#2563eb]/5"
                             >
                                 <div className="flex items-start justify-between mb-3">

@@ -16,18 +16,19 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
+
 import com.ticketpurchasingsystem.project.Controllers.apidto.ConfigureSeatingMapRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventImageRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
-import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -44,22 +45,22 @@ public class EventController {
 
         // POST /api/events
         @PostMapping
-        public ResponseEntity<Void> createEvent(
+        public ResponseEntity<String> createEvent(
                 @RequestHeader("Authorization") String authHeader,
                 @RequestBody CreateEventRequestDTO body) {
 
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
                         .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
 
-                boolean success = eventService.createEvent(
+                String eventId = eventService.createEvent(
                         authHeader,
                         body.getEvent(),
                         body.getPurchasePolicy(),
                         discounts
                 );
 
-                return success
-                        ? ResponseEntity.status(HttpStatus.CREATED).build()
+                return eventId != null
+                        ? ResponseEntity.status(HttpStatus.CREATED).body(eventId)
                         : ResponseEntity.badRequest().build();
         }
 
@@ -69,14 +70,17 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                String token = authHeader.startsWith("Bearer ")
-                ? authHeader.substring(7)
-                : authHeader;
-                // FIXED: Added authHeader
-                EventDTO result = eventService.searchEvent(token, eventId);
+                EventDTO result = eventService.searchEvent(authHeader, eventId);
                 return result != null
                         ? ResponseEntity.ok(result)
                         : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        // GET /api/events/active — public, no auth required
+        @GetMapping("/active")
+        public ResponseEntity<List<EventDTO>> getAllActiveEvents() {
+                List<EventDTO> events = eventService.getAllActiveEvents();
+                return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
 
         // GET /api/events?companyId=123
@@ -85,7 +89,6 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @RequestParam int companyId) {
 
-                // RESOLVED: Cleaned conflict markers and passing standard authHeader to match your other service endpoints
                 List<EventDTO> events = eventService.searchEventsByCompany(authHeader, companyId);
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
@@ -150,6 +153,17 @@ public class EventController {
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
+        // PUT /api/events/{eventId}/image
+        @PutMapping("/{eventId}/image")
+        public ResponseEntity<Void> editEventImage(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId,
+                @RequestBody EditEventImageRequestDTO body) {
+
+                boolean success = eventService.editEventImage(authHeader, eventId, body.getNewImageUrl());
+                return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
+        }
+
         // PUT /api/events/{eventId}/policy
         @PutMapping("/{eventId}/policy")
         public ResponseEntity<Void> editEventPolicy(
@@ -186,7 +200,18 @@ public class EventController {
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
         }
-
+        @GetMapping("/{eventId}/seating-map")
+        public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
+                @RequestHeader("Authorization") String authHeader,
+                @PathVariable String eventId) {
+                String token = authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : authHeader;
+                SeatingMapDTO seatingMap = eventService.getEventSeatingMap(token, eventId);
+                return seatingMap != null
+                        ? ResponseEntity.ok(seatingMap)
+                        : ResponseEntity.notFound().build();
+        }
         @GetMapping("/{eventId}/purchase-policy")
         public ResponseEntity<PurchasePolicyDTO> getEventPurchasePolicy(
                 @RequestHeader("Authorization") String authHeader,
@@ -212,16 +237,4 @@ public class EventController {
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(violation);
         }
 
-        @GetMapping("/{eventId}/seating-map")
-        public ResponseEntity<SeatingMapDTO> getEventSeatingMap(
-                @RequestHeader("Authorization") String authHeader,
-                @PathVariable String eventId) {
-                String token = authHeader.startsWith("Bearer ") 
-                ? authHeader.substring(7) 
-                : authHeader;
-                SeatingMapDTO seatingMap = eventService.getEventSeatingMap(token, eventId);
-                return seatingMap != null
-                        ? ResponseEntity.ok(seatingMap)
-                        : ResponseEntity.notFound().build();
-        }
 }

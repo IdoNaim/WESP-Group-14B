@@ -137,7 +137,7 @@ class ActiveOrderApiAcceptanceTest {
         PurchasePolicyDTO policy = new PurchasePolicyDTO(0, 10, false, 0, 100, false, false);
         List<DiscountDTO> discounts = Collections.emptyList();
         EventDTO eventDTO = new EventDTO(null, 1, "Test Event", 100,
-                LocalDateTime.now().plusDays(30), "test location", true);
+                LocalDateTime.now().plusDays(30), true, "test location");
         eventService.createEvent(userToken, eventDTO, policy, discounts);
         List<EventDTO> events = eventService.searchEventsByCompany(userToken, 1);
         eventId = events.get(0).eventId();

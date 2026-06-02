@@ -82,7 +82,7 @@ class EventApiAcceptanceTest {
     void GivenInvalidPolicy_WhenCreateEvent_ThenReturn400() throws Exception {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null,1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30),"test location", true));
+        dto.setEvent(new EventDTO(null, 1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true, "test location"));
         dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false)); // minTickets=10 > maxTickets=1
         dto.setDiscounts(Collections.emptyList());
 
@@ -234,7 +234,7 @@ class EventApiAcceptanceTest {
     // helpers
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null, companyId, name, capacity, LocalDateTime.now().plusDays(30), "test location", true));
+        dto.setEvent(new EventDTO(null, companyId, name, capacity, LocalDateTime.now().plusDays(30), true, "test location"));
         dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
         dto.setDiscounts(Collections.emptyList());
         return dto;

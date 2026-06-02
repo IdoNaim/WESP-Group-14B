@@ -8,15 +8,26 @@ public record EventDTO(
         Integer eventCapacity,
         LocalDateTime eventDateTime,
         Boolean isActive,
-        String location,
-        Double ticketPrice
+        String eventLocation,
+        Double ticketPrice,
+        String imageUrl,
+        Double minZonePrice,
+        Double maxZonePrice
 ) {
     public EventDTO(String eventId, Integer companyId, String eventName,
                     Integer eventCapacity, LocalDateTime eventDateTime, Boolean isActive) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null);
+        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null, null, null, null);
     }
+
     public EventDTO(String eventId, Integer companyId, String eventName,
-                    Integer eventCapacity, LocalDateTime eventDateTime, String location, Boolean isActive) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, location, null);
+                    Integer eventCapacity, LocalDateTime eventDateTime,
+                    Boolean isActive, String eventLocation) {
+        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, eventLocation, null, null, null, null);
+    }
+
+    public EventDTO(String eventId, Integer companyId, String eventName,
+                    Integer eventCapacity, LocalDateTime eventDateTime,
+                    Boolean isActive, String eventLocation, Double ticketPrice) {
+        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, eventLocation, ticketPrice, null, null, null);
     }
 }

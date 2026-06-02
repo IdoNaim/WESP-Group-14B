@@ -1,32 +1,17 @@
 package com.ticketpurchasingsystem.project.application;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventHandler;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import org.springframework.stereotype.Service;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
-import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
-import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.PurchaseContext;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
-import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
+
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -42,6 +27,7 @@ public class EventService implements IEventService {
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
                         AuthenticationService authenticationService) {
+
         // Hooks into the EventHandler Singleton using the required components
         this.eventHandler = EventHandler.getInstance(eventRepo, eventPublisher, authenticationService);
 
@@ -49,10 +35,15 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public boolean createEvent(String sessionToken, EventDTO eventDTO,
-                               PurchasePolicyDTO purchasePolicyDTO,
-                               List<DiscountDTO> discountPolicyDTO) {
+    public String createEvent(String sessionToken, EventDTO eventDTO,
+                              PurchasePolicyDTO purchasePolicyDTO,
+                              List<DiscountDTO> discountPolicyDTO) {
         return eventHandler.createEvent(sessionToken, eventDTO, purchasePolicyDTO, discountPolicyDTO);
+    }
+
+    @Override
+    public List<EventDTO> getAllActiveEvents() {
+        return eventHandler.getAllActiveEvents();
     }
 
     @Override
@@ -127,6 +118,11 @@ public class EventService implements IEventService {
     }
 
     @Override
+    public boolean editEventImage(String sessionToken, String eventId, String newImageUrl) {
+        return eventHandler.editEventImage(sessionToken, eventId, newImageUrl);
+    }
+
+    @Override
     public boolean editEventPurchasePolicy(String sesssionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO) {
         return eventHandler.editEventPurchasePolicy(sesssionToken, eventId, purchasePolicyDTO);
     }
@@ -142,15 +138,13 @@ public class EventService implements IEventService {
     }
 
     @Override
-    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
-        return eventHandler.getEventPurchasePolicy(sessionToken, eventId);
-    }
-
-    @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
         return eventHandler.getEventSeatingMap(sessionToken, eventId);
     }
-
+    @Override
+    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
+        return eventHandler.getEventPurchasePolicy(sessionToken, eventId);
+    }
     @Override
     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
         return eventHandler.validatePurchasePolicy(sessionToken, eventId, quantity, userAge);

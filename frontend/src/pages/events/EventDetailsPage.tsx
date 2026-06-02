@@ -157,13 +157,6 @@ export default function EventDetailsPage() {
                     </div>
                 </div>
 
-                <div className="bg-[#171f33] border border-gray-800 p-8 rounded-xl space-y-6">
-                    <div>
-                        <h3 className="text-xl font-bold text-white mb-2">About This Event</h3>
-                        <p className="text-gray-300 leading-relaxed">{eventData.description || "No description provided."}</p>
-                    </div>
-                </div>
-
                 {policyDesc && policyDesc !== 'No policy' && (
                     <div className="bg-amber-500/5 border border-amber-500/20 p-8 rounded-xl space-y-3">
                         <h3 className="text-xl font-bold text-amber-300 flex items-center gap-2">

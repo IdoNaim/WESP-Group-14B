@@ -309,6 +309,24 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
     );
 }
 
+// ─── Zone types ───────────────────────────────────────────────────────────────
+
+type ZoneKind = 'standing' | 'seating';
+interface EventZone {
+    label: string;
+    kind: ZoneKind;
+    capacity: string;    // used when kind === 'standing'
+    rows: string;        // used when kind === 'seating'
+    seatsPerRow: string; // used when kind === 'seating'
+    price: string;
+}
+
+function zoneSeats(z: EventZone): number {
+    return z.kind === 'standing'
+        ? (Number(z.capacity) || 0)
+        : (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
+}
+
 // ─── Create modal ─────────────────────────────────────────────────────────────
 
 function CreateEventModal({ companyId, onClose, onCreated }: {
@@ -320,17 +338,38 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     const [capacity, setCapacity] = useState('');
     const [dateTime, setDateTime] = useState('');
     const [location, setLocation] = useState('');
-    const [ticketPrice, setTicketPrice] = useState('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({
-        minTickets: null,
-        maxTickets: null,
-        isQuantityOr: false,
-        minAge: null,
-        maxAge: null,
-        isAgeOr: false,
-        isAgeAndQuantityOr: false
-    });
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const result = ev.target?.result as string;
+            setImageUrl(result);
+            setImagePreview(result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const [zones, setZones] = useState<EventZone[]>([]);
+
+    const addZone = () => setZones(prev => [...prev, {
+        label: `Zone ${prev.length + 1}`, kind: 'standing',
+        capacity: '', rows: '', seatsPerRow: '', price: '',
+    }]);
+    const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
+    const updateZone = (i: number, field: keyof EventZone, value: string) =>
+        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+
+    const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
+    const eventCapNum = Number(capacity) || 0;
+    const zoneCapacityError = zones.length > 0 && capacity !== '' && totalZoneCapacity !== eventCapNum
+        ? `Zone capacities must total exactly ${eventCapNum}. Currently: ${totalZoneCapacity}.`
+        : null;
+
+    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
 
     const [companyPolicyDesc, setCompanyPolicyDesc] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -350,20 +389,32 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (dateError) { setError(dateError); return; }
+        if (zones.length === 0) { setError('At least one area zone is required.'); return; }
+        if (zoneCapacityError) { setError(zoneCapacityError); return; }
         setLoading(true); setError(null);
         try {
-            const ok = await eventApi.createEvent(token, {
+            const eventId = await eventApi.createEvent(token, {
                 event: {
                     companyId,
                     eventName,
                     eventCapacity: Number(capacity),
                     eventDateTime: new Date(dateTime).toISOString().slice(0, 19),
-                    location: location || null,
-                    ticketPrice: ticketPrice !== '' ? Number(ticketPrice) : null,
+                    eventLocation: location || null,
+                    imageUrl: imageUrl ?? null,
                 },
                 purchasePolicy: policyDTO,
             });
-            if (!ok) throw new Error('Failed to create event');
+            if (!eventId) throw new Error('Failed to create event');
+            if (zones.length > 0) {
+                await eventApi.editSeatingMap(token, eventId, {
+                    seatingAreas: zones
+                        .filter(z => z.kind === 'seating')
+                        .map(z => ({ rows: Number(z.rows), seatsPerRow: Number(z.seatsPerRow), price: Number(z.price) })),
+                    standingAreas: zones
+                        .filter(z => z.kind === 'standing')
+                        .map(z => ({ capacity: Number(z.capacity), price: Number(z.price) })),
+                });
+            }
             onCreated();
         } catch (err) { setError(err instanceof Error ? err.message : 'Failed to create event'); }
         setLoading(false);
@@ -401,19 +452,186 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                             </p>
                         )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className={labelCls}>Total Capacity</label>
-                            <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
-                                value={capacity} onChange={e => setCapacity(e.target.value)} required />
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Ticket Price ($)</label>
-                            <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
-                                value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
-                        </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Total Capacity</label>
+                        <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
+                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                    </div>
+
+                    {/* Image upload */}
+                    <div className="space-y-2">
+                        <label className={labelCls}>Event Photo <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="flex items-center gap-2 bg-[#0b1326] border border-gray-600 hover:border-[#00dbe7] rounded-lg px-3 py-2.5 transition-colors text-sm text-gray-400 group-hover:text-[#00dbe7]">
+                                <span className="material-symbols-outlined text-[18px]">upload</span>
+                                {imagePreview ? 'Change photo' : 'Upload photo'}
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </label>
+                        {imagePreview && (
+                            <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-700">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => { setImageUrl(null); setImagePreview(null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
+            </div>
+
+            {/* Area zones */}
+            <div className="border-t border-gray-800 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <p className={sectionHdr}>
+                        <span className="material-symbols-outlined text-[14px]">map</span>
+                        Area Zones <span className="text-red-400 normal-case font-normal ml-1 text-[9px]">* required</span>
+                    </p>
+                    <button type="button" onClick={addZone}
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00dbe7]/10 border border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20 transition-colors">
+                        <span className="material-symbols-outlined text-[15px]">add</span>
+                        Add Zone
+                    </button>
+                </div>
+
+                {zones.length === 0 && (
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                        <p className="text-xs text-amber-300 font-mono">Every event requires at least one area zone.</p>
+                        <p className="text-[10px] text-gray-600 mt-1">Add standing or seating zones — all zone capacities combined must equal the total event capacity.</p>
+                    </div>
+                )}
+
+                {zones.map((zone, i) => {
+                    const seats = zoneSeats(zone);
+                    return (
+                        <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
+                            {/* Zone header */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
+                                <button type="button" onClick={() => removeZone(i)}
+                                    className="text-gray-600 hover:text-red-400 transition-colors">
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+
+                            {/* Zone name */}
+                            <div className="space-y-1">
+                                <label className={labelCls}>Zone Name</label>
+                                <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
+                                    value={zone.label}
+                                    onChange={e => updateZone(i, 'label', e.target.value)} />
+                            </div>
+
+                            {/* Zone type toggle */}
+                            <div className="space-y-1">
+                                <label className={labelCls}>Zone Type</label>
+                                <div className="flex gap-2">
+                                    <button type="button"
+                                        onClick={() => updateZone(i, 'kind', 'standing')}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                                            zone.kind === 'standing'
+                                                ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]'
+                                                : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'
+                                        }`}>
+                                        <span className="material-symbols-outlined text-[15px]">people</span>
+                                        Standing
+                                    </button>
+                                    <button type="button"
+                                        onClick={() => updateZone(i, 'kind', 'seating')}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                                            zone.kind === 'seating'
+                                                ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]'
+                                                : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'
+                                        }`}>
+                                        <span className="material-symbols-outlined text-[15px]">event_seat</span>
+                                        Seating
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Standing fields */}
+                            {zone.kind === 'standing' && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Capacity</label>
+                                        <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
+                                            value={zone.capacity}
+                                            onChange={e => updateZone(i, 'capacity', e.target.value)} required />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Price per Ticket ($)</label>
+                                        <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 29.99"
+                                            value={zone.price}
+                                            onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Seating fields */}
+                            {zone.kind === 'seating' && (
+                                <>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Rows</label>
+                                            <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
+                                                value={zone.rows}
+                                                onChange={e => updateZone(i, 'rows', e.target.value)} required />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Seats / Row</label>
+                                            <input className={inputCls} type="number" min={1} placeholder="e.g. 20"
+                                                value={zone.seatsPerRow}
+                                                onChange={e => updateZone(i, 'seatsPerRow', e.target.value)} required />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Price ($)</label>
+                                            <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
+                                                value={zone.price}
+                                                onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                        </div>
+                                    </div>
+                                    {seats > 0 && (
+                                        <p className="text-[10px] font-mono text-gray-500">
+                                            {zone.rows} rows × {zone.seatsPerRow} seats = <span className="text-white font-bold">{seats} seats</span>
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Capacity summary */}
+                {zones.length > 0 && (
+                    <div className={`space-y-2 p-3 rounded-lg border text-[11px] font-mono ${
+                        zoneCapacityError ? 'bg-red-500/10 border-red-500/30' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#00dbe7]/5 border-[#00dbe7]/15'
+                    }`}>
+                        <div className="flex items-center justify-between">
+                            <span className={zoneCapacityError ? 'text-red-400' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'text-emerald-400' : 'text-gray-400'}>
+                                {zoneCapacityError
+                                    ? zoneCapacityError
+                                    : totalZoneCapacity === eventCapNum && eventCapNum > 0
+                                        ? `All ${eventCapNum} seats assigned across ${zones.length} zone${zones.length !== 1 ? 's' : ''}`
+                                        : `Assigned: ${totalZoneCapacity} / ${eventCapNum || '?'} seats`}
+                            </span>
+                            {zoneCapacityError && <span className="material-symbols-outlined text-[14px] text-red-400">warning</span>}
+                            {!zoneCapacityError && totalZoneCapacity === eventCapNum && eventCapNum > 0 && (
+                                <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
+                            )}
+                        </div>
+                        {eventCapNum > 0 && (
+                            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${
+                                    totalZoneCapacity > eventCapNum ? 'bg-red-500' : totalZoneCapacity === eventCapNum ? 'bg-emerald-500' : 'bg-[#00dbe7]'
+                                }`} style={{ width: `${Math.min(100, eventCapNum > 0 ? (totalZoneCapacity / eventCapNum) * 100 : 0)}%` }} />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <PolicyBuilder onChange={setPolicyDTO} />
@@ -441,21 +659,42 @@ function EditEventModal({ event, onClose, onSaved }: {
 }) {
     const token = localStorage.getItem('token') || '';
 
+    // Basic fields
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
-    const [location, setLocation] = useState(event.location ?? '');
-    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice != null ? String(event.ticketPrice) : '');
+    const [location, setLocation] = useState(event.eventLocation ?? '');
 
-    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({
-        minTickets: null,
-        maxTickets: null,
-        isQuantityOr: false,
-        minAge: null,
-        maxAge: null,
-        isAgeOr: false,
-        isAgeAndQuantityOr: false
-    });
+    // Photo
+    const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
+    const [imageUrl, setImageUrl] = useState<string | null>(event.imageUrl ?? null);
+    const [imageChanged, setImageChanged] = useState(false);
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const result = ev.target?.result as string;
+            setImageUrl(result); setImagePreview(result); setImageChanged(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Purchase policy
+    const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
     const [updatePolicy, setUpdatePolicy] = useState(false);
+
+    // Seating map
+    const [updateSeatingMap, setUpdateSeatingMap] = useState(false);
+    const [zones, setZones] = useState<EventZone[]>([]);
+    const addZone = () => setZones(prev => [...prev, { label: `Zone ${prev.length + 1}`, kind: 'standing', capacity: '', rows: '', seatsPerRow: '', price: '' }]);
+    const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
+    const updateZone = (i: number, field: keyof EventZone, value: string) =>
+        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+    const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
+    const eventCapNum = Number(capacity) || 0;
+    const zoneCapacityError = updateSeatingMap && zones.length > 0 && capacity !== '' && totalZoneCapacity !== eventCapNum
+        ? `Zone capacities must total exactly ${eventCapNum}. Currently: ${totalZoneCapacity}.`
+        : null;
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -467,9 +706,9 @@ function EditEventModal({ event, onClose, onSaved }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) {
-            setError(dateError); return;
-        }
+        if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) { setError(dateError); return; }
+        if (zoneCapacityError) { setError(zoneCapacityError); return; }
+        if (updateSeatingMap && zones.length === 0) { setError('Add at least one zone or disable Update Seating Map.'); return; }
         setLoading(true); setError(null);
         try {
             const eventId = event.eventId!;
@@ -477,23 +716,22 @@ function EditEventModal({ event, onClose, onSaved }: {
 
             if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
                 ops.push(eventApi.editEventDate(token, eventId, { newDateTime: new Date(dateTime).toISOString().slice(0, 19) }));
-
             if (Number(capacity) !== event.eventCapacity)
                 ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
-
             const newLoc = location || null;
-            if (newLoc !== (event.location ?? null))
+            if (newLoc !== (event.eventLocation ?? null))
                 ops.push(eventApi.editEventLocation(token, eventId, newLoc));
-
-            const newPrice = ticketPrice !== '' ? Number(ticketPrice) : null;
-            if (newPrice !== (event.ticketPrice ?? null))
-                ops.push(eventApi.editEventPrice(token, eventId, newPrice));
-
+            if (imageChanged)
+                ops.push(eventApi.editEventImage(token, eventId, imageUrl));
             if (updatePolicy)
                 ops.push(eventApi.editEventPolicy(token, eventId, policyDTO));
+            if (updateSeatingMap && zones.length > 0)
+                ops.push(eventApi.editSeatingMap(token, eventId, {
+                    seatingAreas: zones.filter(z => z.kind === 'seating').map(z => ({ rows: Number(z.rows), seatsPerRow: Number(z.seatsPerRow), price: Number(z.price) })),
+                    standingAreas: zones.filter(z => z.kind === 'standing').map(z => ({ capacity: Number(z.capacity), price: Number(z.price) })),
+                }));
 
             if (ops.length === 0) { onClose(); return; }
-
             const results = await Promise.all(ops);
             if (results.some(r => !r)) throw new Error('One or more updates failed');
             onSaved();
@@ -529,17 +767,32 @@ function EditEventModal({ event, onClose, onSaved }: {
                             </p>
                         )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className={labelCls}>Total Capacity</label>
-                            <input className={inputCls} type="number" min={1}
-                                value={capacity} onChange={e => setCapacity(e.target.value)} required />
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Ticket Price ($)</label>
-                            <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
-                                value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
-                        </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>Total Capacity</label>
+                        <input className={inputCls} type="number" min={1}
+                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                    </div>
+
+                    {/* Photo */}
+                    <div className="space-y-2">
+                        <label className={labelCls}>Event Photo <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="flex items-center gap-2 bg-[#0b1326] border border-gray-600 hover:border-[#00dbe7] rounded-lg px-3 py-2.5 transition-colors text-sm text-gray-400 group-hover:text-[#00dbe7]">
+                                <span className="material-symbols-outlined text-[18px]">upload</span>
+                                {imagePreview ? 'Change photo' : 'Upload photo'}
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </label>
+                        {imagePreview && (
+                            <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-700">
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                <button type="button"
+                                    onClick={() => { setImageUrl(null); setImagePreview(null); setImageChanged(true); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -554,10 +807,126 @@ function EditEventModal({ event, onClose, onSaved }: {
                     </span>
                     <span className="material-symbols-outlined text-[18px]">{updatePolicy ? 'expand_less' : 'expand_more'}</span>
                 </button>
+                {updatePolicy && <div className="mt-3"><PolicyBuilder onChange={setPolicyDTO} /></div>}
+            </div>
 
-                {updatePolicy && (
-                    <div className="mt-3">
-                        <PolicyBuilder onChange={setPolicyDTO} />
+            {/* Seating map toggle */}
+            <div className="border-t border-gray-800 pt-4">
+                <button type="button" onClick={() => setUpdateSeatingMap(v => !v)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updateSeatingMap ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                    <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">map</span>
+                        Replace Seating Map
+                    </span>
+                    <span className="material-symbols-outlined text-[18px]">{updateSeatingMap ? 'expand_less' : 'expand_more'}</span>
+                </button>
+
+                {updateSeatingMap && (
+                    <div className="mt-3 space-y-3">
+                        <p className="text-[10px] text-gray-600 font-mono">Defining zones here replaces the existing seating map entirely.</p>
+
+                        <div className="flex justify-end">
+                            <button type="button" onClick={addZone}
+                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00dbe7]/10 border border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20 transition-colors">
+                                <span className="material-symbols-outlined text-[15px]">add</span>
+                                Add Zone
+                            </button>
+                        </div>
+
+                        {zones.map((zone, i) => {
+                            const seats = zoneSeats(zone);
+                            return (
+                                <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
+                                        <button type="button" onClick={() => removeZone(i)} className="text-gray-600 hover:text-red-400 transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Zone Name</label>
+                                        <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
+                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Zone Type</label>
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => updateZone(i, 'kind', 'standing')}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'standing' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                                                <span className="material-symbols-outlined text-[15px]">people</span>Standing
+                                            </button>
+                                            <button type="button" onClick={() => updateZone(i, 'kind', 'seating')}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'seating' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                                                <span className="material-symbols-outlined text-[15px]">event_seat</span>Seating
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {zone.kind === 'standing' && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className={labelCls}>Capacity</label>
+                                                <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
+                                                    value={zone.capacity} onChange={e => updateZone(i, 'capacity', e.target.value)} required />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className={labelCls}>Price per Ticket ($)</label>
+                                                <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 29.99"
+                                                    value={zone.price} onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {zone.kind === 'seating' && (
+                                        <>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="space-y-1">
+                                                    <label className={labelCls}>Rows</label>
+                                                    <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
+                                                        value={zone.rows} onChange={e => updateZone(i, 'rows', e.target.value)} required />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className={labelCls}>Seats / Row</label>
+                                                    <input className={inputCls} type="number" min={1} placeholder="e.g. 20"
+                                                        value={zone.seatsPerRow} onChange={e => updateZone(i, 'seatsPerRow', e.target.value)} required />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className={labelCls}>Price ($)</label>
+                                                    <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
+                                                        value={zone.price} onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                                </div>
+                                            </div>
+                                            {seats > 0 && (
+                                                <p className="text-[10px] font-mono text-gray-500">
+                                                    {zone.rows} × {zone.seatsPerRow} = <span className="text-white font-bold">{seats} seats</span>
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {zones.length > 0 && (
+                            <div className={`space-y-2 p-3 rounded-lg border text-[11px] font-mono ${zoneCapacityError ? 'bg-red-500/10 border-red-500/30' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#00dbe7]/5 border-[#00dbe7]/15'}`}>
+                                <div className="flex items-center justify-between">
+                                    <span className={zoneCapacityError ? 'text-red-400' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'text-emerald-400' : 'text-gray-400'}>
+                                        {zoneCapacityError ?? (totalZoneCapacity === eventCapNum && eventCapNum > 0
+                                            ? `All ${eventCapNum} seats assigned`
+                                            : `Assigned: ${totalZoneCapacity} / ${eventCapNum || '?'}`)}
+                                    </span>
+                                    {zoneCapacityError
+                                        ? <span className="material-symbols-outlined text-[14px] text-red-400">warning</span>
+                                        : totalZoneCapacity === eventCapNum && eventCapNum > 0
+                                            ? <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
+                                            : null}
+                                </div>
+                                {eventCapNum > 0 && (
+                                    <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all ${totalZoneCapacity > eventCapNum ? 'bg-red-500' : totalZoneCapacity === eventCapNum ? 'bg-emerald-500' : 'bg-[#00dbe7]'}`}
+                                            style={{ width: `${Math.min(100, (totalZoneCapacity / eventCapNum) * 100)}%` }} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -577,9 +946,8 @@ function EventCard({ event, stats, onEdit, onDelete }: {
     const revenue = event.ticketPrice != null
         ? ticketsSold * event.ticketPrice
         : (stats?.historyRevenue ?? 0);
-    const capacityVal = event.eventCapacity ?? 0;
-    const available = capacityVal - ticketsSold;
-    const soldPct = capacityVal > 0 ? Math.min(100, Math.round((ticketsSold / capacityVal) * 100)) : 0;
+    const available = event.eventCapacity - ticketsSold;
+    const soldPct = event.eventCapacity > 0 ? Math.min(100, Math.round((ticketsSold / event.eventCapacity) * 100)) : 0;
 
     return (
         <div className="bg-[#171f33] border border-gray-800 rounded-2xl p-5 flex flex-col gap-3">
@@ -602,10 +970,10 @@ function EventCard({ event, stats, onEdit, onDelete }: {
                         {formatDate(event.eventDateTime)}
                     </p>
                 )}
-                {event.location && (
+                {event.eventLocation && (
                     <p className="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[13px]">location_on</span>
-                        {event.location}
+                        {event.eventLocation}
                     </p>
                 )}
             </div>

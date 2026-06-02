@@ -6,14 +6,15 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
-import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 
 
 public interface IEventService {
-     public boolean createEvent(String sessionToken, EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO);
+     public String createEvent(String sessionToken, EventDTO eventDTO, PurchasePolicyDTO purchasePolicyDTO, List<DiscountDTO> discountPolicyDTO);
+     public List<EventDTO> getAllActiveEvents();
      public EventDTO searchEvent(String sessionToken, String eventId);
      public List<EventDTO> searchEventsByCompany(String sessionToken, int companyId);
      public boolean editEventDate(String sessionToken, String eventId, LocalDateTime newDateTime);
@@ -32,7 +33,11 @@ public interface IEventService {
      public boolean editEventPurchasePolicy(String sessionToken, String eventId, PurchasePolicyDTO purchasePolicyDTO);
      public boolean editEventLocation(String sessionToken, String eventId, String newLocation);
      public boolean editEventPrice(String sessionToken, String eventId, Double newPrice);
-     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
+     public boolean editEventImage(String sessionToken, String eventId, String newImageUrl);
      public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
+     public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
      public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge);
+
+
+
 }

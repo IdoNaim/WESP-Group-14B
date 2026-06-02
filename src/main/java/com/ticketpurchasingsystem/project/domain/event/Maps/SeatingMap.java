@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+
 import com.ticketpurchasingsystem.project.domain.Utils.AssignedSeatDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.StandingAreaDTO;
@@ -155,11 +156,35 @@ public class SeatingMap {
         return new ArrayList<>(standingAreas.keySet());
     }
 
+    public List<Double> getAllZonePrices() {
+        List<Double> prices = new ArrayList<>();
+        standingAreas.values().forEach(a -> prices.add(a.getPriceForTicket()));
+        java.util.Set<String> seenZones = new java.util.HashSet<>();
+        seats.values().forEach(s -> {
+            String zone = s.getId().split("_")[0];
+            if (seenZones.add(zone)) {
+                prices.add(s.getPriceForTicket());
+            }
+        });
+        return prices;
+    }
+
     public Map<String, Bookable> getPurchaseAreas(){
         Map<String, Bookable> combined = new HashMap<>(seats);
         combined.putAll(standingAreas);
         return combined;
     }
+
+    // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){
+    //     if(row <= 0 || number <= 0 || priceForTicket <= 0){
+    //         return false;
+
+    //     }
+    //     AssignedSeat seat = new AssignedSeat(zone, row, number, priceForTicket);
+    //     String seatID = seat.getId();
+    //     PurchaseAreas.put(seatID, seat);
+    //     return true;
+    // }
     public SeatingMapDTO getDTO(){
         List<AssignedSeatDTO> assignedSeatsDTO = new ArrayList<>();
         for(AssignedSeat seat : seats.values()){
@@ -174,14 +199,4 @@ public class SeatingMap {
         return new SeatingMapDTO(assignedSeatsDTO, standingAreasDTO);
     }
 
-    // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){
-    //     if(row <= 0 || number <= 0 || priceForTicket <= 0){
-    //         return false;
-
-    //     }
-    //     AssignedSeat seat = new AssignedSeat(zone, row, number, priceForTicket);
-    //     String seatID = seat.getId();
-    //     PurchaseAreas.put(seatID, seat);
-    //     return true;
-    // }
 }

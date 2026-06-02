@@ -187,8 +187,8 @@ public class ActiveOrderAcceptanceTests {
                 eventName,
                 eventCapacity,
                 eventDate,
-                eventLocation,
-                true);
+                true,
+                eventLocation);
         registeredUsers.add(USER2_ID);
         String sessionToken = authenticationService.login(USER2_ID);
 

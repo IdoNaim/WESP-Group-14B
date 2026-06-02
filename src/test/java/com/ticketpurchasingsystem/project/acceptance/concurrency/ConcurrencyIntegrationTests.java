@@ -168,7 +168,7 @@ public class ConcurrencyIntegrationTests {
         PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity, false, 0, 60, true, false);
         List<DiscountDTO> discounts = new ArrayList<>();
 
-        EventDTO e = new EventDTO(null, companyId, eventName, eventCapacity, eventDate, eventLocation, true);
+        EventDTO e = new EventDTO(null, companyId, eventName, eventCapacity, eventDate, true, eventLocation);
         eventService.createEvent(sessionToken, e, purchasePolicyDTO, discounts);
 
         List<EventDTO> events = eventService.searchEventsByCompany(sessionToken, companyId);
