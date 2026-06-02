@@ -22,6 +22,7 @@ import PurchasePolicyPage from "../pages/policies/PurchasePolicyPage";
 
 import AdminPage from "../pages/admin/AdminPage";
 import AccountPage from "../pages/user/AccountPage";
+import ProductionCompanyPage from "../pages/production-company/ProductionCompanyPage";
 
 import RequireMember from "../components/auth/RequireMember";
 // import RequireProductionUser from "../components/auth/RequireProductionUser";
@@ -57,6 +58,8 @@ export default function AppRoutes() {
             <Route path="/account" element={<AccountPage />} />
             <Route path="/orders/history" element={<OrderHistoryPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/production-company/:companyId" element={<ProductionCompanyPage />} />
+
           </Route>
 
           {/* Production-user-only routes */}
