@@ -18,6 +18,7 @@ import ReserveTicketPage from "../pages/orders/ReserveTicketPage";
 import NotificationsPage from "../pages/notifications/NotificationsPage";
 
 import ProductionCompaniesPage from "../pages/production-company/MyCompaniesPage";
+import CompanyEventsPage from "../pages/production-company/CompanyEventsPage";
 import PurchasePolicyPage from "../pages/policies/PurchasePolicyPage";
 
 import AdminPage from "../pages/admin/AdminPage";
@@ -59,7 +60,7 @@ export default function AppRoutes() {
             <Route path="/orders/history" element={<OrderHistoryPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/production-company/:companyId" element={<ProductionCompanyPage />} />
-
+            <Route path="/company/:companyId/events" element={<CompanyEventsPage />} />
           </Route>
 
           {/* Production-user-only routes */}
