@@ -47,21 +47,21 @@ public class EventService implements IEventService {
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
 
-        Event testEvent = new Event(
-                1,
-                "Test Event",
-                100,
-                LocalDateTime.now().plusDays(10),
-                "Test Location",
-                new EventPurchasePolicy(),
-                new EventDiscountPolicy(new ArrayList<>()),
-                0
-        );
-        SeatingMap seatingMap = new SeatingMap();
-        seatingMap.addSeatingArea(5, 10, 50.0);
-        testEvent.setSeatingMap(seatingMap);
-        Event eventWithId = eventRepo.save(testEvent);
-        logger.info("Test event created with ID: " + eventWithId.getEventId());
+        // Event testEvent = new Event(
+        //         1,
+        //         "Test Event",
+        //         100,
+        //         LocalDateTime.now().plusDays(10),
+        //         "Test Location",
+        //         new EventPurchasePolicy(),
+        //         new EventDiscountPolicy(new ArrayList<>()),
+        //         0
+        // );
+        // SeatingMap seatingMap = new SeatingMap();
+        // seatingMap.addSeatingArea(5, 10, 50.0);
+        // testEvent.setSeatingMap(seatingMap);
+        // Event eventWithId = eventRepo.save(testEvent);
+        // logger.info("Test event created with ID: " + eventWithId.getEventId());
         logger.info("EventService initialized");
     }
 
