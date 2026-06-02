@@ -13,7 +13,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderPublish
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.IdGenerator;
-import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
+
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -41,10 +41,10 @@ public class ActiveOrderService implements IActiveOrderService {
         this.activeOrderHandler = activeOrderHandler;
         this.authenticationService = authenticationService;
         this.barCodeGateway = barCodeGateway;
-        // ActiveOrderItem order = new ActiveOrderItem("1","idonaim56@gmail.com","1");
-        // order.addSeatIds(List.of("0_1_1"));
-        // order.addStandingAreaQuantity("1", 2);
-        // activeOrderRepo.save(order);
+
+        if(activeOrderRepo == null || activeOrderListener == null || activeOrderPublisher == null || activeOrderHandler == null || authenticationService == null || barCodeGateway == null){
+            logger.error("ActiveOrderService initialization failed: One or more dependencies are null");
+        }
     }
 
     @Override
@@ -107,7 +107,8 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         logger.info("Successfully retrieved active order for userId: " + userId);
         return orderDTO;
-    }   
+    }
+
     @Override
     public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken ,String orderId) throws Exception {
         logger.info("Attempting to retrieve active order info. orderId: " + orderId);

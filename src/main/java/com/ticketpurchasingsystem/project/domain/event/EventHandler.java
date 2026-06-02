@@ -133,7 +133,7 @@ public class EventHandler {
                 discountPolicy,
                 0
         );
-        event.setEventLocation(eventDTO.eventLocation());
+        event.setEventLocation(eventDTO.location());
         event.setTicketPrice(eventDTO.ticketPrice());
 
         try {
@@ -472,8 +472,11 @@ public class EventHandler {
         return area != null && area.getAvalibleSeatNumber() >= quantity;
     }
 
+
+
+
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         Event event = eventRepo.findById(eventId);
@@ -485,7 +488,7 @@ public class EventHandler {
     }
 
     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
-        if (!authenticationService.validate(sessionToken)) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
             throw new IllegalArgumentException("Invalid session token");
         }
         Event event = eventRepo.findById(eventId);

@@ -67,8 +67,8 @@ public class ActiveOrderDTO {
     public void setSeatIds(List<String> seatIds){
         this.seatIds = seatIds;
     }
-    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities){
-        this.StandingAreaQuantities = standingAreaQuantities;
+    public void setStandingAreaQuantities(HashMap<String, Integer> StandingAreaQuantities){
+        this.StandingAreaQuantities = StandingAreaQuantities;
     }
 
 

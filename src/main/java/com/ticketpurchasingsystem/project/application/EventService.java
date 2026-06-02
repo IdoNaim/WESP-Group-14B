@@ -1,13 +1,28 @@
 package com.ticketpurchasingsystem.project.application;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventHandler;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import org.springframework.stereotype.Service;
-
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.event.EventDiscountPolicy;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.IPurchaseRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.PurchaseContext;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.EventPurchasePolicy;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MaxTicketsRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinAgeRule;
+import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicketsRule;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -132,11 +147,19 @@ public class EventService implements IEventService {
     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
         return eventHandler.checkStandingAreaAvailability(eventId, areaId, quantity);
     }
+
     @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
         return eventHandler.getEventSeatingMap( sessionToken,  eventId);
 
+
+
+    @Override
+    public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId) {
+        return eventHandler.getEventPurchasePolicy(sessionToken, eventId);
     }
+
+
 
     @Override
     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {

@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.event.Purchase_Policy;
-
+import com.ticketpurchasingsystem.project.domain.Utils.RuleExtractor;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +40,8 @@ public class EventPurchasePolicy implements IPurchaseRule {
         }
         return true; // Passes if all rules pass (or if there are no rules)
     }
-     public PurchasePolicyDTO getDTO() {
+
+    public PurchasePolicyDTO getDTO() {
         if (rules.isEmpty()) {
             return new PurchasePolicyDTO(null, null, false, null, null, false, false);
         }

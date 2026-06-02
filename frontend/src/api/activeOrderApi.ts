@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Define your base URL
 const BASE_URL = '/api/orders';
 
@@ -21,10 +22,25 @@ export interface AddSeatsRequestDTO {
 }
 
 export interface AddStandingAreaRequestDTO {
+=======
+const BASE_URL = '/api/orders';
+
+export interface ActiveOrderDTO {
+  orderId: string;
+  userId: string;
+  eventId: string;
+  createdAt: string;
+  seatIds: string[];
+  
+  StandingAreaQuantities: Record<string, number>; // capital S, plain object not array
+}
+export interface StandingAreaTicketsDTO{
+>>>>>>> aa2ad2b1ccbc0c0ec7f0157ca3d781933a0c5c42
     areaId: string;
     quantity: number;
 }
 
+<<<<<<< HEAD
 export interface CheckoutRequestDTO {
     amount: number;
     creditCardNumber: string;
@@ -87,10 +103,20 @@ export const activeOrderApi = {
     },
 
     getActiveOrderByUserId: async (token: string, userId: string): Promise<ActiveOrderDTO> => {
+=======
+const getHeaders = (token: string) => ({
+    'Content-Type': 'application/json',
+    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+});
+
+export const activeOrderApi = {
+    getActiveOrderByUserId: async (token : string, userId: string): Promise<ActiveOrderDTO | null> => {
+>>>>>>> aa2ad2b1ccbc0c0ec7f0157ca3d781933a0c5c42
         const response = await fetch(`${BASE_URL}/user/${userId}`, {
             method: 'GET',
             headers: getHeaders(token),
         });
+<<<<<<< HEAD
         return parseResponse(response);
     },
     /**
@@ -168,5 +194,17 @@ export const activeOrderApi = {
             body: JSON.stringify(data),
         });
         return parseResponse(response);
+=======
+        if (!response.ok) return null;
+        return response.json();
+    },
+    updateActiveOrder: async (token: string, orderId: string, order: ActiveOrderDTO): Promise<boolean> => {
+        const response = await fetch(`${BASE_URL}/${orderId}`, {
+            method: 'PUT',
+            headers: getHeaders(token),
+            body: JSON.stringify(order),
+        });
+        return response.ok;
+>>>>>>> aa2ad2b1ccbc0c0ec7f0157ca3d781933a0c5c42
     }
 };

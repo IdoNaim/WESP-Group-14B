@@ -119,6 +119,7 @@ public class ActiveOrderAcceptanceTests {
     private PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity,false, 0, 60, true, false);
     private List<DiscountDTO> discounts = new ArrayList<>();
     private LocalDateTime eventDate = LocalDateTime.of(LocalDate.now().plusYears(1), LocalTime.now());
+    private String eventLocation = "test location";
 
 
     private PaymentDetails paymentDetailsFor(double amount) {
@@ -187,6 +188,7 @@ public class ActiveOrderAcceptanceTests {
                 eventName,
                 eventCapacity,
                 eventDate,
+                eventLocation,
                 true);
         registeredUsers.add(USER2_ID);
         String sessionToken = authenticationService.login(USER2_ID);

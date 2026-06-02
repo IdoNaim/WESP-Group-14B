@@ -1,7 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.event.Purchase_Policy;
 
-import org.apache.tomcat.util.digester.Rule;
-
 public class OrRule implements IPurchaseRule {
     private final IPurchaseRule component1;
     private final IPurchaseRule component2;

@@ -14,7 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -26,7 +28,7 @@ import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.EventAggregateListener;
+
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
@@ -60,7 +62,7 @@ public class EventServiceTest {
     // ================= AUTHENTICATION FAILURE TEST =================
     @Test
     void GivenInvalidToken_WhenAnyMethodCalled_ThenThrowIllegalArgumentException() {
-        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), true);
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100, LocalDateTime.now().plusDays(1), "test location", true);
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -78,7 +80,7 @@ public class EventServiceTest {
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnTrue() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -96,7 +98,7 @@ public class EventServiceTest {
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(15);
@@ -116,7 +118,7 @@ public class EventServiceTest {
     @Test
     void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -136,7 +138,7 @@ public class EventServiceTest {
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnFalse() {
         EventDTO dto = new EventDTO(null,1, "Concert", 100,
-                LocalDateTime.now().plusDays(1), true);
+                LocalDateTime.now().plusDays(1), "test location", true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
         when(policyDTO.minTickets()).thenReturn(1);
@@ -165,7 +167,7 @@ public class EventServiceTest {
         when(mockEvent.getEventCapacity()).thenReturn(100);
         when(mockEvent.getEventDate()).thenReturn(now);
         when(mockEvent.isActive()).thenReturn(true);
-
+        when(mockEvent.getEventLocation()).thenReturn("test location");
         when(mockRepo.findById("1")).thenReturn(mockEvent);
 
         EventDTO result = eventService.searchEvent(VALID_TOKEN, "1");
@@ -173,6 +175,7 @@ public class EventServiceTest {
         assertNotNull(result);
         assertEquals("Concert", result.eventName());
         assertEquals(100, result.eventCapacity());
+        assertEquals("test location", result.location());
     }
 
     @Test

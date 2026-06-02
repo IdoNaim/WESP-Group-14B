@@ -1,8 +1,11 @@
 package com.ticketpurchasingsystem.project.application;
 import java.util.List;
 
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
-import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
+
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 public interface  IActiveOrderService {
