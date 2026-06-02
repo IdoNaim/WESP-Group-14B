@@ -13,7 +13,6 @@ import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
-
 @Service
 public class UserService implements IUserService {
 
@@ -27,6 +26,7 @@ public class UserService implements IUserService {
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
+
         //creating admin for testing purposes
         UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
         userRepo.store(newUser);

@@ -8,6 +8,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.application.EventService;
+import com.ticketpurchasingsystem.project.application.NotificationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
@@ -22,11 +23,13 @@ public class DataLoader implements ApplicationRunner {
     private final UserService userService;
     private final ProductionService productionService;
     private final EventService eventService;
+    private final NotificationService notificationService;
 
-    public DataLoader(UserService userService, ProductionService productionService, EventService eventService) {
+    public DataLoader(UserService userService, ProductionService productionService, EventService eventService, NotificationService notificationService) {
         this.userService = userService;
         this.productionService = productionService;
         this.eventService = eventService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -88,5 +91,10 @@ public class DataLoader implements ApplicationRunner {
         // Leave users logged out so they can login normally from the frontend
         userService.logoutUser("alice", aliceToken);
         userService.logoutUser("bob", bobToken);
+
+        //notification test
+        notificationService.createSystemNotification("alice", "Welcome to the ticket purchasing system, Alice!");
+        notificationService.createSystemNotification("bob", "Welcome to the ticket purchasing system, Bob!");
+
     }
 }
