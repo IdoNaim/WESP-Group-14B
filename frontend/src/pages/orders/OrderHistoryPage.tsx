@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { historyOrderApi, HistoryOrderDTO } from './../../api/historyOrderApi';
-import { authApi, UserProfileDTO, UserPermissionsDTO } from '../../api/authApi';
+import { authApi, UserPermissionsDTO } from '../../api/authApi';
+
+interface EventDTO {
+    eventId: string;
+    companyId: number;
+    eventName: string;
+    totalTickets: number;
+    eventDate: string;
+    isActive: boolean;
+    location: string;
+    basePrice: number;
+}
+
+interface EnrichedHistoryOrderDTO extends HistoryOrderDTO {
+    eventDetails?: EventDTO;
+}
 
 type ViewMode = 'PERSONAL' | 'COMPANY' | 'ALL';
 
 export default function OrderHistory() {
     const navigate = useNavigate();
 
-    const [orders, setOrders] = useState<HistoryOrderDTO[]>([]);
+    const [orders, setOrders] = useState<EnrichedHistoryOrderDTO[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<{ status: number; message: string } | null>(null);
     
@@ -18,7 +33,7 @@ export default function OrderHistory() {
 
     const [viewMode, setViewMode] = useState<ViewMode>('PERSONAL');
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-    const [selectedTicket, setSelectedTicket] = useState<HistoryOrderDTO | null>(null);
+    const [selectedTicket, setSelectedTicket] = useState<EnrichedHistoryOrderDTO | null>(null);
 
     useEffect(() => {
         const initUser = async () => {
@@ -40,7 +55,6 @@ export default function OrderHistory() {
 
             } catch (err: any) {
                 setError({ status: err.status || 401, message: err.message || "Failed to authenticate." });
-                setIsLoading(false);
             }
         };
         initUser();
@@ -49,7 +63,7 @@ export default function OrderHistory() {
     useEffect(() => {
         if (!userId) return;
 
-        const fetchOrders = async () => {
+        const fetchOrdersAndEvents = async () => {
             setIsLoading(true);
             setError(null);
             
@@ -67,7 +81,28 @@ export default function OrderHistory() {
                     ordersData = await historyOrderApi.getAllOrders(token);
                 }
 
-                setOrders(ordersData);
+                const eventMap = new Map<string, EventDTO>();
+                const uniqueEventIds = Array.from(new Set(ordersData.map(o => o.eventId)));
+                
+                await Promise.all(uniqueEventIds.map(async (id) => {
+                    try {
+                        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+                        const res = await fetch(`/api/events/${id}`, {
+                            headers: { 'Authorization': formattedToken }
+                        });
+                        if (res.ok) {
+                            const eventData: EventDTO = await res.json();
+                            eventMap.set(id, eventData);
+                        }
+                    } catch (e) {}
+                }));
+
+                const enrichedOrders: EnrichedHistoryOrderDTO[] = ordersData.map(order => ({
+                    ...order,
+                    eventDetails: eventMap.get(order.eventId)
+                }));
+
+                setOrders(enrichedOrders);
 
             } catch (err: any) {
                 if (err.status === 403 || err.status === 401) {
@@ -80,17 +115,8 @@ export default function OrderHistory() {
             }
         };
 
-        fetchOrders();
+        fetchOrdersAndEvents();
     }, [viewMode, userId, selectedCompanyId]);
-
-    const handleLogout = async () => {
-        const token = localStorage.getItem('token');
-        if (token && userId) {
-            try { await authApi.logout(token, userId); } catch (e) {}
-        }
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
 
     const formatDate = (dateString: string, full: boolean = false) => {
         const options: Intl.DateTimeFormatOptions = full 
@@ -105,8 +131,6 @@ export default function OrderHistory() {
         return { seatCount, standingCount, total: seatCount + standingCount };
     };
 
-    const isGuest = !username;
-    
     const isAdmin = permissions?.isAdmin === true;
     const companyIds = permissions ? Object.keys(permissions.productionRoles || {}).map(Number) : [];
     const isCompanyManager = companyIds.length > 0;
@@ -122,46 +146,22 @@ export default function OrderHistory() {
                 .barcode-stripes { background: repeating-linear-gradient(90deg, #03dbe7, #03dbe7 2px, transparent 2px, transparent 6px, #03dbe7 6px, #03dbe7 10px, transparent 10px, transparent 12px, #03dbe7 12px, #03dbe7 14px); }
             `}</style>
 
-            {/* Header */}
-            <header className="fixed top-0 w-full z-50 bg-[#0b1326]/70 backdrop-blur-xl border-b border-gray-800 shadow-sm flex justify-between items-center px-6 md:px-12 py-4">
-                <div className="flex items-center gap-4">
-                    <Link to="/home" className="active:scale-95 transition-transform text-[#b4c5ff]">
-                        <span className="material-symbols-outlined">home</span>
-                    </Link>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-[#b4c5ff] uppercase">TicketFlow</h1>
-                </div>
-                <div className="flex items-center gap-4">
-                
-
-                    {!isGuest ? (
-                        <button onClick={handleLogout} className="bg-[#2d3449] hover:bg-[#171f33] border border-gray-600 text-white px-5 py-2 rounded font-bold text-xs tracking-widest transition-colors z-50 relative">SIGN OUT</button>
-                    ) : (
-                        <Link to="/login" className="bg-[#2563eb] hover:bg-[#0053db] text-white px-5 py-2 rounded font-bold text-xs tracking-widest transition-colors z-50 relative">SIGN IN</Link>
-                    )}
-                </div>
-            </header>
-
-            <main className="pt-28 pb-12 px-6 md:px-12 min-h-screen max-w-7xl mx-auto flex flex-col relative z-0">
+            <main className="pt-6 pb-12 px-6 md:px-12 min-h-screen max-w-7xl mx-auto flex flex-col relative z-0">
 
                 <section className="mb-8">
                     <h2 className="text-4xl md:text-5xl font-black text-white mb-2 uppercase">Order History</h2>
-                    <p className="text-gray-400 max-w-xl mb-6">Review your past premium experiences. Secure, encrypted, and immutable ticketing records.</p>
-                    
+                    <p className="text-gray-400 max-w-xl mb-6">Review past premium experiences. Secure, encrypted, and immutable ticketing records.</p>
                     
                     {(isAdmin || isCompanyManager) && (
                         <div className="flex gap-6 border-b border-gray-800 w-full mb-4 overflow-x-auto">
                             <button onClick={() => setViewMode('PERSONAL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'PERSONAL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                 My Personal Orders
                             </button>
-                            
-                            
                             {isCompanyManager && (
                                 <button onClick={() => setViewMode('COMPANY')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'COMPANY' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     Company Orders
                                 </button>
                             )}
-                            
-                        
                             {isAdmin && (
                                 <button onClick={() => setViewMode('ALL')} className={`pb-3 font-bold text-sm tracking-widest uppercase transition-colors whitespace-nowrap ${viewMode === 'ALL' ? 'text-[#03dbe7] border-b-2 border-[#03dbe7]' : 'text-gray-500 hover:text-gray-300'}`}>
                                     All System Orders
@@ -179,7 +179,7 @@ export default function OrderHistory() {
                                 className="bg-[#0b1326] text-[#03dbe7] font-mono border border-gray-700 rounded px-3 py-1 outline-none focus:border-[#03dbe7]"
                             >
                                 {companyIds.map(id => (
-                                    <option key={id} value={id}>Company #{id} - {permissions?.productionRoles[id]}</option>
+                                    <option key={id} value={id}>Company #{id}</option>
                                 ))}
                             </select>
                         </div>
@@ -193,7 +193,6 @@ export default function OrderHistory() {
                     </div>
                 )}
 
-                {/* ERROR STATE: Shows Clear Error when accessing forbidden history */}
                 {!isLoading && error && (
                     <div className="flex-grow flex items-center justify-center py-10 w-full animate-in fade-in">
                         <div className="bg-[#171f33] border border-red-900/50 p-10 md:p-16 rounded-xl text-center max-w-lg shadow-2xl relative overflow-hidden">
@@ -215,38 +214,28 @@ export default function OrderHistory() {
                             <span className="material-symbols-outlined text-[#2d3449] text-[48px]">receipt_long</span>
                         </div>
                         <h3 className="text-2xl font-bold text-white mb-2 uppercase tracking-wide">No Records Found</h3>
-                        <p className="text-gray-400 max-w-sm mb-8">
-                            {viewMode === 'PERSONAL' ? "Your transaction history is currently empty." : "No orders found in this category."}
-                        </p>
-                        {viewMode === 'PERSONAL' && (
-                            <Link to="/events" className="bg-[#2563eb] text-white px-8 py-4 rounded font-bold text-sm tracking-widest transition-all hover:bg-[#0053db] shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-2">
-                                BROWSE EVENTS <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                            </Link>
-                        )}
+                        <p className="text-gray-400 max-w-sm mb-8">No orders found in this category.</p>
                     </div>
                 )}
 
-                {/* RICH EVENT CARDS WITH SEAT DETAILS */}
                 {!isLoading && !error && orders.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                         {orders.map((order) => {
                             const isRecent = new Date().getTime() - new Date(order.purchaseDate).getTime() < 86400000 * 7; 
                             const hasSeats = order.seatIds && order.seatIds.length > 0;
                             const hasStanding = order.standingAreaQuantities && Object.keys(order.standingAreaQuantities).length > 0;
+                            const eventName = order.eventDetails?.eventName || `Event #${order.eventId}`;
+                            const eventDate = order.eventDetails?.eventDate || null;
+                            const eventLocation = order.eventDetails?.location || "Venue TBD";
+
                             return (
                                 <div key={order.orderId} className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 hover:border-[#75f5ff]/50 group relative z-10">
                                     <div className="h-48 relative overflow-hidden bg-[#0b1326] border-b border-gray-800">
-                                        {order.eventImageUrl ? (
-                                            <img src={order.eventImageUrl} alt="Event Cover" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
-                                        ) : (
-                                            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2563eb] via-[#0b1326] to-[#0b1326] flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-[64px] text-gray-700">confirmation_number</span>
-                                            </div>
-                                        )}
-                                        
+                                        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2563eb] via-[#0b1326] to-[#0b1326] flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-[64px] text-gray-700">confirmation_number</span>
+                                        </div>
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             {isRecent && <span className="px-3 py-1 rounded text-[10px] font-mono uppercase tracking-widest font-bold bg-[#03dbe7] text-[#00363a] shadow-lg">NEW ORDER</span>}
-                                            {order.category && <span className="px-3 py-1 rounded text-[10px] font-mono uppercase tracking-widest font-bold bg-[#171f33] text-[#eeefff] shadow-lg border border-gray-700">{order.category}</span>}
                                         </div>
                                         <div className="absolute bottom-4 right-4 px-3 py-1 rounded text-[10px] font-mono bg-[#0b1326]/80 text-gray-400 border border-gray-700 backdrop-blur-sm">
                                             ORD: {order.orderId.substring(0, 8)}
@@ -255,17 +244,19 @@ export default function OrderHistory() {
 
                                     <div className="p-5 flex-1 flex flex-col">
                                         <div className="mb-4 border-b border-gray-800 pb-4">
-                                            <h3 className="text-xl font-bold leading-tight uppercase mb-2">
-                                                {order.eventName || `Event #${order.eventId}`}
-                                            </h3>
+                                            <h3 className="text-xl font-bold leading-tight uppercase mb-2">{eventName}</h3>
                                             <div className="flex flex-col gap-1.5 text-gray-400 text-sm">
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                                                    <span>{order.eventDate ? formatDate(order.eventDate, true) : "Date TBD"}</span>
+                                                    <span>{eventDate ? formatDate(eventDate, true) : "Date TBD"}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-[16px]">location_on</span>
-                                                    <span>{order.eventLocation || "Venue TBD"}</span>
+                                                    <span>{eventLocation}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-[16px]">person</span>
+                                                    <span>Purchaser: <span className="font-mono text-[#03dbe7] font-bold">{order.userId}</span></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -296,10 +287,6 @@ export default function OrderHistory() {
                                                     </div>
                                                 </div>
                                             )}
-
-                                            {!hasSeats && !hasStanding && (
-                                                <p className="text-xs text-gray-600 font-mono italic">No seating details available.</p>
-                                            )}
                                         </div>
 
                                         <div className="mt-auto space-y-4">
@@ -327,7 +314,6 @@ export default function OrderHistory() {
 
             </main>
 
-            {/* MODAL: VIEW TICKET (POPUP) */}
             {selectedTicket && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md bg-[#0b1326]/80 overflow-y-auto animate-in fade-in duration-300">
                     <div className="absolute inset-0" onClick={() => setSelectedTicket(null)}></div>
@@ -344,7 +330,7 @@ export default function OrderHistory() {
                                 <div>
                                     <p className="text-[#03dbe7] text-[10px] uppercase font-bold tracking-[0.2em] mb-2">Entry Pass</p>
                                     <h3 className="text-3xl font-black text-white leading-tight uppercase">
-                                        {selectedTicket.eventName || `EVENT #${selectedTicket.eventId}`}
+                                        {selectedTicket.eventDetails?.eventName || `EVENT #${selectedTicket.eventId}`}
                                     </h3>
                                 </div>
                             </div>
@@ -353,7 +339,7 @@ export default function OrderHistory() {
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Event Date</p>
                                     <p className="font-mono text-sm text-[#03dbe7] font-bold">
-                                        {selectedTicket.eventDate ? formatDate(selectedTicket.eventDate, true) : "TBD"}
+                                        {selectedTicket.eventDetails?.eventDate ? formatDate(selectedTicket.eventDetails.eventDate, true) : "TBD"}
                                     </p>
                                 </div>
                                 <div>
@@ -362,13 +348,21 @@ export default function OrderHistory() {
                                 </div>
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Location</p>
-                                    <p className="font-mono text-sm text-[#dbe2fd]">{selectedTicket.eventLocation || "TBD Sector / Main Arena"}</p>
+                                    <p className="font-mono text-sm text-[#dbe2fd]">{selectedTicket.eventDetails?.location || "TBD Sector / Main Arena"}</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Admissions</p>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Purchaser ID</p>
+                                    <p className="font-mono text-sm text-[#03dbe7] font-bold truncate pr-4">{selectedTicket.userId}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Total Admissions</p>
                                     <p className="font-mono text-sm text-white font-bold">
-                                        {getTicketQuantity(selectedTicket).total} Total (Seats: {getTicketQuantity(selectedTicket).seatCount}, Gen: {getTicketQuantity(selectedTicket).standingCount})
+                                        {getTicketQuantity(selectedTicket).total} Tickets
                                     </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Total Price</p>
+                                    <p className="font-mono text-sm text-white font-bold">${selectedTicket.price.toFixed(2)}</p>
                                 </div>
                             </div>
 

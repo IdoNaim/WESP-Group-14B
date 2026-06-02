@@ -3,8 +3,10 @@ package com.ticketpurchasingsystem.project;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -14,10 +16,12 @@ import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.Controllers.HistoryOrderController;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 
 import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.application.EventService;
+import com.ticketpurchasingsystem.project.application.HistoryOrderService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
@@ -33,11 +37,13 @@ public class DataLoader implements ApplicationRunner {
     private final UserService userService;
     private final ProductionService productionService;
     private final EventService eventService;
+    HistoryOrderService historyOrderService;
 
-    public DataLoader(UserService userService, ProductionService productionService, EventService eventService) {
+    public DataLoader(UserService userService, ProductionService productionService, EventService eventService, HistoryOrderService historyOrderService) {
         this.userService = userService;
         this.productionService = productionService;
         this.eventService = eventService;
+        this.historyOrderService = historyOrderService;
     }
 
     @Override
@@ -53,8 +59,10 @@ public class DataLoader implements ApplicationRunner {
         userService.registerUser("bob", "Bob Jones", "pass456", "bob@example.com",
                 UserGroupDiscount.STUDENT, guestToken2);
         String bobToken = userService.loginUser("bob", "pass456", guestToken2);
-
-        // Step 3: alice creates a production company
+        //admin login for test:
+        String adminGuestToken = userService.guestEntry();
+        String adminToken = userService.loginAdmin("admin@gmail.com", "admin123", adminGuestToken);
+        // // Step 3: alice creates a production company
         ProductionCompanyDTO companyDTO = new ProductionCompanyDTO(
                 "Live Events Co.",
                 "Premier live event organizer",
@@ -62,6 +70,19 @@ public class DataLoader implements ApplicationRunner {
         );
         Integer companyId = productionService.createProductionCompany(aliceToken, companyDTO);
 
+        ProductionCompanyDTO companyDTO2 = new ProductionCompanyDTO(
+                "Comedy Central",
+                "Leading comedy event organizer",
+                "contact@comedycentral.com"
+        );
+        Integer companyId2 = productionService.createProductionCompany(aliceToken, companyDTO2);
+
+
+        //appoint admin as manager to the company for testing purposes
+        Set<ManagerPermission> permissions = new HashSet<>();
+        permissions.add(ManagerPermission.PURCHASE_AND_ORDER_HISTORY_ACCESS);
+        productionService.appointManager(adminGuestToken, companyId, "admin@gmail.com", permissions);
+        
         if (companyId == null) {
             return;
         }
@@ -92,7 +113,7 @@ public class DataLoader implements ApplicationRunner {
                 noRestrictions, noDiscounts);
 
         eventService.createEvent(aliceToken,
-                new EventDTO("3", companyId, "Comedy Night 18+", 300,
+                new EventDTO("3", companyId2, "Comedy Night 18+", 300,
                         LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
                 adultOnly, noDiscounts);
 
@@ -100,17 +121,14 @@ public class DataLoader implements ApplicationRunner {
         historyOrderService.createHistoryOrder("order1", "bob", "1", companyId, new Timestamp(System.currentTimeMillis()), 100.0, List.of("A1", "A2"), new HashMap<>());
         loggerDef.getInstance().info("Successfully created history order 'order1' for bob.");
 
+        historyOrderService.createHistoryOrder("order2", "bob", "3", companyId2, new Timestamp(System.currentTimeMillis()), 100.0, List.of("A1", "A2"), new HashMap<>());
+        loggerDef.getInstance().info("Successfully created history order 'order2' for bob.");
+
 
         userService.logoutUser("alice", aliceToken);
         userService.logoutUser("bob", bobToken);
+        userService.logoutUser("admin-1", adminToken);
 
         loggerDef.getInstance().info("Data loading completed.=================================================================");
-                new EventDTO(null, companyId, "Comedy Night 18+", 300,
-                        LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
-                adultOnly, noDiscounts);
-
-        // Leave users logged out so they can login normally from the frontend
-        userService.logoutUser("alice", aliceToken);
-        userService.logoutUser("bob", bobToken);
     }
 }
