@@ -14,8 +14,6 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import jakarta.annotation.PostConstruct;
-
 @Service
 public class UserService implements IUserService {
 
@@ -29,13 +27,6 @@ public class UserService implements IUserService {
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
-    }
-
-    @PostConstruct
-    private void init() {
-        UserInfo newUser = userHandler.registerUser("user1", "name1", "email1@example.com", "password1", UserGroupDiscount.NONE);
-        userRepo.store(newUser);
-        userPublisher.publishUserCreated(newUser.getId());
     }
 
 
