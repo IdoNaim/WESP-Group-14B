@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,6 @@ public class EventService implements IEventService {
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
                         AuthenticationService authenticationService) {
-
         // Hooks into the EventHandler Singleton using the required components
         this.eventHandler = EventHandler.getInstance(eventRepo, eventPublisher, authenticationService);
 

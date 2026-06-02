@@ -131,7 +131,7 @@ function buildOrderItemsFromActiveOrder(
 ): OrderItem[] {
   const items: OrderItem[] = [];
 
-  for (const seatId of activeOrder.seatIds) {
+  for (const seatId of activeOrder.seatIds ?? []) {
     const parsed = parseSeatId(seatId);
     if (!parsed) continue;
     const zoneData = zones.find((z) => z.zone === parsed.zone);
@@ -498,7 +498,7 @@ export default function ReserveTicketsPage() {
 
         setCurrentOrder(activeOrder);
 
-        const createdTime = new Date(activeOrder.createdAt).getTime();
+        const createdTime = new Date(activeOrder.createdAt ?? '').getTime();
         const expiresAtTime = createdTime + RESERVATION_MINUTES * 60 * 1000;
         const remainingSeconds = Math.floor((expiresAtTime - Date.now()) / 1000);
         setTimeLeft(Math.max(0, remainingSeconds));
