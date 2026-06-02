@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 // Mock Data matching the Stitch output
 const events = [
@@ -37,13 +37,24 @@ const events = [
 ];
 
 export default function EventsPage() {
+    // ── Only change: read ?search= from the URL and filter events ──
+    const [searchParams] = useSearchParams();
+    const searchQuery = searchParams.get('search') ?? '';
+    const filteredEvents = searchQuery
+        ? events.filter(e =>
+            e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            e.category.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : events;
+    // ───────────────────────────────────────────────────────────────
+
     return (
         <div className="bg-[#0b1326] text-[#dbe2fd] min-h-screen font-sans overflow-x-hidden pb-32">
 
             {/* Header */}
             <header className="fixed top-0 w-full z-50 bg-[#0b1326]/70 backdrop-blur-xl border-b border-gray-800 shadow-sm flex justify-between items-center px-6 md:px-12 py-4">
                 <div className="flex items-center gap-4">
-                    <Link to="/dashboard" className="active:scale-95 transition-transform text-[#b4c5ff]">
+                    <Link to="/home" className="active:scale-95 transition-transform text-[#b4c5ff]">
                         <span className="material-symbols-outlined">arrow_back</span>
                     </Link>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-[#b4c5ff]">VELOCITY TICKETS</h1>
@@ -55,18 +66,20 @@ export default function EventsPage() {
                 {/* Hero Section */}
                 <section className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <h2 className="text-4xl md:text-5xl font-black text-white mb-2">Live Events</h2>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-2">
+                            {searchQuery ? `Results for "${searchQuery}"` : 'Live Events'}
+                        </h2>
                         <p className="text-gray-400 max-w-xl">Curated premium experiences for the bold. Secure your entry to the season's most anticipated performances.</p>
                     </div>
                     <div className="flex gap-2">
-                        <span className="bg-[#03dbe7]/10 text-[#03dbe7] px-3 py-1 rounded-full text-xs font-mono border border-[#03dbe7]/20">84 UPCOMING</span>
+                        <span className="bg-[#03dbe7]/10 text-[#03dbe7] px-3 py-1 rounded-full text-xs font-mono border border-[#03dbe7]/20">{filteredEvents.length} EVENTS</span>
                         <span className="bg-[#2d3449] text-gray-300 px-3 py-1 rounded-full text-xs font-mono">FILTERS</span>
                     </div>
                 </section>
 
                 {/* Events Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {events.map((event) => (
+                    {filteredEvents.length > 0 ? filteredEvents.map((event) => (
                         <div key={event.id} className={`rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 ${event.theme === 'light' ? 'bg-[#eeefff] text-[#171f33]' : 'bg-[#171f33] border border-gray-800 text-[#dbe2fd] hover:border-[#75f5ff]/50 group'}`}>
 
                             <div className="h-48 relative overflow-hidden">
@@ -101,14 +114,18 @@ export default function EventsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Task: Add button/link to view event details */}
                                     <Link to={`/events/${event.id}`} className={`w-full flex justify-center py-3 rounded-lg font-bold text-sm tracking-widest active:scale-95 transition-all shadow-md ${event.theme === 'light' ? 'bg-[#2563eb] text-white hover:bg-[#0053db]' : 'bg-[#2563eb] text-[#eeefff] border-t border-white/20'}`}>
                                         VIEW DETAILS
                                     </Link>
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="col-span-3 text-center py-20 text-gray-400">
+                            <p className="text-2xl font-bold mb-2">No events found</p>
+                            <p className="text-sm">Try a different search term.</p>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
