@@ -36,26 +36,26 @@ public class EventService implements IEventService {
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
 
-        EventPurchasePolicy defaultPurchasePolicy = new EventPurchasePolicy();
-        defaultPurchasePolicy.addRule(new MinAgeRule(18));
-        Event testEvent = new Event(
-                1,
-                "Test Event",
-                100,
-                LocalDateTime.now().plusDays(10),
-                defaultPurchasePolicy,
-                new EventDiscountPolicy(new ArrayList<>()),
-                0
-        );
-        testEvent.setEventLocation("Test Location");
-        SeatingMap seatingMap = new SeatingMap();
-        seatingMap.addSeatingArea(10, 10, 40.0); 
-        seatingMap.addStandingArea(50, 20.0);
-        seatingMap.bookAssignedSeats(List.of("0_1_1"), "1");
-        seatingMap.bookStandingArea("1", "1", 2);
-        testEvent.setSeatingMap(seatingMap);
-        Event eventWithId =eventRepo.save(testEvent);
-        logger.info("Created test event with ID: " + eventWithId.getEventId());
+        // EventPurchasePolicy defaultPurchasePolicy = new EventPurchasePolicy();
+        // defaultPurchasePolicy.addRule(new MinAgeRule(18));
+        // Event testEvent = new Event(
+        //         1,
+        //         "Test Event",
+        //         100,
+        //         LocalDateTime.now().plusDays(10),
+        //         defaultPurchasePolicy,
+        //         new EventDiscountPolicy(new ArrayList<>()),
+        //         0
+        // );
+        // testEvent.setEventLocation("Test Location");
+        // SeatingMap seatingMap = new SeatingMap();
+        // seatingMap.addSeatingArea(10, 10, 40.0); 
+        // seatingMap.addStandingArea(50, 20.0);
+        // seatingMap.bookAssignedSeats(List.of("0_1_1"), "1");
+        // seatingMap.bookStandingArea("1", "1", 2);
+        // testEvent.setSeatingMap(seatingMap);
+        // Event eventWithId =eventRepo.save(testEvent);
+        // logger.info("Created test event with ID: " + eventWithId.getEventId());
         logger.info("EventService initialized");
     }
 
