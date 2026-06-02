@@ -12,13 +12,12 @@ import EventsPage from "../pages/events/EventsPage";
 import EventDetailsPage from "../pages/events/EventDetailsPage";
 
 import ActiveOrderPage from "../pages/orders/ActiveOrderPage";
-import CheckoutPage from "../pages/orders/CheckoutPage";
 import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
 import ReserveTicketPage from "../pages/orders/ReserveTicketPage";
 
 import NotificationsPage from "../pages/notifications/NotificationsPage";
 
-import ProductionCompanyPage from "../pages/production-company/ProductionCompanyPage";
+import ProductionCompaniesPage from "../pages/production-company/MyCompaniesPage";
 import PurchasePolicyPage from "../pages/policies/PurchasePolicyPage";
 
 import AdminPage from "../pages/admin/AdminPage";
@@ -51,7 +50,6 @@ export default function AppRoutes() {
           />
 
           <Route path="/orders/active" element={<ActiveOrderPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
 
           {/* Member-only routes */}
           <Route element={<RequireMember />}>
@@ -61,13 +59,13 @@ export default function AppRoutes() {
           </Route>
 
           {/* Production-user-only routes */}
-          <Route element={<RequireProductionUser />}>
-            <Route
-              path="/production-company"
-              element={<ProductionCompanyPage />}
-            />
-            <Route path="/policies" element={<PurchasePolicyPage />} />
-          </Route>
+          {/* <Route element={<RequireProductionUser />}> */}
+          <Route
+            path="/production-company"
+            element={<ProductionCompaniesPage />}
+          />
+          <Route path="/policies" element={<PurchasePolicyPage />} />
+          {/* </Route> */}
 
           {/* Admin-only routes */}
           <Route element={<RequireAdmin />}>

@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllActiveOrdersEvent;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
 
 @Component
 public class AdminPublisher {
@@ -28,6 +30,13 @@ public class AdminPublisher {
 
     public List<HistoryOrderItem> publishGetAllOrdersHistory(String reqId) {
         GetAllHistoryOrdersEvent event = new GetAllHistoryOrdersEvent(reqId);
+        eventPublisher.publishEvent(event);
+        return event.getResult();
+    }
+
+
+    public List<UserDTO> publishGetAllUsers(String reqId) {
+        GetAllUsersEvent event = new GetAllUsersEvent(reqId);
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
