@@ -1,8 +1,7 @@
-// types/notification.ts (או באותו קובץ)
 export interface NotificationDTO {
     id: string;
     message: string;
-    read: boolean; // שונה מ-isRead ל-read
+    read: boolean; 
     createdAt: string; 
     title?: string;
 }
@@ -20,9 +19,9 @@ export interface BroadcastNotificationRequestDTO {
 // api/notifications.api.ts
 const BASE_URL = '/api/notifications';
 
-// פונקציית עזר לשליפת הטוקן (יש להתאים למנגנון האותנטיקציה שלכם)
+
 const getAuthHeaders = (): HeadersInit => {
-  const token = localStorage.getItem('token'); // או כל מקום אחר בו נשמר הטוקן
+  const token = localStorage.getItem('token'); 
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -77,17 +76,6 @@ export const NotificationAPI = {
         
         if (!response.ok) {
             throw new Error(`Failed to mark as read. Status: ${response.status}`);
-        }
-        return true;
-    },
-    markAsUnread: async (id: string): Promise<boolean> => {
-        const response = await fetch(`${BASE_URL}/${id}/unread`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Failed to mark as unread. Status: ${response.status}`);
         }
         return true;
     },
