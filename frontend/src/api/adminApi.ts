@@ -18,7 +18,7 @@ const parseResponse = async (response: Response) => {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        const errorMessage = data.message || "An error occurred while processing the request.";
+        const errorMessage = (data as any).error || (data as any).message || "An error occurred while processing the request.";
         throw new Error(errorMessage);
     }
 
@@ -68,7 +68,7 @@ export const adminApi = {
     },
 
     getOrderHistory: async (token: string): Promise<SystemHistoryOrderDTO[]> => {
-        const response = await fetch(`${BASE_URL}/order-history`, {
+        const response = await fetch(`${BASE_URL}/history-orders`, {
             method: "GET",
             headers: getHeaders(token),
         });

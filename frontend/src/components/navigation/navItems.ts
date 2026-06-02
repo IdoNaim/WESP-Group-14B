@@ -45,6 +45,6 @@ export const navItems: NavItem[] = [
   {
     label: "Admin",
     path: "/admin",
-    visibility: "all",
+    visibility: "admin",
   },
 ];
