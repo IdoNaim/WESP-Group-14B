@@ -32,36 +32,6 @@ public class EventService implements IEventService {
                         EventAggregatePublisher eventPublisher,
                         AuthenticationService authenticationService) {
 
-//<<<<<<< HEAD
-//        // EventPurchasePolicy defaultPurchasePolicy = new EventPurchasePolicy();
-//        // defaultPurchasePolicy.addRule(new MinAgeRule(18));
-//        // Event testEvent = new Event(
-//        //         1,
-//        //         "Test Event",
-//        //         100,
-//        //         LocalDateTime.now().plusDays(10),
-//        //         defaultPurchasePolicy,
-//        //         new EventDiscountPolicy(new ArrayList<>()),
-//        //         0
-//        // );
-//        // testEvent.setEventLocation("Test Location");
-//        // SeatingMap seatingMap = new SeatingMap();
-//        // seatingMap.addSeatingArea(10, 10, 40.0);
-//        // seatingMap.addStandingArea(50, 20.0);
-//        // seatingMap.bookAssignedSeats(List.of("0_1_1"), "1");
-//        // seatingMap.bookStandingArea("1", "1", 2);
-//        // testEvent.setSeatingMap(seatingMap);
-//        // Event eventWithId =eventRepo.save(testEvent);
-//        // logger.info("Created test event with ID: " + eventWithId.getEventId());
-//        logger.info("EventService initialized");
-//    }
-//
-//    private String extractToken(String token) {
-//        if (token != null && token.startsWith("Bearer ")) {
-//            return token.substring(7);
-//        }
-//        return token;
-//=======
         // Hooks into the EventHandler Singleton using the required components
         this.eventHandler = EventHandler.getInstance(eventRepo, eventPublisher, authenticationService);
 
@@ -116,63 +86,7 @@ public class EventService implements IEventService {
     public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {
         eventHandler.releaseSeats(sessionToken, orderId, eventId, seatIds);
     }
-//<<<<<<< HEAD
-//    public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity){
-//        //TODO: Implement the logic to release reserved standing area based on the eventId, areaId, and quantity
-//        if (!authenticationService.validate(extractToken(sessionToken))) {
-//            throw new IllegalArgumentException("Invalid session token");
-//        }
-//        logger.info("Releasing standing area");
-//        Event event = eventRepo.findById(eventId);
-//        if (event == null) {
-//            logger.warn("Cannot release standing area. Event not found: " + eventId);
-//            throw new IllegalArgumentException("Invalid EventID");
-//        }
-//        if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
-//            logger.warn("Cannot release standing area. one or more stands not booked");
-//            // throw new IllegalArgumentException("one or more stands not booked");
-//        }
-//        else{
-//        logger.info("Released standing area successfully");
-//        }
-//    }
-//    public boolean reserveSeats(String sessionToken, String orderId, String eventId, List<String> seatIds){
-//        //TODO: Implement the logic to reserve seats based on the orderId, eventId, and seatIds
-//        if (!authenticationService.validate(extractToken(sessionToken))) {
-//            throw new IllegalArgumentException("Invalid session token");
-//        }
-//        logger.info("Releasing seats");
-//        Event event = eventRepo.findById(eventId);
-//        if (event == null) {
-//            logger.warn("Cannot release seats. Event not found: " + eventId);
-//            throw new IllegalArgumentException("Invalid EventID");
-//        }
-//        if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
-//            logger.warn("Cannot book seats, problem occured");
-//            throw new IllegalArgumentException("cannot book seats, problem occured");
-//        }
-//        logger.info("booked seats successfully");
-//        return true;
-//    }
-//    public boolean reserveStandingArea(String sessionToken, String eventId, String areaId, int quantity){
-//        //TODO: Implement the logic to reserve standing area based on the eventId, areaId, and quantity
-//        if (!authenticationService.validate(extractToken(sessionToken))) {
-//            throw new IllegalArgumentException("Invalid session token");
-//        }
-//        logger.info("booking standing area");
-//        Event event = eventRepo.findById(eventId);
-//        if (event == null) {
-//            logger.warn("Cannot book standing area. Event not found: " + eventId);
-//            throw new IllegalArgumentException("Invalid EventID");
-//        }
-//        if(!event.getSeatingMap().bookStandingArea(areaId, null,quantity)){
-//            logger.warn("Cannot book standing area. one or more stands not booked");
-//            throw new IllegalArgumentException("cannot book standing area, problem occured");
-//        }
-//        logger.info("booked standing area successfully");
-//        return true;
-//=======
-//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
+
 
     @Override
     public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity) {
@@ -218,7 +132,6 @@ public class EventService implements IEventService {
     public boolean checkStandingAreaAvailability(String eventId, String areaId, int quantity) {
         return eventHandler.checkStandingAreaAvailability(eventId, areaId, quantity);
     }
-//<<<<<<< HEAD
     @Override
     public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId) {
         return eventHandler.getEventSeatingMap( sessionToken,  eventId);
@@ -231,6 +144,3 @@ public class EventService implements IEventService {
     }
 
 }
-//=======
-//}
-//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6

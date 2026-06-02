@@ -13,12 +13,10 @@ import org.springframework.web.client.RestTemplate;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 
 import com.ticketpurchasingsystem.project.application.PaymentDetails;
-//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
 
 @Component
 @Profile("!dev")
 public class PaymentGateway implements IPaymentGateway {
-
 
     static final String API_URL = "https://damp-lynna-wsep-1984852e.koyeb.app/";
 

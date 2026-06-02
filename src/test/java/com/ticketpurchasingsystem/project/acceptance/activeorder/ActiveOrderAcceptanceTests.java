@@ -20,7 +20,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -74,11 +73,8 @@ import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-//<<<<<<< HEAD
-//import com.ticketpurchasingsystem.project.domain.Utils.PaymentDetailsDTO;
-//=======
+
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
-//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
 @ExtendWith(MockitoExtension.class)
 public class ActiveOrderAcceptanceTests {
     private IActiveOrderService activeOrderService;
@@ -765,17 +761,11 @@ public class ActiveOrderAcceptanceTests {
             
 
             double amountToPay = 100;
-//<<<<<<< HEAD
-//            when(paymentGatewayMock.pay(any(), anyDouble())).thenReturn(true);
-//            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
-//
-//            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, amountToPay, order.getOrderId(), paymentDetails));
-//=======
+
             when(paymentGatewayMock.pay(any())).thenReturn(50000);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
             assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
-//>>>>>>> 977e62e60538a55f7f25f0ed01751af487fbb0b6
             assertThrows(Exception.class, ()-> activeOrderService.getActiveOrderInfo(session, order.getOrderId()));
             assertNull(activeOrderRepo.findById(order.getOrderId()));
             //check if we can create new order:
