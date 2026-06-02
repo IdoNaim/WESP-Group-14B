@@ -24,8 +24,13 @@ export interface AddStandingAreaRequestDTO {
     quantity: number;
 }
 
+// MATCHES: CheckoutPage.tsx parameters exactly
 export interface CheckoutRequestDTO {
     amount: number;
+    creditCardNumber: string;
+    cardHolderName: string;
+    expirationDate: string;
+    cvv: string;
 }
 
 export interface CheckoutResponseDTO {
@@ -168,10 +173,25 @@ export const activeOrderApi = {
      * Completes the order: checks purchase policy, charges payment, issues barcodes.
      */
     checkout: async (token: string, orderId: string, data: CheckoutRequestDTO): Promise<CheckoutResponseDTO> => {
+        // Break up expirationDate (MM/YY) into distinct month and year elements
+        const [month, year] = data.expirationDate.split('/');
+
+        // TRANSFORMATION BLOCK: Maps frontend values to exact field names expected by CheckoutRequestDTO.java
+        const backendPayload = {
+            amount: data.amount,
+            currency: 'USD', // Standard fallback value for the DTO
+            cardNumber: data.creditCardNumber,
+            month: month || '',
+            year: year || '',
+            holder: data.cardHolderName,
+            cvv: data.cvv,
+            id: '' // Base placeholder matching the DTO requirements
+        };
+
         const response = await fetch(`${BASE_URL}/${orderId}/checkout`, {
             method: 'POST',
             headers: getHeaders(token),
-            body: JSON.stringify(data),
+            body: JSON.stringify(backendPayload),
         });
         return parseResponse(response);
     },
