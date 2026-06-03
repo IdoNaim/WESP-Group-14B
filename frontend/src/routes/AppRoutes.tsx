@@ -29,6 +29,7 @@ import RequireMember from "../components/auth/RequireMember";
 // import RequireProductionUser from "../components/auth/RequireProductionUser";
 import RequireAdmin from "../components/auth/RequireAdmin";
 import CheckoutPage from '../pages/orders/CheckoutPage';
+import AccountSettingsPage from '../pages/dashboard/AccountSettingsPage';
 
 export default function AppRoutes() {
   return (
@@ -58,7 +59,7 @@ export default function AppRoutes() {
 
           {/* Member-only routes */}
           <Route element={<RequireMember />}>
-            <Route path="/account" element={<AccountPage />} />
+            <Route path="/account" element={<AccountSettingsPage />} />
             <Route path="/orders/history" element={<OrderHistoryPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/production-company/:companyId" element={<ProductionCompanyPage />} />
@@ -79,7 +80,7 @@ export default function AppRoutes() {
             <Route path="/admin" element={<AdminPage />} />
           </Route>
 
-        
+
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
