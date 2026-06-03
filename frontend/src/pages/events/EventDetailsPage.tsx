@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { eventApi, EventDTO } from '../../api/eventsApi';
+import {getActiveOrderByUserId} from '../../api/activeOrderApi';
 // Make sure to adjust this import path to where your activeOrderApi is located!
 import { activeOrderApi } from '../../api/activeOrderApi';
 import { useAuth } from '../../context/AuthContext';
@@ -66,7 +67,19 @@ export default function EventDetailsPage() {
             // Assuming you store the logged-in user's ID in localStorage.
             // Adjust this if you extract it from the JWT token instead!
             const userId = localStorage.getItem('userId') || 'fallback-user-id';
-
+            console.log("got here70");
+            const existingOrder = await activeOrderApi.getActiveOrderByUserId(token, userId);
+            console.log("got here72", existingOrder);
+            if (existingOrder) {
+                if (existingOrder.eventId === eventId) {
+                    navigate('/orders/active');
+                    return;
+                } else {
+                    setOrderError(`You already have an active order for: ${existingOrder.eventId}`);
+                    return;
+                }
+            }
+            console.log("got here81");
             const response = await activeOrderApi.createOrder(token, {
                 userId: userId,
                 eventId: eventId
@@ -78,6 +91,10 @@ export default function EventDetailsPage() {
             }
         } catch (error: any) {
             console.error('[ORDER ERROR] Failed to create order:', error.message);
+            if (error.message?.includes('active order')) {
+                navigate('/orders/active');
+                return;
+            }
             setOrderError("Unable to start your order. Please try again.");
         } finally {
             setIsCreatingOrder(false);
@@ -174,12 +191,12 @@ export default function EventDetailsPage() {
                         <p className="text-4xl font-mono font-black">{eventData.ticketPrice ? `$${eventData.ticketPrice}` : 'TBD'}</p>
                     </div>
 
-                    {!isMember ? (
+                    {/* {!isMember ? (
                         <div className="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-6 py-4 rounded-lg font-bold border border-amber-500/20 text-xs tracking-widest uppercase">
                             <span className="material-symbols-outlined">lock</span>
                             SIGN IN AS A MEMBER TO RESERVE TICKETS
                         </div>
-                    ) : !isAuthorized ? (
+                    ) : */!isAuthorized ? ( 
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">block</span>
                             PURCHASE UNAVAILABLE
