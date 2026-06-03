@@ -38,11 +38,6 @@ export const navItems: NavItem[] = [
     visibility: "member",
   },
   {
-    label: "Purchase Policies",
-    path: "/policies",
-    visibility: "production",
-  },
-  {
     label: "Admin",
     path: "/admin",
     visibility: "admin",
