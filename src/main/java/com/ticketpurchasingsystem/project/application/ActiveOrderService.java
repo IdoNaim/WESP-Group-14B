@@ -255,26 +255,53 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("order is already being processed");
         }
 
-        List<BarcodeDTO> barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
-        if(barcodesIssued == null){
-            logger.error("Barcode generation failed for order: " + orderId + ". Rolling back and deleting order.");
-            rollbackOrderReservations(sessionToken.getToken(), orderDTO);
-            activeOrderRepo.delete(orderId);
-            throw new IllegalStateException("Barcode generation failed. Refund processed.");
-        }
-
         int transactionId = payment(paymentGateway, sessionToken, paymentDetails);
         if(transactionId == -1){
             logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
-            barCodeGateway.cancelTickets(barcodesIssued);
             rollbackOrderReservations(sessionToken.getToken(), orderDTO);
             activeOrderRepo.delete(orderId);
             throw new IllegalStateException("Payment failed");
         }
-        activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId);
-        activeOrderRepo.delete(orderId);
-        logger.info("Successfully completed order: " + orderId);
-        return barcodesIssued;
+
+        List<BarcodeDTO> barcodesIssued = null;
+        try {
+            barcodesIssued = barCodeGateway.issueBarcodes(orderDTO);
+            if(barcodesIssued == null){
+                throw new IllegalStateException("Barcode generation failed");
+            }
+            activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId);
+            activeOrderRepo.delete(orderId);
+            logger.info("Successfully completed order: " + orderId);
+            return barcodesIssued;
+        } catch (Exception e) {
+            logger.error("Exception occurred during checkout completion for order " + orderId + ": " + e.getMessage());
+            try {
+                paymentGateway.refund(transactionId);
+            } catch (Exception refundEx) {
+                logger.error("Failed to refund transaction " + transactionId + " during rollback: " + refundEx.getMessage());
+            }
+            if(barcodesIssued != null){
+                try {
+                    barCodeGateway.cancelTickets(barcodesIssued);
+                } catch (Exception cancelEx) {
+                    logger.error("Failed to cancel tickets during rollback: " + cancelEx.getMessage());
+                }
+            }
+            try {
+                rollbackOrderReservations(sessionToken.getToken(), orderDTO);
+            } catch (Exception rollbackEx) {
+                logger.error("Failed to rollback reservations during rollback: " + rollbackEx.getMessage());
+            }
+            try {
+                activeOrderRepo.delete(orderId);
+            } catch (Exception deleteEx) {
+                logger.error("Failed to delete active order during rollback: " + deleteEx.getMessage());
+            }
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException("Order completion failed", e);
+        }
     }
 
     @Override

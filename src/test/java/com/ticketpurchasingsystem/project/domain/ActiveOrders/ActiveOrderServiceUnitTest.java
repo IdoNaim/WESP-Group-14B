@@ -830,7 +830,6 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
-        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
         lenient().when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
@@ -858,6 +857,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
+        when(paymentGatewayMock.pay(any())).thenReturn(100);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
         when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
@@ -866,10 +866,43 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
         );
 
+        verify(paymentGatewayMock, times(1)).refund(100);
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("C-1"));
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
-        verifyNoInteractions(paymentGatewayMock);
+    }
+
+    @Test
+    void GivenPersistenceFails_WhenCompleteOrder_ThenThrowRuntimeExceptionAndRollback() {
+        IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
+        ActiveOrderItem validOrder = orderForUser(USER_ID);
+        validOrder.setSeatIds(List.of("D-1"));
+
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(validOrder);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
+        when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
+        when(paymentGatewayMock.pay(any())).thenReturn(200);
+
+        List<BarcodeDTO> barcodes = List.of(new BarcodeDTO("barcode-123"));
+        when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(barcodes);
+
+        doThrow(new RuntimeException("Persistence failed"))
+                .when(activeOrderPublisherMock)
+                .publishCompletedOrder(any(), anyDouble(), anyInt());
+
+        when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
+
+        assertThrows(Exception.class, () ->
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+        );
+
+        verify(paymentGatewayMock, times(1)).refund(200);
+        verify(barcodeGatewayMock, times(1)).cancelTickets(barcodes);
+        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("D-1"));
+        verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
 
 //     --- Concurrency tests for completeOrder ---

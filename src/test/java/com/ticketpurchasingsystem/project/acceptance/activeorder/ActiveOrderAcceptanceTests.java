@@ -854,7 +854,6 @@ public class ActiveOrderAcceptanceTests {
 
             double amountToPay = 100;
             when(paymentGatewayMock.pay(any())).thenReturn(-1);
-            when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
             assertThrows(Exception.class, ()-> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
             assertNull(activeOrderRepo.findById(order.getOrderId()));
