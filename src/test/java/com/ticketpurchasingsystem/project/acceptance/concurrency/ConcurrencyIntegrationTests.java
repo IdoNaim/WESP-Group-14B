@@ -185,7 +185,7 @@ public class ConcurrencyIntegrationTests {
 
     // 1. ActiveOrders (Concurrent Finalization)
     @Test
-    public void testConcurrentActiveOrderFinalization() throws Exception {
+    public void givenActiveOrderWithReservedSeats_whenUsersCompleteOrderConcurrently_thenOnlyOneSucceeds() throws Exception {
         String userId = "user_finalizer";
         userRepo.store(new UserInfo(userId, "Finalizer User", "finalizer@test.com", "pass123", UserGroupDiscount.NONE));
         String sessionToken = authenticationService.login(userId);
@@ -254,7 +254,7 @@ public class ConcurrencyIntegrationTests {
 
     // 2. Authentications (Duplicate Registrations)
     @Test
-    public void testConcurrentDuplicateRegistrations() throws Exception {
+    public void givenTwoGuestSessions_whenRegisteringSameUserIdConcurrently_thenStateIsConsistent() throws Exception {
         String sharedUserId = "alice_dup";
         String name = "Alice";
         String password = "password123";
@@ -310,7 +310,7 @@ public class ConcurrencyIntegrationTests {
 
     // 3. Events (Concurrent Seat Reservations)
     @Test
-    public void testConcurrentSeatReservationsAllowsDoubleBooking() throws Exception {
+    public void givenTwoUsersAndOneAvailableSeat_whenReservingSameSeatConcurrently_thenSeatIsBooked() throws Exception {
         String userA = "user_a";
         String userB = "user_b";
         userRepo.store(new UserInfo(userA, "User A", "usera@test.com", "pass123", UserGroupDiscount.NONE));
@@ -370,7 +370,7 @@ public class ConcurrencyIntegrationTests {
 
     // 4. Events (Concurrent Base Updates with Optimistic Locking)
     @Test
-    public void testConcurrentEventBaseUpdatesOptimisticLocking() throws Exception {
+    public void givenTwoDifferentCopiesOfSameEvent_whenSavingBothConcurrently_thenOneSucceedsAndOtherFailsWithOptimisticLockingException() throws Exception {
         String userId = "event_updater";
         userRepo.store(new UserInfo(userId, "Event Updater", "updater@test.com", "pass123", UserGroupDiscount.NONE));
         String sessionToken = authenticationService.login(userId);
