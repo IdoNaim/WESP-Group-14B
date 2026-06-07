@@ -99,7 +99,7 @@ public class HistoryOrderAcceptanceTests {
         mockStandingAreaQuantities = new HashMap<>();
     }
     @Test
-    public void checkSetup(){
+    public void givenTestEnvironmentSetup_whenCheckingSetup_thenAssertionSucceeds(){
         assertTrue(true);
     }
 

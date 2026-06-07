@@ -202,7 +202,7 @@ public class ActiveOrderAcceptanceTests {
 
     }
     @Test
-    public void checkSetup(){
+    public void givenTestEnvironmentSetup_whenCheckingSetup_thenAssertionSucceeds(){
         assertTrue(true);
         System.out.println("setup complete!");
     }
