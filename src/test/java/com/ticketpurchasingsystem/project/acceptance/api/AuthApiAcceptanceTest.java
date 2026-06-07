@@ -72,14 +72,14 @@ class AuthApiAcceptanceTest {
         // POST /api/identity/guest
 
         @Test
-        void WhenGuestEntry_ThenReturn200WithToken() throws Exception {
+        void givenNoSession_whenGuestEntry_thenReturn200WithToken() throws Exception {
                 mockMvc.perform(post("/api/identity/guest"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.token").exists());
         }
 
         @Test
-        void WhenTwoGuestEntries_ThenEachGetsDistinctToken() throws Exception {
+        void givenNoSession_whenTwoGuestEntries_thenEachGetsDistinctToken() throws Exception {
                 MvcResult first = mockMvc.perform(post("/api/identity/guest"))
                                 .andExpect(status().isOk())
                                 .andReturn();
