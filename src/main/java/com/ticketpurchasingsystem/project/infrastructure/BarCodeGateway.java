@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Component
 public class BarCodeGateway implements IBarCodeGateway {
@@ -38,7 +39,7 @@ public class BarCodeGateway implements IBarCodeGateway {
             String seat = parts[2];
 
             Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "issue ticket");
+            body.put("action_type", "issue_ticket");
             body.put("customer_id", order.getUserId());
             body.put("event_id", order.getEventId());
             body.put("zone", zone);
@@ -55,7 +56,7 @@ public class BarCodeGateway implements IBarCodeGateway {
 
         for (Map.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
             Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "issue ticket");
+            body.put("action_type", "issue_ticket");
             body.put("customer_id", order.getUserId());
             body.put("event_id", order.getEventId());
             body.put("zone", entry.getKey());
@@ -76,7 +77,7 @@ public class BarCodeGateway implements IBarCodeGateway {
     public void cancelTickets(List<BarcodeDTO> barcodes) {
         for (BarcodeDTO barcode : barcodes) {
             Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "cancel ticket");
+            body.put("action_type", "cancel_ticket");
             body.put("ticket_id", barcode.getBarcodeValue());
             try {
                 post(body);
@@ -87,8 +88,13 @@ public class BarCodeGateway implements IBarCodeGateway {
     }
 
     private String post(Map<String, Object> body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.postForObject(API_URL, new HttpEntity<>(body, headers), String.class);
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            return restTemplate.postForObject(API_URL, new HttpEntity<>(body, headers), String.class);
+        } catch (Exception e) {
+            loggerDef.getInstance().error("Network error calling external BarCodeGateway: " + e.getMessage());
+            return null;
+        }
     }
 }
