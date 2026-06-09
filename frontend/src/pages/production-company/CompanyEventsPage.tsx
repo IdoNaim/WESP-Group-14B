@@ -375,7 +375,12 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const minDateTime = (() => { const d = new Date(); d.setSeconds(0, 0); return d.toISOString().slice(0, 16); })();
+    const minDateTime = (() => {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
@@ -398,7 +403,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     companyId,
                     eventName,
                     eventCapacity: Number(capacity),
-                    eventDateTime: new Date(dateTime).toISOString().slice(0, 19),
+                    eventDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime,
                     eventLocation: location || null,
                     imageUrl: imageUrl ?? null,
                 },
@@ -699,7 +704,12 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const minDateTime = (() => { const d = new Date(); d.setSeconds(0, 0); return d.toISOString().slice(0, 16); })();
+    const minDateTime = (() => {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
@@ -715,7 +725,7 @@ function EditEventModal({ event, onClose, onSaved }: {
             const ops: Promise<boolean>[] = [];
 
             if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
-                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: new Date(dateTime).toISOString().slice(0, 19) }));
+                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime }));
             if (Number(capacity) !== event.eventCapacity)
                 ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
             const newLoc = location || null;
@@ -946,8 +956,9 @@ function EventCard({ event, stats, onEdit, onDelete }: {
     const revenue = event.ticketPrice != null
         ? ticketsSold * event.ticketPrice
         : (stats?.historyRevenue ?? 0);
-    const available = event.eventCapacity - ticketsSold;
-    const soldPct = event.eventCapacity > 0 ? Math.min(100, Math.round((ticketsSold / event.eventCapacity) * 100)) : 0;
+    const available = event.eventCapacity;
+    const total = event.eventCapacity + ticketsSold;
+    const soldPct = total > 0 ? Math.min(100, Math.round((ticketsSold / total) * 100)) : 0;
 
     return (
         <div className="bg-[#171f33] border border-gray-800 rounded-2xl p-5 flex flex-col gap-3">
@@ -992,7 +1003,7 @@ function EventCard({ event, stats, onEdit, onDelete }: {
                 <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
                     <span>{ticketsSold} sold</span>
                     <span>{available} available</span>
-                    <span>{event.eventCapacity} total</span>
+                    <span>{total} total</span>
                 </div>
                 <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
                     <div
