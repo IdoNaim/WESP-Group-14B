@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
@@ -22,8 +24,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import jakarta.annotation.PostConstruct;
-
 @Service
 public class ProductionService implements IProductionService {
 
@@ -32,6 +32,7 @@ public class ProductionService implements IProductionService {
     private final IProdRepo prodRepo;
     private final ProductionEventPublisher productionEventPublisher;
 
+    @Autowired
     public ProductionService(AuthenticationService authenticationService,
             ProductionHandler productionHandler,
             IProdRepo prodRepo,
@@ -51,6 +52,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("createProductionCompany: invalid session token");
@@ -80,6 +82,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -123,6 +126,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean appointManager(String sessionToken, Integer companyId, String managerId,
             Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
@@ -167,6 +171,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("getCompanyPurchaseHistory: invalid session token");
@@ -190,6 +195,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
             String managerId, Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
@@ -229,6 +235,7 @@ public class ProductionService implements IProductionService {
         return false;
     }
     @Override
+    @Transactional(readOnly = true)
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("getRolesTree: invalid session token");
@@ -255,6 +262,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean removeManager(String sessionToken, Integer companyId, String managerId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -288,6 +296,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean removeOwner(String sessionToken, Integer companyId, String ownerId) {
         if (!authenticationService.validate(sessionToken)) return false;
         String requesterId = authenticationService.getUser(sessionToken);
@@ -347,6 +356,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CompanySummaryDTO> getMyCompanies(String sessionToken) {
         if (!authenticationService.validate(sessionToken)) {
             return null;
@@ -369,6 +379,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) return null;
         String userId = authenticationService.getUser(sessionToken);
@@ -403,6 +414,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
