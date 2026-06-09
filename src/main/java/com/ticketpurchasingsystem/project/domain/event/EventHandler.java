@@ -151,18 +151,20 @@ public class EventHandler {
     private EventDTO toDTO(Event event) {
         Double minPrice = null;
         Double maxPrice = null;
+        int displayCapacity = event.getEventCapacity();
         if (event.getSeatingMap() != null) {
             java.util.List<Double> prices = event.getSeatingMap().getAllZonePrices();
             if (!prices.isEmpty()) {
                 minPrice = prices.stream().mapToDouble(Double::doubleValue).min().getAsDouble();
                 maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().getAsDouble();
             }
+            displayCapacity = event.getSeatingMap().getTotalAvailableCapacity();
         }
         return new EventDTO(
                 event.getEventId(),
                 event.getCompanyId(),
                 event.getEventName(),
-                event.getEventCapacity(),
+                displayCapacity,
                 event.getEventDate(),
                 event.isActive(),
                 event.getEventLocation(),
@@ -339,11 +341,11 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot release seats. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         if (!event.getSeatingMap().unbookAssignedSeats(seatIds)) {
-            logger.warn("Cannot release seats. one or more seats not booked");
-            throw new IllegalArgumentException("one or more seats not booked");
+            logger.warn("Cannot release seats: one or more seats were not booked");
+            throw new IllegalArgumentException("Could not release the selected seats. Please refresh and try again.");
         }
         logger.info("Released seats successfully");
     }
@@ -356,11 +358,11 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot release standing area. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         if(!event.getSeatingMap().unbookStandingArea(areaID, quantity)){
-            logger.warn("Cannot release standing area. one or more stands not booked");
-            throw new IllegalArgumentException("one or more stands not booked");
+            logger.warn("Cannot release standing area: quantity mismatch or area not booked");
+            throw new IllegalArgumentException("Could not release the standing area spots. Please refresh and try again.");
         }
         logger.info("Released standing area successfully");
     }
@@ -373,12 +375,11 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot book seats. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
-            logger.warn("Cannot book seats, problem occurred");
-            // Adjusted spelling to match your test assertion expected string
-            throw new IllegalArgumentException("cannot book seats, problem occured");
+            logger.warn("Cannot book seats: one or more seats are already taken or do not exist");
+            throw new IllegalArgumentException("The selected seats are no longer available. Please choose different seats.");
         }
         logger.info("booked seats successfully");
         return true;
@@ -392,12 +393,11 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot book standing area. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         if(!event.getSeatingMap().bookStandingArea(areaId, null, quantity)){
-            logger.warn("Cannot book standing area. one or more stands not booked");
-            // Adjusted spelling to match your test assertion expected string
-            throw new IllegalArgumentException("cannot book standing area, problem occured");
+            logger.warn("Cannot book standing area: insufficient availability");
+            throw new IllegalArgumentException("The standing area does not have enough spots available. Please adjust your quantity.");
         }
         logger.info("booked standing area successfully");
         return true;
@@ -411,7 +411,7 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot check reserved seats. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         List<String> reservedSeatIds = new ArrayList<>();
         for (String seatId : seatIds) {
@@ -511,7 +511,7 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot get purchase policy. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         return event.getPurchasePolicy().getDTO();
     }
@@ -523,7 +523,7 @@ public class EventHandler {
         Event event = eventRepo.findById(eventId);
         if (event == null) {
             logger.warn("Cannot get seating map. Event not found: " + eventId);
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         if (event.getSeatingMap() == null) {
             throw new IllegalStateException("Event has no seating map configured");
@@ -537,7 +537,7 @@ public class EventHandler {
         }
         Event event = eventRepo.findById(eventId);
         if (event == null) {
-            throw new IllegalArgumentException("Invalid EventID");
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
         PurchaseContext context = new PurchaseContext(quantity, userAge);
         if (event.getPurchasePolicy().validate(context)) {

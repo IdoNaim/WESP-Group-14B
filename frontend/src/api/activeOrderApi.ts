@@ -64,11 +64,26 @@ const getHeaders = (token?: string) => {
     return headers;
 };
 
+function cleanErrorMessage(raw: string | undefined, status: number): string {
+    if (raw) {
+        const cleaned = raw.replace(/(?:[\w]+\.)+\w+(?:Exception|Error):\s*/g, '').trim();
+        if (cleaned.length > 0) return cleaned;
+    }
+    switch (status) {
+        case 400: return 'The request could not be completed. Please check the information and try again.';
+        case 401: return 'Your session has expired. Please log in again.';
+        case 403: return 'You do not have permission to perform this action.';
+        case 404: return 'The requested resource was not found.';
+        case 409: return 'A conflict occurred. Please refresh and try again.';
+        default:  return 'An unexpected error occurred. Please try again.';
+    }
+}
+
 // Helper: Response parser
 const parseResponse = async (response: Response) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(data.error || 'An unexpected error occurred');
+        throw new Error(cleanErrorMessage(data.error || data.message, response.status));
     }
     return data;
 };

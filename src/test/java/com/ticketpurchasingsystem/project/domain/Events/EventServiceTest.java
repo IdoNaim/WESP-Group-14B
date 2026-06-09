@@ -69,7 +69,8 @@ public class EventServiceTest {
 
         assertEquals("Invalid session token", exception.getMessage());
 
-        // Complete State Verification: No database changes or event messages broadcasted
+        // Complete State Verification: No database changes or event messages
+        // broadcasted
         verify(mockRepo, never()).save(any(Event.class));
         verify(mockPublisher, never()).publishEventCreated(any());
     }
@@ -77,7 +78,7 @@ public class EventServiceTest {
     // ================= CREATE EVENT =================
     @Test
     void GivenValidInput_WhenCreateEvent_ThenReturnEventId() {
-        EventDTO dto = new EventDTO(null,1, "Concert", 100,
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -99,7 +100,7 @@ public class EventServiceTest {
 
     @Test
     void GivenMinTicketsGreaterThanMaxTickets_WhenCreateEvent_ThenReturnFalse() {
-        EventDTO dto = new EventDTO(null,1, "Concert", 100,
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -119,7 +120,7 @@ public class EventServiceTest {
 
     @Test
     void GivenMinAgeGreaterThanMaxAge_WhenCreateEvent_ThenReturnNull() {
-        EventDTO dto = new EventDTO(null,1, "Concert", 100,
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -139,7 +140,7 @@ public class EventServiceTest {
 
     @Test
     void GivenRepoFailure_WhenCreateEvent_ThenReturnNull() {
-        EventDTO dto = new EventDTO(null,1, "Concert", 100,
+        EventDTO dto = new EventDTO(null, 1, "Concert", 100,
                 LocalDateTime.now().plusDays(1), true);
 
         PurchasePolicyDTO policyDTO = mock(PurchasePolicyDTO.class);
@@ -154,7 +155,8 @@ public class EventServiceTest {
 
         assertNull(result);
 
-        // Complete State Verification: Ensure event was never published if database execution failed
+        // Complete State Verification: Ensure event was never published if database
+        // execution failed
         verify(mockPublisher, never()).publishEventCreated(any());
     }
 
@@ -335,8 +337,7 @@ public class EventServiceTest {
             eventService.releaseSeats(VALID_TOKEN, "ORDER1", "1", List.of("A1"));
         });
 
-        assertEquals("Invalid EventID", exception.getMessage());
-
+        assertEquals("Event not found. It may have been removed or the ID is incorrect.", exception.getMessage());
         // Complete State Verification
         verify(mockRepo, never()).save(any(Event.class));
     }
@@ -355,7 +356,7 @@ public class EventServiceTest {
             eventService.releaseSeats(VALID_TOKEN, "ORDER1", "1", seatIds);
         });
 
-        assertEquals("one or more seats not booked", exception.getMessage());
+        assertEquals("Could not release the selected seats. Please refresh and try again.", exception.getMessage());
 
         // Complete State Verification
         verify(mockRepo, never()).save(any(Event.class));
@@ -388,7 +389,8 @@ public class EventServiceTest {
             eventService.releaseStandingArea(VALID_TOKEN, "1", "AREA1", 5);
         });
 
-        assertEquals("one or more stands not booked", exception.getMessage());
+        assertEquals("Could not release the standing area spots. Please refresh and try again.",
+                exception.getMessage());
 
         // Complete State Verification
         verify(mockRepo, never()).save(any(Event.class));
@@ -426,7 +428,8 @@ public class EventServiceTest {
         });
 
         // Changed to match production spelling: "occured"
-        assertEquals("cannot book seats, problem occured", exception.getMessage());
+        assertEquals("The selected seats are no longer available. Please choose different seats.",
+                exception.getMessage());
 
         // State Verification remains intact
         verify(mockRepo, never()).save(any(Event.class));
@@ -462,7 +465,8 @@ public class EventServiceTest {
         });
 
         // Changed to match production spelling: "occured"
-        assertEquals("cannot book standing area, problem occured", exception.getMessage());
+        assertEquals("The standing area does not have enough spots available. Please adjust your quantity.",
+                exception.getMessage());
 
         // State Verification remains intact
         verify(mockRepo, never()).save(any(Event.class));

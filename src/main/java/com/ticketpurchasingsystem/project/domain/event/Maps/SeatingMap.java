@@ -169,6 +169,17 @@ public class SeatingMap {
         return prices;
     }
 
+    public int getTotalAvailableCapacity() {
+        int available = 0;
+        for (AssignedSeat seat : seats.values()) {
+            if (!seat.isBooked()) available++;
+        }
+        for (StandingArea area : standingAreas.values()) {
+            available += area.getAvalibleSeatNumber();
+        }
+        return available;
+    }
+
     public Map<String, Bookable> getPurchaseAreas(){
         Map<String, Bookable> combined = new HashMap<>(seats);
         combined.putAll(standingAreas);

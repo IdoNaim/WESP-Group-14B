@@ -62,6 +62,21 @@ export const ALL_PERMISSIONS: ManagerPermission[] = [
     'SALES_REPORT_GENERATION',
 ];
 
+function cleanErrorMessage(raw: string | undefined, status: number): string {
+    if (raw) {
+        const cleaned = raw.replace(/(?:[\w]+\.)+\w+(?:Exception|Error):\s*/g, '').trim();
+        if (cleaned.length > 0) return cleaned;
+    }
+    switch (status) {
+        case 400: return 'The request could not be completed. Please check the information and try again.';
+        case 401: return 'Your session has expired. Please log in again.';
+        case 403: return 'You do not have permission to perform this action.';
+        case 404: return 'The requested resource was not found.';
+        case 409: return 'This action conflicts with the current state. Please refresh and try again.';
+        default:  return 'An unexpected error occurred. Please try again.';
+    }
+}
+
 async function apiRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
     const res = await fetch(`${BASE_URL}${path}`, {
         method,
@@ -72,8 +87,8 @@ async function apiRequest<T>(method: string, path: string, body?: unknown): Prom
         body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(err.error || `Request failed (${res.status})`);
+        const err = await res.json().catch(() => null);
+        throw new Error(cleanErrorMessage(err?.error || err?.message, res.status));
     }
     return res.json();
 }

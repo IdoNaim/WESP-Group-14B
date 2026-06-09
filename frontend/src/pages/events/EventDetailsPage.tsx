@@ -1,15 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { eventApi, EventDTO } from '../../api/eventsApi';
-import {getActiveOrderByUserId} from '../../api/activeOrderApi';
-// Make sure to adjust this import path to where your activeOrderApi is located!
 import { activeOrderApi } from '../../api/activeOrderApi';
-import { useAuth } from '../../context/AuthContext';
 
 export default function EventDetailsPage() {
     const { eventId } = useParams();
     const navigate = useNavigate(); // Added for redirection
-    const { isMember } = useAuth();
 
     const [eventData, setEventData] = useState<EventDTO | null>(null);
     const [policyDesc, setPolicyDesc] = useState<string | null>(null);
@@ -167,8 +163,7 @@ export default function EventDetailsPage() {
                     <div className="bg-[#171f33] border border-gray-800 p-6 rounded-xl flex items-start gap-4">
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">group</span>
                         <div>
-                            <p className="text-xs uppercase font-bold text-gray-500 mb-1">Capacity</p>
-                            {/* FIXED: Using eventCapacity instead of capacity */}
+                            <p className="text-xs uppercase font-bold text-gray-500 mb-1">Tickets Available</p>
                             <p className="font-bold text-lg">{eventData.eventCapacity} Tickets</p>
                         </div>
                     </div>
