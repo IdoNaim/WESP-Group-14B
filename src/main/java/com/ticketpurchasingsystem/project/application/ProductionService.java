@@ -114,7 +114,7 @@ public class ProductionService implements IProductionService {
                         "assignOwner: " + appointeeUserId + " appointed as owner of company "
                                 + companyId + " by " + appointerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
@@ -159,7 +159,7 @@ public class ProductionService implements IProductionService {
                         "appointManager: " + managerId + " appointed as manager of company "
                                 + companyId + " by " + appointerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
@@ -224,7 +224,7 @@ public class ProductionService implements IProductionService {
                         "modifyManagerPermissions: permissions updated for manager " + managerId
                                 + " in company " + companyId + " by " + ownerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
@@ -284,7 +284,7 @@ public class ProductionService implements IProductionService {
                 ProductionCompany saved = prodRepo.save(company);
                 loggerDef.getInstance().info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeManager failed: " + e.getMessage());
@@ -313,7 +313,7 @@ public class ProductionService implements IProductionService {
                 prodRepo.save(company);
                 loggerDef.getInstance().info("removed owner " + ownerId + " from company " + companyId + " by " + requesterId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("removeOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeOwner failed: " + e.getMessage());

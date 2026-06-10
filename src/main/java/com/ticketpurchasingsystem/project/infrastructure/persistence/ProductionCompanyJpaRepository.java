@@ -1,12 +1,5 @@
 package com.ticketpurchasingsystem.project.infrastructure.persistence;
 
-import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import java.util.Optional;
-
-@Repository
-public interface ProductionCompanyJpaRepository extends JpaRepository<ProductionCompany, Integer> {
-
-    Optional<ProductionCompany> findByCompanyNameIgnoreCase(String companyName);
-}
+// Superseded by DBProdRepo which extends JpaRepository directly.
+// The @Repository annotation has been removed so Spring Data does not register
+// a second repository bean for ProductionCompany.

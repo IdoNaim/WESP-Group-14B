@@ -1,56 +1,30 @@
 package com.ticketpurchasingsystem.project.infrastructure.persistence;
 
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
-import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFailureException;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 @Primary
-public class DBProdRepo implements IProdRepo {
+public interface DBProdRepo extends JpaRepository<ProductionCompany, Integer>, IProdRepo {
 
-    private final ProductionCompanyJpaRepository jpaRepo;
+    // Used by the findByName default method below
+    Optional<ProductionCompany> findByCompanyNameIgnoreCase(String companyName);
 
-    @Autowired
-    public DBProdRepo(ProductionCompanyJpaRepository jpaRepo) {
-        this.jpaRepo = jpaRepo;
+    @Override
+    default Optional<ProductionCompany> findByName(String name) {
+        return findByCompanyNameIgnoreCase(name);
     }
 
     @Override
-    public ProductionCompany save(ProductionCompany company) {
-        try {
-            ProductionCompany saved = jpaRepo.save(company);
-            return new ProductionCompany(saved);
-        } catch (org.springframework.dao.OptimisticLockingFailureException e) {
-            throw new OptimisticLockingFailureException(
-                    "Company " + company.getCompanyId() + " was modified concurrently: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public Optional<ProductionCompany> findByName(String name) {
-        return jpaRepo.findByCompanyNameIgnoreCase(name)
-                .map(ProductionCompany::new);
-    }
-
-    @Override
-    public Optional<ProductionCompany> findById(Integer companyId) {
-        return jpaRepo.findById(companyId)
-                .map(ProductionCompany::new);
-    }
-
-    @Override
-    public List<ProductionCompany> findAllByUserId(String userId) {
-        return jpaRepo.findAll().stream()
-                .filter(c -> userId.equals(c.getFounderId())
-                        || c.isOwner(userId)
-                        || c.isManager(userId))
-                .map(ProductionCompany::new)
-                .collect(Collectors.toList());
-    }
+    @Query("SELECT DISTINCT p FROM ProductionCompany p LEFT JOIN p.members m " +
+           "WHERE p.founderId = :userId OR (m.userId = :userId AND m.permission IS NULL)")
+    List<ProductionCompany> findAllByUserId(@Param("userId") String userId);
 }
