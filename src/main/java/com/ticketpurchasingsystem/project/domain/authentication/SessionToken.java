@@ -15,6 +15,8 @@ public class SessionToken {
     @Column(name =  "expirationTime")
     private long expirationTime;
 
+    //for Jpa
+    public SessionToken(){}
     public SessionToken(String token, long expirationTime) {
         this.token = token;
 
