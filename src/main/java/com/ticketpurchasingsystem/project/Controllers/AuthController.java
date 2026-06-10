@@ -64,13 +64,9 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> register(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody RegisterRequestDTO body) {
-        System.out.println("hey im here");
         String token = extractToken(authHeader);
         try {
-            System.out.println("--- LOGIN ATTEMPT ---");
-            System.out.println("User ID: " + body.getUserId());
-            System.out.println("Password: " + body.getPassword());
-            System.out.println("Guest Token: " + token);
+
             UserGroupDiscount discount = body.getUserGroupDiscount() != null
                     ? body.getUserGroupDiscount()
                     : UserGroupDiscount.NONE;
@@ -86,7 +82,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("message", "User registered successfully."));
         } catch (Exception e) {
-            System.out.println("--- LOGIN FAILED ---");
             e.printStackTrace();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
@@ -104,19 +99,11 @@ public class AuthController {
 
         String token = extractToken(authHeader);
         try {
-            // 1. Let's see exactly what React sent to Java:
-            System.out.println("--- LOGIN ATTEMPT ---");
-            System.out.println("User ID: " + body.getUserId());
-            System.out.println("Password: " + body.getPassword());
-            System.out.println("Guest Token: " + token);
-
             String newToken = userService.loginUser(body.getUserId(), body.getPassword(), token);
             return ResponseEntity.ok(Map.of(
                     "token", newToken,
                     "userId", body.getUserId()));
         } catch (Exception e) {
-            // 2. Print the exact error to the Java terminal!
-            System.out.println("--- LOGIN FAILED ---");
             e.printStackTrace();
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -243,18 +230,14 @@ public class AuthController {
     @GetMapping("/permissions")
     public ResponseEntity<Map<String, Object>> getPermissions(@RequestHeader("Authorization") String authHeader) {
         String token = extractToken(authHeader);
-        System.out.println("Received permissions request with token: " + token);
         try {
             if (!authenticationService.validate(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Invalid or expired session token."));
             }
             String userId = authenticationService.getUser(token);
-            System.out.println("Authenticated user ID: " + userId);
             UserInfo userInfo = userService.getUserInfo(userId);
-            System.out.println("User : " + userInfo.getName()+", id: "+ userInfo.getId());
             boolean isAdmin = adminRepo.isAdmin(userId);
-            System.out.println("Is admin: " + isAdmin);
             String state = userInfo.getUserState().name();
 
             Map<Integer, String> productionRoles = Collections.emptyMap();
@@ -281,9 +264,6 @@ public class AuthController {
     public ResponseEntity<Map<String,String>> editPassword(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody PasswordUpdateRequestDTO body) {
-        System.out.println("Received password update request with token: " + authHeader
-            + " and body: currentPassword=" + body.getCurrentPassword() + ", newPassword=" + body.getNewPassword()
-        );
         String token = extractToken(authHeader);
         String currentPassword = body.getCurrentPassword();
         String newPassword = body.getNewPassword();
