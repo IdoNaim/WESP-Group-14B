@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ISessionRepo {
-    void save(SessionToken sessionToken);
+    SessionToken save(SessionToken sessionToken);
 
     Optional<SessionToken> findByToken(String token);
 
