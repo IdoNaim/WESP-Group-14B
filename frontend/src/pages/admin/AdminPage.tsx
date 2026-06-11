@@ -12,7 +12,7 @@ type AdminDataState = {
 };
 
 export default function AdminPage() {
-  const { token, isAdmin } = useAuth();
+  const { token, isAdmin, loading: authLoading } = useAuth();
 
   const [selectedTab, setSelectedTab] = useState<AdminTab>("overview");
   const [data, setData] = useState<AdminDataState>({
@@ -32,6 +32,8 @@ export default function AdminPage() {
   }, [data.historyOrders]);
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!token || !isAdmin) {
       setErrorMessage("Access denied: admin privileges required.");
       return;
@@ -61,7 +63,7 @@ export default function AdminPage() {
     };
 
     loadAdminData();
-  }, [token, isAdmin]);
+  }, [token, isAdmin, authLoading]);
 
   return (
     <section className="admin-page">
