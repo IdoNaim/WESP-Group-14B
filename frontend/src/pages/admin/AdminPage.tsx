@@ -33,6 +33,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!token || !isAdmin) {
+      setErrorMessage("Access denied: admin privileges required.");
       return;
     }
 
@@ -42,9 +43,9 @@ export default function AdminPage() {
 
       try {
         const [users, activeOrders, historyOrders] = await Promise.all([
-          adminApi.getSystemUsers(token),
-          adminApi.getActiveOrders(token),
-          adminApi.getOrderHistory(token),
+          adminApi.getSystemUsers(token).catch(e => { throw new Error(`Users: ${e.message}`); }),
+          adminApi.getActiveOrders(token).catch(e => { throw new Error(`Active orders: ${e.message}`); }),
+          adminApi.getOrderHistory(token).catch(e => { throw new Error(`History orders: ${e.message}`); }),
         ]);
 
         setData({
@@ -80,11 +81,14 @@ export default function AdminPage() {
         </div>
       )}
 
+      {!errorMessage && (
+        <>
       <div className="admin-page__stats-grid">
         <button
           type="button"
           className="admin-page__stat-card"
           onClick={() => setSelectedTab("users")}
+          disabled={loading}
         >
           <span className="admin-page__stat-label">Users</span>
           <strong className="admin-page__stat-value">{data.users.length}</strong>
@@ -94,6 +98,7 @@ export default function AdminPage() {
           type="button"
           className="admin-page__stat-card"
           onClick={() => setSelectedTab("activeOrders")}
+          disabled={loading}
         >
           <span className="admin-page__stat-label">Active Orders</span>
           <strong className="admin-page__stat-value">
@@ -105,6 +110,7 @@ export default function AdminPage() {
           type="button"
           className="admin-page__stat-card"
           onClick={() => setSelectedTab("historyOrders")}
+          disabled={loading}
         >
           <span className="admin-page__stat-label">History Orders</span>
           <strong className="admin-page__stat-value">
@@ -181,6 +187,8 @@ export default function AdminPage() {
           />
         )}
       </div>
+        </>
+      )}
     </section>
   );
 }
@@ -264,30 +272,37 @@ function AdminGenericTable({
     return <p className="admin-page__muted">{emptyMessage}</p>;
   }
 
-  const columns = Array.from(
+  const allColumns = Array.from(
     items.reduce((keys, item) => {
       Object.keys(item).forEach((key) => keys.add(key));
       return keys;
     }, new Set<string>())
-  ).slice(0, 8);
+  );
+  const truncated = allColumns.length > 8;
+  const columns = allColumns.slice(0, 8);
 
   return (
     <div>
       <h2>{title}</h2>
+      {truncated && (
+        <p className="admin-page__muted">
+          Showing 8 of {allColumns.length} columns.
+        </p>
+      )}
 
       <div className="admin-page__table-wrapper">
         <table className="admin-page__table">
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column}>{column}</th>
+                <th key={column}>{formatColumnLabel(column)}</th>
               ))}
             </tr>
           </thead>
 
           <tbody>
             {items.map((item, index) => (
-              <tr key={String(item.orderId ?? index)}>
+              <tr key={String(item.orderId ?? item.id ?? index)}>
                 {columns.map((column) => (
                   <td key={column}>{formatCellValue(item[column])}</td>
                 ))}
@@ -298,6 +313,13 @@ function AdminGenericTable({
       </div>
     </div>
   );
+}
+
+function formatColumnLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
 }
 
 function formatCellValue(value: unknown): string {
