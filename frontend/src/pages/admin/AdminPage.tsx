@@ -239,7 +239,7 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
               <th>User ID</th>
               <th>Name</th>
               <th>Email</th>
-              <th>State</th>
+              <th>Group Discount</th>
             </tr>
           </thead>
 
@@ -249,7 +249,7 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
                 <td>{String(user.id ?? user.userId ?? "—")}</td>
                 <td>{String(user.username ?? user.name ?? "—")}</td>
                 <td>{String(user.email ?? "—")}</td>
-                <td>{String(user.userState ?? "—")}</td>
+                <td>{String(user.userGroupDiscount ?? "—")}</td>
               </tr>
             ))}
           </tbody>

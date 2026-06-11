@@ -64,7 +64,9 @@ export const adminApi = {
             headers: getHeaders(token),
         });
 
-        return parseResponse(response);
+        const data = await parseResponse(response);
+        if (!Array.isArray(data)) throw new Error("Active orders response is not an array.");
+        return data;
     },
 
     getOrderHistory: async (token: string): Promise<SystemHistoryOrderDTO[]> => {
@@ -73,7 +75,9 @@ export const adminApi = {
             headers: getHeaders(token),
         });
 
-        return parseResponse(response);
+        const data = await parseResponse(response);
+        if (!Array.isArray(data)) throw new Error("History orders response is not an array.");
+        return data;
     },
 
     getSystemUsers: async (token: string): Promise<SystemUserDTO[]> => {
@@ -82,7 +86,9 @@ export const adminApi = {
             headers: getHeaders(token),
         });
 
-        return parseResponse(response);
+        const data = await parseResponse(response);
+        if (!Array.isArray(data)) throw new Error("Users response is not an array.");
+        return data;
     },
 };
 
