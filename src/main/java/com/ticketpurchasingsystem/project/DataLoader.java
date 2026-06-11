@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminInfo;
+import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.http.ResponseEntity;
@@ -37,17 +40,50 @@ public class DataLoader implements ApplicationRunner {
     private final UserService userService;
     private final ProductionService productionService;
     private final EventService eventService;
-    HistoryOrderService historyOrderService;
+    private final HistoryOrderService historyOrderService;
+    private final IAdminRepo adminRepo;
+    @Value("${system.admin.initial.userId}")
+    private String adminUserId;
 
-    public DataLoader(UserService userService, ProductionService productionService, EventService eventService, HistoryOrderService historyOrderService) {
+    @Value("${system.admin.initial.password}")
+    private String adminPassword;
+
+    @Value("${system.admin.initial.email}")
+    private String adminEmail;
+
+    @Value("${system.admin.initial.name}")
+    private String adminFullName;
+
+    public DataLoader(UserService userService, ProductionService productionService, EventService eventService, HistoryOrderService historyOrderService, IAdminRepo adminRepo) {
         this.userService = userService;
         this.productionService = productionService;
         this.eventService = eventService;
         this.historyOrderService = historyOrderService;
+        this.adminRepo = adminRepo;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        String adminGuestToken = userService.guestEntry();
+        loggerDef.getInstance().info(adminUserId +" "+adminFullName+ " "+ adminEmail+" "+adminPassword);
+        userService.registerUser(
+                adminUserId,
+                adminFullName,
+                adminPassword,
+                adminEmail,
+                UserGroupDiscount.NONE,
+                adminGuestToken
+        );
+        AdminInfo adminInfo = new AdminInfo(adminUserId, adminEmail);
+        adminRepo.save(adminInfo);
+        
+
+//        userService.registerUser("admin", "admin", "ILOVEBALLS3", "admin@gmail.com",UserGroupDiscount.NONE, adminGuestToken);
+        loggerDef.getInstance().info("is adming registered: "+ userService.isUserRegistered("admin"));
+
+//        String adminToken = userService.loginUser(adminUsername, adminPassword, adminGuestToken);
+
+
         // Step 1: enter as guest, register + login user1
         String guestToken1 = userService.guestEntry();
         userService.registerUser("alice", "Alice Smith", "pass123", "alice@example.com",
@@ -75,7 +111,7 @@ public class DataLoader implements ApplicationRunner {
         );
         Integer companyId2 = productionService.createProductionCompany(aliceToken, companyDTO2);
 
-        
+
         if (companyId == null) {
             return;
         }
@@ -110,7 +146,7 @@ public class DataLoader implements ApplicationRunner {
                         LocalDateTime.now().plusDays(7), true, "Jerusalem Theater", 60.0),
                 adultOnly, noDiscounts);
 
-        
+
         historyOrderService.createHistoryOrder("order1", "bob", "1", companyId, new Timestamp(System.currentTimeMillis()), 100.0, List.of("A1", "A2"), new HashMap<>());
         loggerDef.getInstance().info("Successfully created history order 'order1' for bob.");
 
