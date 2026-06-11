@@ -27,8 +27,7 @@ class SystemAdminTests {
     @BeforeEach
     void setUp() {
         adminPublisher = mock(AdminPublisher.class);
-        AdminInfo adminInfo = new AdminInfo("testAdmin", "test@test.com");
-        systemAdmin = new SystemAdmin(adminInfo, adminPublisher);
+        systemAdmin = new SystemAdmin("test-admin-id", adminPublisher);
     }
 
     // --- getAllActiveOrders ---

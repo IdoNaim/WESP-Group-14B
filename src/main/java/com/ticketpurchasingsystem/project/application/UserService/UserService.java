@@ -30,6 +30,7 @@ public class UserService implements IUserService {
 
         //creating admin for testing purposes
         UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
+        newUser.setAdmin(true);
         userRepo.store(newUser);
         // UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
         // UserProduction userProduction = new UserProduction();

@@ -7,18 +7,19 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 
 public class SystemAdmin {
 
-    private final AdminInfo adminInfo;
+    private final String adminId;
     private final AdminPublisher adminPublisher;
 
-    public SystemAdmin(AdminInfo adminInfo, AdminPublisher adminPublisher) {
-        this.adminInfo = adminInfo;
+    public SystemAdmin(String adminId, AdminPublisher adminPublisher) {
+        this.adminId = adminId;
         this.adminPublisher = adminPublisher;
     }
 
     public List<ActiveOrderItem> getAllActiveOrders() {
-        return adminPublisher.publishGetAllActiveOrders(this.adminInfo.getId());
+        return adminPublisher.publishGetAllActiveOrders(this.adminId);
     }
+
     public List<HistoryOrderItem> getAllHistoryOrderItems() {
-        return adminPublisher.publishGetAllOrdersHistory(this.adminInfo.getId());
+        return adminPublisher.publishGetAllOrdersHistory(this.adminId);
     }
 }

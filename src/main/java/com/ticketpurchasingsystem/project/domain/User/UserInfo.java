@@ -19,6 +19,7 @@ public class UserInfo {
     private boolean LoggedIn = false ;
     private String sessionTokenStr;
     private UserProduction userProduction;
+    private boolean isAdmin = false;
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
@@ -144,5 +145,13 @@ public class UserInfo {
 
     public String getState() {
         return this.userState.toString();
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.isAdmin = admin;
     }
 }

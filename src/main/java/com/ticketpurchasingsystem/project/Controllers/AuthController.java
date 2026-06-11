@@ -21,12 +21,10 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.ProfileUpdateReques
 import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.UserService.IUserService;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
-
-import jakarta.annotation.PostConstruct;
 
 @RestController
 @RequestMapping("/api/identity")
@@ -34,12 +32,12 @@ public class AuthController {
 
     private final IUserService userService;
     private final AuthenticationService authenticationService;
-    private final IAdminRepo adminRepo;
+    private final IUserRepo userRepo;
 
-    public AuthController(IUserService userService, AuthenticationService authenticationService, IAdminRepo adminRepo) {
+    public AuthController(IUserService userService, AuthenticationService authenticationService, IUserRepo userRepo) {
         this.userService = userService;
         this.authenticationService = authenticationService;
-        this.adminRepo = adminRepo;
+        this.userRepo = userRepo;
 
     }
 
@@ -253,7 +251,7 @@ public class AuthController {
             System.out.println("Authenticated user ID: " + userId);
             UserInfo userInfo = userService.getUserInfo(userId);
             System.out.println("User : " + userInfo.getName()+", id: "+ userInfo.getId());
-            boolean isAdmin = adminRepo.isAdmin(userId);
+            boolean isAdmin = userRepo.isAdmin(userId);
             System.out.println("Is admin: " + isAdmin);
             String state = userInfo.getUserState().name();
 
