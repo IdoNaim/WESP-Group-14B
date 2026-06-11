@@ -55,4 +55,17 @@ public class InMemoryAdminRepo implements IAdminRepo {
             lock.readLock().unlock();
         }
     }
+    public boolean isAdminByUserId(String userId){
+        lock.readLock().lock();
+        try{
+            for(AdminInfo admin : storage.values()){
+                if(admin.getUsername().equals(userId)){
+                    return true;
+                }
+            }
+            return false;
+        }finally {
+            lock.readLock().unlock();
+        }
+    }
 }

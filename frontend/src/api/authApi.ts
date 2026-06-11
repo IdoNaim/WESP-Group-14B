@@ -110,19 +110,19 @@ export const authApi = {
     login: async (token: string, data: LoginRequestDTO): Promise<{ token: string; userId: string }> => {
     let response: Response; 
     
-    if (data.userId === "admin@gmail.com") {
-        response = await fetch(`${BASE_URL}/admin/login`, {
-            method: 'POST',
-            headers: getHeaders(token),
-            body: JSON.stringify(data),
-        });
-    } else {
+    // if (data.userId === "admin@gmail.com") {
+    //     response = await fetch(`${BASE_URL}/admin/login`, {
+    //         method: 'POST',
+    //         headers: getHeaders(token),
+    //         body: JSON.stringify(data),
+    //     });
+    // } else {
         response = await fetch(`${BASE_URL}/login`, {
             method: 'POST',
             headers: getHeaders(token),
             body: JSON.stringify(data),
         });
-    }
+    // }
     return parseResponse(response);
 },
 

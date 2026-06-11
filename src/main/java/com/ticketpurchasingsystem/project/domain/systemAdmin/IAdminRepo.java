@@ -7,4 +7,5 @@ public interface IAdminRepo {
     AdminInfo findById(String adminId);
     boolean isAdmin(String adminId);
     List<AdminInfo> findAll();
+    boolean isAdminByUserId(String userId);
 }

@@ -123,14 +123,18 @@ public class UserService implements IUserService {
             // validate user exists
             
             // Generate a fresh session token via auth service
-            String newSessionTokenStr = authenticationService.login(userId);
+            String newSessionTokenStr;
+            if(authenticationService.isAdminUserId(userId)){
+                newSessionTokenStr = authenticationService.login(userId, "admin");
+            }
+            else{
+                newSessionTokenStr = authenticationService.login(userId);
+            }
 
             // Let handler update login status and state
             userHandler.loginUser(userInfo, password, newSessionTokenStr);
             
             // Delete guest matching the OLD session token before saving the user
-
-            
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
             authenticationService.logout(sessionTokenStr);
             userPublisher.publishGuestExited(guestId, sessionTokenStr);

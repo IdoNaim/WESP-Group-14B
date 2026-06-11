@@ -253,7 +253,7 @@ public class AuthController {
             System.out.println("Authenticated user ID: " + userId);
             UserInfo userInfo = userService.getUserInfo(userId);
             System.out.println("User : " + userInfo.getName()+", id: "+ userInfo.getId());
-            boolean isAdmin = adminRepo.isAdmin(userId);
+            boolean isAdmin = adminRepo.isAdminByUserId(userId);
             System.out.println("Is admin: " + isAdmin);
             String state = userInfo.getUserState().name();
 

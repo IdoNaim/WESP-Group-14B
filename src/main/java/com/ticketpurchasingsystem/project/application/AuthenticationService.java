@@ -1,5 +1,8 @@
 package com.ticketpurchasingsystem.project.application;
 
+import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
@@ -9,6 +12,8 @@ public class AuthenticationService {
 
     private final DomainAuthService domainAuthService;
     private final ISessionRepo sessionRepo;
+    @Autowired
+    private IAdminRepo adminRepo;
 
     public AuthenticationService(DomainAuthService domainAuthService, ISessionRepo sessionRepo) {
         this.domainAuthService = domainAuthService;
@@ -39,6 +44,13 @@ public class AuthenticationService {
         sessionRepo.deleteByToken(token);
     }
 
+    public boolean isAdminUserId(String userId) {
+        try {
+            return adminRepo.isAdminByUserId(userId);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
     public boolean isAdmin(String token) {
         try{
             return domainAuthService.validateAdminSession(token);
