@@ -232,6 +232,7 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
               <th>Name</th>
               <th>Email</th>
               <th>State</th>
+              <th>Is Admin</th>
             </tr>
           </thead>
 
@@ -242,6 +243,7 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
                 <td>{String(user.username ?? user.name ?? "—")}</td>
                 <td>{String(user.email ?? "—")}</td>
                 <td>{String(user.userState ?? "—")}</td>
+                <td>{user.isAdmin === true ? "Yes" : user.isAdmin === false ? "No" : "—"}</td>
               </tr>
             ))}
           </tbody>

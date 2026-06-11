@@ -33,6 +33,7 @@ export type SystemUserDTO = {
   email?: string;
   userState?: string;
   groupDiscount?: string;
+  isAdmin?: boolean;
   [key: string]: unknown;
 };
 
