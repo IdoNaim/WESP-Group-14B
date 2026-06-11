@@ -6,13 +6,10 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.springframework.stereotype.Repository;
-
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFailureException;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 
-@Repository
 public class ProdRepo implements IProdRepo {
 
     private final ConcurrentHashMap<Integer, ProductionCompany> storage = new ConcurrentHashMap<>();
