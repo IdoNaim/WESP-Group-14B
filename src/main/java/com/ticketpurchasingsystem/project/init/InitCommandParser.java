@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class InitCommandParser {
+    //take all the relvent text in the files 
+    // and then take the line and split it to variable name, command name and arguments.
 
     public List<ParsedCommand> parse(InputStream input) throws Exception {
         List<ParsedCommand> commands = new ArrayList<>();

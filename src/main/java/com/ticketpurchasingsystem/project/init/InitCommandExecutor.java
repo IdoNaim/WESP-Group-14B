@@ -15,14 +15,18 @@ import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
-import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
-import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 
+// jsut glorify cases specific to the init file, not meant for general use.
+// it is basically a big switch statement that calls the relevant service method based on the command name and arguments. 
+// it also handles variable assignment and resolution for commands that return values
+//  (like guest-entry or create-production-company).
+// maybe there is more elegant way to do this. IDK
+// if one exception is thrown, the whole initialization will fail and stop, which is probably what we want(they want they ask for it).
 public class InitCommandExecutor {
 
     private final UserService userService;

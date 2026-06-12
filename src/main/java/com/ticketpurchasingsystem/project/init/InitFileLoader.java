@@ -17,6 +17,10 @@ import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
+
+//ApplicationRunner is to make sure it run when you start it.
+// the file is to just find the correct config file. that it.
+// file system first , the classpath.
 @Component
 public class InitFileLoader implements ApplicationRunner {
 
