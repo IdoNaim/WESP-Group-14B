@@ -15,6 +15,24 @@ export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+    // Helper function to dynamically strip out Java exception boilerplate
+    const formatBackendError = (rawMessage: string): string => {
+        if (!rawMessage) return "Failed to register. Please try again.";
+
+        // If the error contains a colon (e.g., "java.lang.RuntimeException: User already exists")
+        if (rawMessage.includes(':')) {
+            const firstColonIndex = rawMessage.indexOf(':');
+            const prefix = rawMessage.substring(0, firstColonIndex);
+
+            // If the prefix looks like a Java class/exception, strip it out
+            if (prefix.includes('Exception') || prefix.startsWith('java.') || prefix.startsWith('org.')) {
+                return rawMessage.substring(firstColonIndex + 1).trim();
+            }
+        }
+
+        return rawMessage;
+    };
+
     const handleRegisterSubmit = async (event: FormEvent) => {
         event.preventDefault();
         setIsLoading(true);
@@ -56,7 +74,11 @@ export default function RegisterPage() {
 
         } catch (error: any) {
             console.error('[UI CATCH BLOCK] Registration flow crashed:', error.message);
-            setErrorMessage(error.message || "Failed to register. Please try again.");
+
+            // Clean the error dynamically
+            const cleanedError = formatBackendError(error.message);
+            setErrorMessage(cleanedError);
+
         } finally {
             console.log('--- [UI END] Registration Process Completed ---');
             setIsLoading(false);
@@ -79,7 +101,6 @@ export default function RegisterPage() {
 
                     {/* Header Identity & Home Access Button */}
                     <div className="flex flex-col items-center mb-6 relative">
-                        {/* Clean Home Button pinned to the top right of the card header */}
                         <Link 
                             to={DEFAULT_REDIRECT_PATH}
                             className="absolute right-0 top-0 text-[#8d90a0] hover:text-[#2563eb] transition-colors p-1 flex items-center justify-center rounded-lg hover:bg-gray-200/50"
