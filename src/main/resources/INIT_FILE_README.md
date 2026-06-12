@@ -8,25 +8,32 @@ If any command fails, the entire initialization fails and the application stops.
 
 ## Changing the init file
 
-**Default:** `src/main/resources/init_db_file.txt` (loaded from classpath).
-
-### Option 1 — application.properties
+The init file is resolved by Spring profile. The active profile is set in `application.properties`:
 ```properties
-init.file=init_db_file.txt
+spring.profiles.active=dev
 ```
 
-### Option 2 — Command-line argument (overrides application.properties)
-```bash
-java -jar ticket.jar --init.file=init_db_file.txt
-```
-You can also point to a file outside the JAR using an absolute path:
-```bash
-java -jar ticket.jar --init.file=/data/my_init.txt
+
+| Profile | Init file |
+|---|---|
+| `dev` (default) | `init_db_file.txt` — seeds users, companies, events, orders | +Admin
+| `prod` | `empty_init.txt` — no seed data | only Admin
+
+### Option 1 — Switch profile (application.properties)
+```properties
+spring.profiles.active=prod
 ```
 
-### Option 3 — Maven (dev/test runs)
+### Option 2 — Switch profile at runtime
 ```bash
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=prod"
+```
+
+### Option 3 — Override init file manually (ignores profile)
+```bash
+# point to a classpath file
 mvn spring-boot:run -Dspring-boot.run.arguments="--init.file=my_other_file.txt"
+
 ```
 
 ### Disabling initialization
