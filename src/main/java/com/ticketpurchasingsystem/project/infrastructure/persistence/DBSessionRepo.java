@@ -1,4 +1,4 @@
-package com.ticketpurchasingsystem.project.infrastructure;
+package com.ticketpurchasingsystem.project.infrastructure.persistence;
 
 import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
