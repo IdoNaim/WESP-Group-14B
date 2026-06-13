@@ -54,14 +54,18 @@ public class Event {
     // Note: I marked these as @Transient so Hibernate ignores them for now.
     // Depending on your DB schema, these either need to be serialized to JSON (@JdbcTypeCode),
     // mapped as @Embedded, or mapped as @OneToOne / @OneToMany relations.
-    @Transient
+// 1. Fix the Seating Map
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "seating_map_id")
     private SeatingMap seatingMap;
+
+    // 2. Fix the Purchase Policy
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "purchase_policy_id")
+    private EventPurchasePolicy purchasePolicy;
 
     @Transient
     private EventDiscountPolicy discountPolicy;
-
-    @Transient
-    private EventPurchasePolicy purchasePolicy;
 
     @Transient
     private ITicketPurchaseRule ticketPurchasePolicy;

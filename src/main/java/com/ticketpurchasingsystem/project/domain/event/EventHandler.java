@@ -134,7 +134,6 @@ public class EventHandler {
                 0
         );
         event.setLocation(eventDTO.eventLocation());
-        event.setTicketPrice(eventDTO.ticketPrice());
         event.setImageUrl(eventDTO.imageUrl());
 
         try {
@@ -168,7 +167,6 @@ public class EventHandler {
                 event.getEventDate(),
                 event.isActive(),
                 event.getLocation(),
-                event.getTicketPrice(),
                 event.getImageUrl(),
                 minPrice,
                 maxPrice
@@ -447,7 +445,6 @@ public class EventHandler {
         try {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
-            event.setTicketPrice(newPrice);
             eventRepo.save(event);
             return true;
         } catch (Exception e) {

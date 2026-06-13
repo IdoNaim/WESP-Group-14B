@@ -136,8 +136,21 @@ class ActiveOrderApiAcceptanceTest {
 
         PurchasePolicyDTO policy = new PurchasePolicyDTO(0, 10, false, 0, 100, false, false);
         List<DiscountDTO> discounts = Collections.emptyList();
-        EventDTO eventDTO = new EventDTO(null, 1, "Test Event", 100,
-                LocalDateTime.now().plusDays(30), true, "test location");
+
+        // ✅ FIXED: Expanded constructor to 10 parameters to match the updated record schema
+        EventDTO eventDTO = new EventDTO(
+                null,
+                1,
+                "Test Event",
+                100,
+                LocalDateTime.now().plusDays(30),
+                true,
+                "test location",
+                null, // imageUrl
+                null, // minZonePrice
+                null  // maxZonePrice
+        );
+
         eventService.createEvent(userToken, eventDTO, policy, discounts);
         List<EventDTO> events = eventService.searchEventsByCompany(userToken, 1);
         eventId = events.get(0).eventId();
@@ -249,7 +262,6 @@ class ActiveOrderApiAcceptanceTest {
     @Test
     void GivenAlreadyBookedSeats_WhenAddSeats_ThenReturn409() throws Exception {
         String orderId = createOrder();
-        // Book the seats first via the event service directly
         eventService.reserveSeats(userToken, "other-order", eventId, seatIds);
 
         AddSeatsRequestDTO body = new AddSeatsRequestDTO();
@@ -374,13 +386,12 @@ class ActiveOrderApiAcceptanceTest {
 
     @Test
     void GivenOrderViolatesPurchasePolicy_WhenCheckout_ThenReturn409() throws Exception {
-        // Change policy to require min 10 tickets, but order has 2 seats
         PurchasePolicyDTO strictPolicy = new PurchasePolicyDTO(10, 50, false, 0, 100, false, false);
         eventService.editEventPurchasePolicy(userToken, eventId, strictPolicy);
 
         String orderId = createOrder();
         AddSeatsRequestDTO seats = new AddSeatsRequestDTO();
-        seats.setSeatIds(seatIds); // only 2 seats
+        seats.setSeatIds(seatIds);
         mockMvc.perform(post("/api/orders/" + orderId + "/seats")
                 .header("Authorization", validAuthHeader)
                 .contentType(MediaType.APPLICATION_JSON)

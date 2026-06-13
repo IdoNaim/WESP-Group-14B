@@ -3,10 +3,12 @@ package com.ticketpurchasingsystem.project.infrastructure.persistence;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+@Primary
 public class DBEventRepo implements IEventRepo {
 
     private final EventJpaRepository eventJpaRepository;
