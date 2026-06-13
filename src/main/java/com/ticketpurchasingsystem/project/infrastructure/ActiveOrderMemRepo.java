@@ -1,13 +1,12 @@
 package com.ticketpurchasingsystem.project.infrastructure;
-import org.springframework.stereotype.Repository;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-@Repository
 public class ActiveOrderMemRepo implements IActiveOrderRepo {
 
 
@@ -19,7 +18,7 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
-    public void save(ActiveOrderItem order) {
+    public ActiveOrderItem save(ActiveOrderItem order) {
         if(order == null){
             throw new IllegalArgumentException("tried to save null active order");
         }
@@ -29,23 +28,19 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         }
         activeOrders.put(order.getOrderId(), order);
         getLockFor(order.getOrderId());
+        return order;
     }
 
     @Override
-    public ActiveOrderItem findById(String orderId) {
+    public Optional<ActiveOrderItem> findById(String orderId) {
         ReentrantLock lock = orderLocks.get(orderId);
         if (lock == null) {
-            return null;
+            return Optional.empty();
         }
         lock.lock();
         try {
             ActiveOrderItem order = activeOrders.get(orderId);
-            if(order != null) {
-                return new ActiveOrderItem(order);
-            }
-            else {
-                return null;
-            }
+            return order != null ? Optional.of(new ActiveOrderItem(order)) : Optional.empty();
         } finally {
             lock.unlock();
         }
