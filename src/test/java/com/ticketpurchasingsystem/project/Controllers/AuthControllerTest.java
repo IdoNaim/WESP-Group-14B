@@ -11,7 +11,7 @@ import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.User.UserState;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -49,7 +49,7 @@ class AuthControllerTest {
         private AuthenticationService authenticationService;
 
         @MockBean
-        private IAdminRepo adminRepo;
+        private IUserRepo userRepo;
 
         private static final String VALID_AUTH = "Bearer valid-token";
 
@@ -332,7 +332,7 @@ class AuthControllerTest {
                 when(authenticationService.validate("valid-token")).thenReturn(true);
                 when(authenticationService.getUser("valid-token")).thenReturn("test-user-id");
                 when(userService.getUserInfo("test-user-id")).thenReturn(userInfo);
-                when(adminRepo.isAdmin("test-user-id")).thenReturn(true);
+                when(userRepo.isAdmin("test-user-id")).thenReturn(true);
 
                 mockMvc.perform(get("/api/identity/permissions")
                                 .header("Authorization", "Bearer valid-token"))

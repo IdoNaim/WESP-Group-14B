@@ -2,6 +2,7 @@ package com.ticketpurchasingsystem.project.domain.User;
 
 import org.springframework.boot.autoconfigure.jms.JmsProperties.Listener.Session;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 //** just a very early version of the user info class, we will add more fields and methods to it as we go along
@@ -19,6 +20,8 @@ public class UserInfo {
     private boolean LoggedIn = false ;
     private String sessionTokenStr;
     private UserProduction userProduction;
+    @JsonProperty("isAdmin")
+    private boolean isAdmin = false;
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
@@ -144,5 +147,13 @@ public class UserInfo {
 
     public String getState() {
         return this.userState.toString();
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.isAdmin = admin;
     }
 }
