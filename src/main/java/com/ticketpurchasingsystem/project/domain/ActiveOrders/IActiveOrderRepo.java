@@ -1,12 +1,14 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
-import java.util.List;
 
-public interface  IActiveOrderRepo {
-    public void save(ActiveOrderItem order);
-    public ActiveOrderItem findById(String orderId);
-    public void delete(String orderId);
-    public void update(ActiveOrderItem order);
-    public List<ActiveOrderItem> findAll();
-    public ActiveOrderItem findByUserId(String userId);
-    public boolean markAsProcessing(String orderId);
+import java.util.List;
+import java.util.Optional;
+
+public interface IActiveOrderRepo {
+    ActiveOrderItem save(ActiveOrderItem order);
+    Optional<ActiveOrderItem> findById(String orderId);
+    void delete(String orderId);
+    void update(ActiveOrderItem order);
+    List<ActiveOrderItem> findAll();
+    ActiveOrderItem findByUserId(String userId);
+    boolean markAsProcessing(String orderId);
 }
