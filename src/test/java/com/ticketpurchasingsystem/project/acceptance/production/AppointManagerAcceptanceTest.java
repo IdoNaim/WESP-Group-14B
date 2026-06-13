@@ -9,11 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
+import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
@@ -21,9 +25,12 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsU
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional // rolls back DB changes after each test method
 class AppointManagerAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
@@ -35,20 +42,25 @@ class AppointManagerAcceptanceTest {
 
     private final Set<String> registeredUsers = new HashSet<>();
 
+@Autowired
+private IProdRepo prodRepo;
+
+
+private ISessionRepo sessionRepo;
+
     private AuthenticationService authService;
-    private ProdRepo prodRepo;
     private ProductionService productionService;
     private int companyId;
 
     @BeforeEach
     void setUp() {
         registeredUsers.clear();
-        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
+        sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();
         authService = new AuthenticationService(domainAuthService, sessionRepo);
-        prodRepo = new ProdRepo();
+
         ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {
             if (event instanceof IsUserRegisteredEvent e) {
                 e.setRegistered(registeredUsers.contains(e.getUserId()));
@@ -64,84 +76,63 @@ class AppointManagerAcceptanceTest {
 
     @Test
     void GivenOwnerAppoints_WhenAppointManager_ThenReturnTrue() {
-        // Arrange
         registeredUsers.add(MANAGER_ID);
         String founderToken = authService.login(FOUNDER);
 
-        // Act
         boolean result = productionService.appointManager(founderToken, companyId, MANAGER_ID, PERMISSIONS);
 
-        // Assert
         assertTrue(result);
     }
 
     @Test
     void GivenOwnerAppoints_WhenAppointManager_ThenManagerAppearsInCompany() {
-        // Arrange
         registeredUsers.add(MANAGER_ID);
         String founderToken = authService.login(FOUNDER);
 
-        // Act
         productionService.appointManager(founderToken, companyId, MANAGER_ID, PERMISSIONS);
 
-        // Assert
         Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
         assertTrue(company.isPresent());
         assertTrue(company.get().isManager(MANAGER_ID));
     }
 
-    // Fail
-
     @Test
     void GivenInvalidToken_WhenAppointManager_ThenReturnFalse() {
-        // Arrange
         registeredUsers.add(MANAGER_ID);
 
-        // Act
         boolean result = productionService.appointManager("bad-token", companyId, MANAGER_ID, PERMISSIONS);
 
-        // Assert
         assertFalse(result);
     }
 
     @Test
     void GivenNonOwnerAppoints_WhenAppointManager_ThenReturnFalse() {
-        // Arrange
         registeredUsers.add(MANAGER_ID);
         String nonOwnerToken = authService.login("random-user");
 
-        // Act
         boolean result = productionService.appointManager(nonOwnerToken, companyId, MANAGER_ID, PERMISSIONS);
 
-        // Assert
         assertFalse(result);
     }
 
     @Test
     void GivenManagerAlreadyAppointed_WhenAppointManager_ThenReturnFalse() {
-        // Arrange
         registeredUsers.add(MANAGER_ID);
         String founderToken = authService.login(FOUNDER);
         productionService.appointManager(founderToken, companyId, MANAGER_ID, PERMISSIONS);
 
-        // Act
         String newToken = authService.login(FOUNDER);
         boolean secondResult = productionService.appointManager(newToken, companyId, MANAGER_ID, PERMISSIONS);
 
-        // Assert
         assertFalse(secondResult);
     }
 
     @Test
     void GivenUnregisteredManager_WhenAppointManager_ThenReturnFalse() {
-        // Arrange
         String founderToken = authService.login(FOUNDER);
-        // "unregistered" is intentionally NOT added to registeredUsers
 
-        // Act
         boolean result = productionService.appointManager(founderToken, companyId, "unregistered", PERMISSIONS);
 
-        // Assert
         assertFalse(result);
     }
 }
