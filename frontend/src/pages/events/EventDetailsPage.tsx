@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { eventApi, EventDTO } from '../../api/eventsApi';
 import { activeOrderApi } from '../../api/activeOrderApi';
-
+import { getUserFriendlyError } from '../../utils/errorUtils';
 export default function EventDetailsPage() {
     const { eventId } = useParams();
     const navigate = useNavigate(); // Added for redirection
@@ -41,7 +41,10 @@ export default function EventDetailsPage() {
                 }
             } catch (error: any) {
                 console.error('[UI CATCH BLOCK] Failed to fetch specific event or policy:', error);
-                setErrorMessage(error.message || "Unable to load event details at this time.");
+                setErrorMessage(
+                    getUserFriendlyError(error) ||
+                    "Unable to load event details at this time."
+                );
             } finally {
                 setIsLoading(false);
                 console.log('--- [UI END] Event Details Fetch Completed ---');
@@ -87,11 +90,15 @@ export default function EventDetailsPage() {
             }
         } catch (error: any) {
             console.error('[ORDER ERROR] Failed to create order:', error.message);
-            if (error.message?.includes('active order')) {
+            const message = error?.message ?? '';
+            if (message.toLowerCase().includes('active order')) {
                 navigate('/orders/active');
                 return;
             }
-            setOrderError("Unable to start your order. Please try again.");
+
+            setOrderError(
+                message || "Unable to start your order. Please try again."
+            );
         } finally {
             setIsCreatingOrder(false);
         }

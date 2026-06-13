@@ -21,6 +21,9 @@ public class UserDTO {
     @JsonProperty("userGroupDiscount")
     private UserGroupDiscount userGroupDiscount;
 
+    @JsonProperty("isAdmin")
+    private boolean isAdmin;
+
     public UserDTO() {}
 
     public UserDTO(String userId, String username, String email, UserGroupDiscount userGroupDiscount) {
@@ -44,5 +47,9 @@ public class UserDTO {
 
     public UserGroupDiscount getGroupDiscount() {
         return userGroupDiscount;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
     }
 }

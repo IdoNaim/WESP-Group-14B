@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
@@ -22,8 +24,6 @@ import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
-import jakarta.annotation.PostConstruct;
-
 @Service
 public class ProductionService implements IProductionService {
 
@@ -32,6 +32,7 @@ public class ProductionService implements IProductionService {
     private final IProdRepo prodRepo;
     private final ProductionEventPublisher productionEventPublisher;
 
+    @Autowired
     public ProductionService(AuthenticationService authenticationService,
             ProductionHandler productionHandler,
             IProdRepo prodRepo,
@@ -51,6 +52,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("createProductionCompany: invalid session token");
@@ -80,6 +82,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -111,7 +114,7 @@ public class ProductionService implements IProductionService {
                         "assignOwner: " + appointeeUserId + " appointed as owner of company "
                                 + companyId + " by " + appointerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
@@ -123,6 +126,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean appointManager(String sessionToken, Integer companyId, String managerId,
             Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
@@ -155,7 +159,7 @@ public class ProductionService implements IProductionService {
                         "appointManager: " + managerId + " appointed as manager of company "
                                 + companyId + " by " + appointerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
@@ -167,6 +171,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<HistoryOrderItem> getCompanyPurchaseHistory(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("getCompanyPurchaseHistory: invalid session token");
@@ -190,6 +195,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
             String managerId, Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
@@ -218,7 +224,7 @@ public class ProductionService implements IProductionService {
                         "modifyManagerPermissions: permissions updated for manager " + managerId
                                 + " in company " + companyId + " by " + ownerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
@@ -229,6 +235,7 @@ public class ProductionService implements IProductionService {
         return false;
     }
     @Override
+    @Transactional(readOnly = true)
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("getRolesTree: invalid session token");
@@ -255,6 +262,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean removeManager(String sessionToken, Integer companyId, String managerId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -276,7 +284,7 @@ public class ProductionService implements IProductionService {
                 ProductionCompany saved = prodRepo.save(company);
                 loggerDef.getInstance().info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeManager failed: " + e.getMessage());
@@ -288,6 +296,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean removeOwner(String sessionToken, Integer companyId, String ownerId) {
         if (!authenticationService.validate(sessionToken)) return false;
         String requesterId = authenticationService.getUser(sessionToken);
@@ -304,7 +313,7 @@ public class ProductionService implements IProductionService {
                 prodRepo.save(company);
                 loggerDef.getInstance().info("removed owner " + ownerId + " from company " + companyId + " by " + requesterId);
                 return true;
-            } catch (OptimisticLockingFailureException e) {
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("removeOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeOwner failed: " + e.getMessage());
@@ -347,6 +356,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CompanySummaryDTO> getMyCompanies(String sessionToken) {
         if (!authenticationService.validate(sessionToken)) {
             return null;
@@ -369,6 +379,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId) {
         if (!authenticationService.validate(sessionToken)) return null;
         String userId = authenticationService.getUser(sessionToken);
@@ -403,6 +414,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule) {
         if (!authenticationService.validate(sessionToken)) {
             return false;

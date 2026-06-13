@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const ensureGuestToken = useCallback(async (): Promise<string> => {
         const response = await authApi.guestEntry();
-        
+
         localStorage.setItem(TOKEN_KEY, response.token);
         localStorage.removeItem(USER_ID_KEY); // Clear any existing userId since we're now a guest
 

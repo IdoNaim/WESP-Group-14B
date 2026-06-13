@@ -18,13 +18,14 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListene
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminInfo;
+import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
+import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminPublisher;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllActiveOrdersEvent;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
 import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
-import com.ticketpurchasingsystem.project.infrastructure.InMemoryAdminRepo;
+import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -48,9 +49,10 @@ class AdminAcceptanceTests {
         activeOrderRepo = new ActiveOrderMemRepo();
         historyOrderRepo = new HistoryOrderRepo();
 
-        InMemoryAdminRepo adminRepo = new InMemoryAdminRepo();
-        AdminInfo adminInfo = new AdminInfo(ADMIN_ID, "admin@system.com");
-        adminRepo.save(adminInfo);
+        MemoryUserRepo userRepo = new MemoryUserRepo();
+        UserInfo adminUser = new UserInfo(ADMIN_ID, ADMIN_ID, "admin@system.com", "admin", UserGroupDiscount.NONE);
+        adminUser.setAdmin(true);
+        userRepo.store(adminUser);
 
         InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
@@ -60,8 +62,7 @@ class AdminAcceptanceTests {
         domainAuthService.init();
 
         AuthenticationService authService = new AuthenticationService(domainAuthService, sessionRepo);
-        // token subject must match AdminInfo.getId() (auto-generated), not the username
-        adminToken = authService.login(adminInfo.getId(), "admin");
+        adminToken = authService.login(ADMIN_ID, "admin");
 
         ActiveOrderListener activeOrderListener = new ActiveOrderListener(activeOrderRepo);
 
@@ -72,7 +73,7 @@ class AdminAcceptanceTests {
                 e.setResult(historyOrderRepo.findAll());
         });
 
-        adminService = new SystemAdminService(adminRepo, adminPublisher, authService);
+        adminService = new SystemAdminService(userRepo, adminPublisher, authService);
     }
 
     // ─── getAllActiveOrders ───────────────────────────────────────────────────

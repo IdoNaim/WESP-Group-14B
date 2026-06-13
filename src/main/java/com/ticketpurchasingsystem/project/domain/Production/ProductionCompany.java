@@ -2,17 +2,13 @@ package com.ticketpurchasingsystem.project.domain.Production;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
-import static com.ticketpurchasingsystem.project.domain.Production.ManagerPermission.none;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.DiscountPolicy.DiscountPolicy;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.PurchasePolicy;
@@ -21,31 +17,69 @@ import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
+
+@Entity
+@Table(name = "production_company")
 public class ProductionCompany {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "company_id")
     private Integer companyId;
+
+    @Column(name = "company_name", unique = true, nullable = false, length = 255)
     private String companyName;
+
+    @Column(name = "company_email", length = 255)
     private String companyEmail;
+
+    @Column(name = "company_description", columnDefinition = "TEXT")
     private String companyDescription;
+
+    @Column(name = "founder_id", length = 255)
     private String founderId;
-    private List<String> ownerIds;
-    private final Map<String, OwnerDTO> ownershipTree;
-    private final Map<String, ManagerDTO> managerTree;
+
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.EAGER)
+    private List<UserProductionCompany> members = new ArrayList<>();
+
+    @Transient
     private PurchasePolicy purchasePolicy;
+
+    @Transient
     private DiscountPolicy discountPolicy;
-    private final Map<String, Set<ManagerPermission>> managerPermissions;
+
+    @Version
+    @Column(name = "version")
     private long version;
+
+    @Transient
     private ITicketPurchaseRule ticketPurchasePolicy;
+
+    protected ProductionCompany() {
+        this.members = new ArrayList<>();
+        this.purchasePolicy = new PurchasePolicy();
+        this.discountPolicy = new DiscountPolicy();
+    }
 
     public ProductionCompany(ProductionCompanyDTO dto) {
         this.companyName = dto.getCompanyName();
         this.companyEmail = dto.getCompanyEmail();
         this.companyDescription = dto.getCompanyDescription();
-        this.ownerIds = new ArrayList<>();
-        this.ownershipTree = new LinkedHashMap<>();
-        this.managerTree = new LinkedHashMap<>();
+        this.members = new ArrayList<>();
         this.purchasePolicy = new PurchasePolicy();
         this.discountPolicy = new DiscountPolicy();
-        this.managerPermissions = new LinkedHashMap<>();
         this.version = 0;
     }
 
@@ -55,41 +89,40 @@ public class ProductionCompany {
         this.companyEmail = other.companyEmail;
         this.companyDescription = other.companyDescription;
         this.founderId = other.founderId;
-        this.ownerIds = new ArrayList<>(other.ownerIds);
-        this.ownershipTree = new LinkedHashMap<>(other.ownershipTree);
-        this.managerTree = new LinkedHashMap<>(other.managerTree);
+        this.members = new ArrayList<>();
+        for (UserProductionCompany m : other.members) {
+            this.members.add(new UserProductionCompany(
+                    m.getId(), m.getUserId(), m.getRole(), m.getAppointerId(), m.getPermission(), this));
+        }
         this.purchasePolicy = other.purchasePolicy;
         this.discountPolicy = other.discountPolicy;
-        this.managerPermissions = new LinkedHashMap<>();
-        for (Map.Entry<String, Set<ManagerPermission>> entry : other.managerPermissions.entrySet()) {
-            Set<ManagerPermission> permCopy = entry.getValue().isEmpty()
-                    ? new HashSet<>()
-                    : EnumSet.copyOf(entry.getValue());
-            this.managerPermissions.put(entry.getKey(), permCopy);
-        }
         this.version = other.version;
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
     }
 
+    // ── Founder / Owner ─────────────────────────────────────────────────────
+
     public void initFounder(String userId) {
         this.founderId = userId;
-        if (!this.ownerIds.contains(userId)) {
-            this.ownerIds.add(userId);
+        if (members.stream().noneMatch(m -> m.getUserId().equals(userId)
+                && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                && m.getPermission() == null)) {
+            members.add(new UserProductionCompany(
+                    userId, UserProductionCompany.MemberRole.OWNER, null, null, this));
         }
-        ownershipTree.putIfAbsent(userId, new OwnerDTO(userId, null)); // ← ADD THIS
     }
 
     public boolean appointOwner(String appointerId, String appointeeId) {
-        if (ownerIds.contains(appointeeId)) {
-            return false;
-        }
-        ownerIds.add(appointeeId);
-        ownershipTree.put(appointeeId, new OwnerDTO(appointeeId, appointerId));
+        if (isOwner(appointeeId)) return false;
+        members.add(new UserProductionCompany(
+                appointeeId, UserProductionCompany.MemberRole.OWNER, appointerId, null, this));
         return true;
     }
 
     public boolean isOwner(String userId) {
-        return ownerIds.contains(userId);
+        return members.stream().anyMatch(m -> m.getUserId().equals(userId)
+                && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                && m.getPermission() == null);
     }
 
     public boolean isFounder(String userId) {
@@ -97,46 +130,78 @@ public class ProductionCompany {
     }
 
     public Optional<OwnerDTO> getOwnerDTO(String userId) {
-        return Optional.ofNullable(ownershipTree.get(userId));
+        return members.stream()
+                .filter(m -> m.getUserId().equals(userId)
+                        && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                        && m.getPermission() == null)
+                .map(m -> new OwnerDTO(m.getUserId(), m.getAppointerId()))
+                .findFirst();
     }
 
     public Map<String, OwnerDTO> getOwnershipTree() {
-        return Collections.unmodifiableMap(ownershipTree);
+        Map<String, OwnerDTO> tree = new LinkedHashMap<>();
+        for (UserProductionCompany m : members) {
+            if (m.getRole() == UserProductionCompany.MemberRole.OWNER && m.getPermission() == null) {
+                tree.put(m.getUserId(), new OwnerDTO(m.getUserId(), m.getAppointerId()));
+            }
+        }
+        return Collections.unmodifiableMap(tree);
     }
 
-    public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
-        ManagerDTO managerDTO = managerTree.putIfAbsent(managerId, new ManagerDTO(managerId, appointerId, permissions));
-        if(managerDTO != null){
-            return false;
-        }
-        setManagerPermissions(managerId, permissions);
-//        if (managerTree.containsKey(managerId)) {
-//            return false;
-//        }
-//        managerTree.put(managerId, new ManagerDTO(managerId, appointerId, permissions));
-        return true;
+    public List<String> getOwnerIds() {
+        return members.stream()
+                .filter(m -> m.getRole() == UserProductionCompany.MemberRole.OWNER
+                        && m.getPermission() == null)
+                .map(UserProductionCompany::getUserId)
+                .collect(Collectors.toList());
     }
+
+    public void addOwnerId(String ownerId) {
+        if (members.stream().noneMatch(m -> m.getUserId().equals(ownerId)
+                && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                && m.getPermission() == null)) {
+            members.add(new UserProductionCompany(
+                    ownerId, UserProductionCompany.MemberRole.OWNER, null, null, this));
+        }
+    }
+
     public boolean removeOwner(String requesterId, String ownerId) {
-        if (isFounder(ownerId)) return false;           // founder can never be removed
+        if (isFounder(ownerId)) return false;
         if (!isOwner(requesterId) && !isFounder(requesterId)) return false;
         if (!isOwner(ownerId)) return false;
-        ownerIds.remove(ownerId);
-        ownershipTree.remove(ownerId);
+        // Remove base ownership row only; permission rows are left (matches original behaviour)
+        members.removeIf(m -> m.getUserId().equals(ownerId)
+                && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                && m.getPermission() == null);
         return true;
     }
 
-    public boolean removeManager(String appointerId, String managerId){
-        if(!isManager(managerId) || !isManagerAppointedByOwner(managerId, appointerId)){
-            return false;
-        }
-        managerTree.remove(managerId);
-        if(managerPermissions.containsKey(managerId)) {
-            managerPermissions.remove(managerId);
+    public boolean isAppointedBy(String memberId, String appointerId) {
+        return members.stream().anyMatch(m -> m.getUserId().equals(memberId)
+                && m.getRole() == UserProductionCompany.MemberRole.OWNER
+                && appointerId.equals(m.getAppointerId())
+                && m.getPermission() == null);
+    }
+
+    // ── Manager ──────────────────────────────────────────────────────────────
+
+    public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
+        if (isManager(managerId)) return false;
+        // Base membership row
+        members.add(new UserProductionCompany(
+                managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, null, this));
+        // One permission row per granted permission
+        for (ManagerPermission perm : permissions) {
+            members.add(new UserProductionCompany(
+                    managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, perm, this));
         }
         return true;
     }
+
     public boolean isManager(String userId) {
-        return managerTree.containsKey(userId);
+        return members.stream().anyMatch(m -> m.getUserId().equals(userId)
+                && m.getRole() == UserProductionCompany.MemberRole.MANAGER
+                && m.getPermission() == null);
     }
 
     public boolean isOwnerOrManager(String userId) {
@@ -144,90 +209,87 @@ public class ProductionCompany {
     }
 
     public Optional<ManagerDTO> getManagerDTO(String userId) {
-        return Optional.ofNullable(managerTree.get(userId));
+        return members.stream()
+                .filter(m -> m.getUserId().equals(userId)
+                        && m.getRole() == UserProductionCompany.MemberRole.MANAGER
+                        && m.getPermission() == null)
+                .map(m -> new ManagerDTO(m.getUserId(), m.getAppointerId(), getManagerPermissions(userId)))
+                .findFirst();
     }
 
     public Map<String, ManagerDTO> getManagerTree() {
-        return Collections.unmodifiableMap(managerTree);
+        Map<String, ManagerDTO> tree = new LinkedHashMap<>();
+        for (UserProductionCompany m : members) {
+            if (m.getRole() == UserProductionCompany.MemberRole.MANAGER && m.getPermission() == null) {
+                tree.put(m.getUserId(),
+                        new ManagerDTO(m.getUserId(), m.getAppointerId(), getManagerPermissions(m.getUserId())));
+            }
+        }
+        return Collections.unmodifiableMap(tree);
     }
 
-    public Integer getCompanyId() {
-        return companyId;
+    public boolean isManagerAppointedByOwner(String managerId, String ownerId) {
+        return members.stream().anyMatch(m -> m.getUserId().equals(managerId)
+                && m.getRole() == UserProductionCompany.MemberRole.MANAGER
+                && ownerId.equals(m.getAppointerId())
+                && m.getPermission() == null);
     }
 
-    public void setCompanyId(Integer companyId) {
-        this.companyId = companyId;
+    public boolean removeManager(String appointerId, String managerId) {
+        if (!isManager(managerId) || !isManagerAppointedByOwner(managerId, appointerId)) return false;
+        // Remove all rows for this manager (base + permissions)
+        members.removeIf(m -> m.getUserId().equals(managerId)
+                && m.getRole() == UserProductionCompany.MemberRole.MANAGER);
+        return true;
     }
 
-    public String getCompanyName() {
-        return companyName;
-    }
+    // ── Permissions ──────────────────────────────────────────────────────────
 
-    public String getCompanyEmail() {
-        return companyEmail;
-    }
+    public void setManagerPermissions(String userId, Set<ManagerPermission> permissions) {
+        // Find the user's base row to copy role + appointer
+        Optional<UserProductionCompany> baseRow = members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() == null)
+                .findFirst();
+        if (baseRow.isEmpty()) return;
 
-    public String getCompanyDescription() {
-        return companyDescription;
-    }
+        // Remove existing permission rows for this user, keep the base row
+        members.removeIf(m -> m.getUserId().equals(userId) && m.getPermission() != null);
 
-    public String getFounderId() {
-        return founderId;
-    }
-
-    public void setFounderId(String founderId) {
-        this.founderId = founderId;
-    }
-
-    public List<String> getOwnerIds() {
-        return ownerIds;
-    }
-
-    public void addOwnerId(String ownerId) {
-        this.ownerIds.add(ownerId);
-    }
-
-    public PurchasePolicy getPurchasePolicy() {
-        return purchasePolicy;
-    }
-
-    public DiscountPolicy getDiscountPolicy() {
-        return discountPolicy;
-    }
-
-    public void setManagerPermissions(String managerId, Set<ManagerPermission> permissions) {
-        if (permissions.isEmpty()) {
-            managerPermissions.put(managerId, none());
-        } else {
-            managerPermissions.put(managerId, EnumSet.copyOf(permissions));
+        for (ManagerPermission perm : permissions) {
+            members.add(new UserProductionCompany(
+                    userId, baseRow.get().getRole(), baseRow.get().getAppointerId(), perm, this));
         }
     }
 
-    public Set<ManagerPermission> getManagerPermissions(String managerId) {
-        return Collections.unmodifiableSet(
-                managerPermissions.getOrDefault(managerId, none()));
+    public Set<ManagerPermission> getManagerPermissions(String userId) {
+        Set<ManagerPermission> perms = members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() != null)
+                .map(UserProductionCompany::getPermission)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return perms.isEmpty()
+                ? ManagerPermission.none()
+                : Collections.unmodifiableSet(perms);
     }
 
-    public boolean isAppointedBy(String managerId, String ownerId) {
-        return ownershipTree.containsKey(managerId)
-                && ownerId.equals(ownershipTree.get(managerId).getAppointerId());
-    }
-    public boolean isManagerAppointedByOwner(String managerId, String ownerId){
-        return managerTree.containsKey(managerId)
-                && ownerId.equals(managerTree.get(managerId).getAppointerId());
-    }
-    public long getVersion() {
-        return version;
-    }
+    // ── Getters / Setters ────────────────────────────────────────────────────
 
-    public void setVersion(long version) {
-        this.version = version;
-    }
+    public Integer getCompanyId() { return companyId; }
+    public void setCompanyId(Integer companyId) { this.companyId = companyId; }
 
-    public ITicketPurchaseRule getTicketPurchasePolicy() {
-        return ticketPurchasePolicy;
-    }
+    public String getCompanyName() { return companyName; }
+    public String getCompanyEmail() { return companyEmail; }
+    public String getCompanyDescription() { return companyDescription; }
 
+    public String getFounderId() { return founderId; }
+    public void setFounderId(String founderId) { this.founderId = founderId; }
+
+    public PurchasePolicy getPurchasePolicy() { return purchasePolicy; }
+    public DiscountPolicy getDiscountPolicy() { return discountPolicy; }
+
+    public long getVersion() { return version; }
+    public void setVersion(long version) { this.version = version; }
+
+    public ITicketPurchaseRule getTicketPurchasePolicy() { return ticketPurchasePolicy; }
     public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
         this.ticketPurchasePolicy = ticketPurchasePolicy;
     }

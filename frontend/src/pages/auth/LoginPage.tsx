@@ -49,7 +49,25 @@ export default function LoginPage() {
             navigate(DEFAULT_REDIRECT_PATH, { replace: true });
 
         } catch (error: any) {
-            setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
+            const backendMessage = error.message || "";
+
+            // 1. Clean up known authentication exceptions
+            if (backendMessage.includes("User not found") || backendMessage.includes("Invalid user ID or password")) {
+                setErrorMessage("Invalid user ID or password");
+            }
+            // 2. Global Sanitizer: Intercept unhandled Java runtime errors, database crashes, or 500s
+            else if (
+                backendMessage.includes("java.") ||
+                backendMessage.toLowerCase().includes("exception") ||
+                backendMessage.toLowerCase().includes("internal server error") ||
+                backendMessage.toLowerCase().includes("nullpointer")
+            ) {
+                setErrorMessage("The authentication server is having trouble. Please try again later.");
+            }
+            // 3. Fallback for safe errors (like network/client issues e.g., "Failed to fetch")
+            else {
+                setErrorMessage(backendMessage || "Failed to sign in. Please check your credentials.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -71,7 +89,6 @@ export default function LoginPage() {
 
                     {/* Header Identity & Home Access Button */}
                     <div className="flex flex-col items-center mb-6 relative">
-                        {/* Clean Home Button pinned to the top right of the card header */}
                         <Link 
                             to={DEFAULT_REDIRECT_PATH}
                             className="absolute right-0 top-0 text-[#8d90a0] hover:text-[#2563eb] transition-colors p-1 flex items-center justify-center rounded-lg hover:bg-gray-200/50"
