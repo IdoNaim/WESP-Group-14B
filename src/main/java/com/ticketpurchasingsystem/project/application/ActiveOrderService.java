@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderHandler;
@@ -18,6 +19,7 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
+@Transactional
 public class ActiveOrderService implements IActiveOrderService {
     private final ActiveOrderListener activeOrderListener;
     private final ActiveOrderPublisher activeOrderPublisher;
@@ -74,6 +76,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ActiveOrderDTO getActiveOrderByUserId(SessionToken sessionToken, String userId) throws Exception {
         logger.info("Attempting to retrieve active order for userId: " + userId);
         validateSession(sessionToken, "Session validation failed while retrieving active order for userId: " + userId, "Session has ended");
@@ -94,6 +97,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken, String orderId) throws Exception {
         logger.info("Attempting to retrieve active order info. orderId: " + orderId);
         validateSession(sessionToken, "Session validation failed while retrieving order info for orderId: " + orderId, "Session has ended");

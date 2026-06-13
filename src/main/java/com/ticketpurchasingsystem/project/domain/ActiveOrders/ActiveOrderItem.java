@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -43,7 +44,7 @@ public class ActiveOrderItem {
     @CollectionTable(name = "active_order_standing_areas", joinColumns = @JoinColumn(name = "order_id"))
     @MapKeyColumn(name = "area_id")
     @Column(name = "quantity")
-    private HashMap<String, Integer> StandingAreaQuantities;
+    private Map<String, Integer> StandingAreaQuantities;
 
     @Version
     @Column(name = "version")
@@ -73,6 +74,7 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(other.getCreatedAt().getTime());
         this.seatIds = new ArrayList<>(other.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
+        this.version = other.version;
         this.processing = false;
     }
     public ActiveOrderItem(ActiveOrderDTO other){
@@ -167,7 +169,7 @@ public class ActiveOrderItem {
         this.seatIds = seatIds;
     }
 
-    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) {
+    public void setStandingAreaQuantities(Map<String, Integer> standingAreaQuantities) {
         StandingAreaQuantities = standingAreaQuantities;
     }
 

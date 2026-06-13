@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ticketpurchasingsystem.project.application.ActiveOrderService;
 import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
@@ -33,6 +35,7 @@ public class InitCommandExecutor {
     private final ProductionService productionService;
     private final EventService eventService;
     private final HistoryOrderService historyOrderService;
+    private final ActiveOrderService activeOrderService;
 
     // holds $varName -> value (String token or Integer companyId)
     private final Map<String, Object> context = new HashMap<>();
@@ -40,11 +43,13 @@ public class InitCommandExecutor {
     public InitCommandExecutor(UserService userService,
                                ProductionService productionService,
                                EventService eventService,
-                               HistoryOrderService historyOrderService) {
+                               HistoryOrderService historyOrderService,
+                               ActiveOrderService activeOrderService) {
         this.userService = userService;
         this.productionService = productionService;
         this.eventService = eventService;
         this.historyOrderService = historyOrderService;
+        this.activeOrderService = activeOrderService;
     }
 
     public void execute(ParsedCommand cmd) {
@@ -243,6 +248,19 @@ public class InitCommandExecutor {
             }
 
             // ── Order commands ────────────────────────────────────────────
+
+            case "create-active-order" -> {
+                // create-active-order(token, userId, eventId)
+                SessionToken token = new SessionToken(arg(args, 0), Long.MAX_VALUE);
+                yield activeOrderService.createPendingOrder(token, arg(args, 1), arg(args, 2)).getOrderId();
+            }
+
+            case "add-seats-to-order" -> {
+                // add-seats-to-order(token, orderId, seat1, seat2, ...)
+                SessionToken token = new SessionToken(arg(args, 0), Long.MAX_VALUE);
+                activeOrderService.addSeatsToActiveOrder(token, arg(args, 1), args.subList(2, args.size()));
+                yield null;
+            }
 
             case "create-history-order" -> {
                 // create-history-order(orderId, userId, eventId, companyId, price, seat1, seat2, ...)
