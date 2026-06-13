@@ -1,19 +1,37 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-public class AssignedSeat implements Bookable {
-    private String id;              //includes zone, row and number
-    private boolean isBooked;
-    private String orderId;
-    private double priceForTicket;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "EventsSeats")
+@IdClass(AssignedSeatId.class)
+public class AssignedSeat{
+
+    @Id
+    @Column(name = "eventId", insertable = false, updatable = false)
+    private String eventId; // Mapped as part of the PK, but managed by the parent Event relationship
+
+    @Id
+    @Column(name = "seatId")
+    private String seatId;
+
+    @Column(name = "isBooked", nullable = false)
+    private boolean isBooked;
+
+    @Column(name = "orderId")
+    private String orderId;
+
+    @Column(name = "price", nullable = false)
+    private double price;
+
+    public AssignedSeat() {}
     public AssignedSeat(String zone, int row, int number, double priceForTicket) {
-        this.id = String.format("%s_%d_%d", zone, row, number);
+        this.eventId = String.format("%s_%d_%d", zone, row, number);
         this.isBooked = false;
         this.orderId = null;
-        this.priceForTicket = priceForTicket;
+        this.price = priceForTicket;
     }
 
-    @Override
     public boolean isbooked(String orderId) {
         if(orderId == null){
             return false;
@@ -23,17 +41,14 @@ public class AssignedSeat implements Bookable {
         }
     }
 
-
-    @Override
     public String getId() {
-        return id;
+        return eventId;
     }
 
     public boolean isBooked() {
         return isBooked;
     }
 
-    @Override
     public boolean book(String orderId, int numberOfTickets) {
         if (numberOfTickets != 1) {
             return false; // Assigned seats can only be booked one at a time
@@ -58,16 +73,15 @@ public class AssignedSeat implements Bookable {
         return true; // Unbooking successful
     }
 
-    @Override
     public double getPriceForTicket(){
-        return priceForTicket;
+        return price;
     }
 
     public boolean setPriceForTicket(double newPrice) {
         if (newPrice < 0) {
             return false; // Price cannot be negative
         }
-        this.priceForTicket = newPrice;
+        this.price = newPrice;
         return true; // Price updated successfully
     }
 

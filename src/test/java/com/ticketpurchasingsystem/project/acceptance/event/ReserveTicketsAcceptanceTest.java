@@ -48,7 +48,19 @@ class ReserveTicketsAcceptanceTest {
         eventService = new EventService(new EventRepo(), simplePublisher, authService);
 
         // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
-        EventDTO newEvent = new EventDTO(null, 42, "Rock Concert", 100, LocalDateTime.now().plusDays(5), true, "test locaion");
+        // ✅ FIXED: Padded with 3 null values to match the updated 10-parameter record signature
+        EventDTO newEvent = new EventDTO(
+                null,
+                42,
+                "Rock Concert",
+                100,
+                LocalDateTime.now().plusDays(5),
+                true,
+                "test locaion",
+                null, // imageUrl
+                null, // minZonePrice
+                null  // maxZonePrice
+        );
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, 0, 120, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
@@ -59,7 +71,8 @@ class ReserveTicketsAcceptanceTest {
         SeatingMap map = eventService.configureSeatingMap(validToken, seatingConfigs, new ArrayList<>());
         eventService.editEventSeatingMap(validToken, savedEventId, map);
 
-        activeKeysFromMap = map.getPurchaseAreas().keySet().stream().limit(2).toList();
+        // ✅ FIXED: Uncommented and switched to map.getSeatIds() to populate keys safely and prevent NullPointerExceptions
+        activeKeysFromMap = map.getSeatIds().stream().limit(2).toList();
     }
 
     @Test

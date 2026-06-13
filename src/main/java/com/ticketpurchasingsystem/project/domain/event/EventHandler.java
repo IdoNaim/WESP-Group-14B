@@ -133,8 +133,7 @@ public class EventHandler {
                 discountPolicy,
                 0
         );
-        event.setEventLocation(eventDTO.eventLocation());
-        event.setTicketPrice(eventDTO.ticketPrice());
+        event.setLocation(eventDTO.eventLocation());
         event.setImageUrl(eventDTO.imageUrl());
 
         try {
@@ -167,8 +166,7 @@ public class EventHandler {
                 displayCapacity,
                 event.getEventDate(),
                 event.isActive(),
-                event.getEventLocation(),
-                event.getTicketPrice(),
+                event.getLocation(),
                 event.getImageUrl(),
                 minPrice,
                 maxPrice
@@ -431,7 +429,7 @@ public class EventHandler {
         try {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
-            event.setEventLocation(newLocation);
+            event.setLocation(newLocation);
             eventRepo.save(event);
             return true;
         } catch (Exception e) {
@@ -447,7 +445,6 @@ public class EventHandler {
         try {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
-            event.setTicketPrice(newPrice);
             eventRepo.save(event);
             return true;
         } catch (Exception e) {

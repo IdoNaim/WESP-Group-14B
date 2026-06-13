@@ -1,56 +1,73 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-public class StandingArea implements Bookable {
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "EventsStandingAres")
+@IdClass(StandingAreaId.class) // Links your standing area composite key class
+public class StandingArea {
+
+    @Id
+    @Column(name = "eventId", insertable = false, updatable = false)
+    private String eventId;
+
+    @Id
+    @Column(name = "areaId")
     private String areaId;
-    private int avalibleSeats;
+
+    @Column(name = "availableSeats", nullable = false)
+    private int availableSeats;
+
+    @Column(name = "capacity", nullable = false)
     private int capacity;
-    private double priceForTicket;
+
+    @Column(name = "price", nullable = false)
+    private double price;
 //    private String desc;
 
 
+    public StandingArea() {}
     public StandingArea(int capacity, double priceForTicket, String areaId) {
         this.capacity = capacity;
-        this.priceForTicket = priceForTicket;
-        this.avalibleSeats = capacity;
+        this.price = priceForTicket;
+        this.capacity = capacity;
 //        this.desc = desc;
         this.areaId = areaId;
     }
-    @Override
     public String getId(){
         return areaId;
     }
-    @Override
+
     public boolean book(String orderId, int numberOfTickets) {
         if(isBookeable(numberOfTickets)) {
-            avalibleSeats -= numberOfTickets;
+            availableSeats -= numberOfTickets;
             return true;
         }
         return false;
     }
     private boolean isBookeable(int numberOfTickets) {
-        return avalibleSeats - numberOfTickets >= 0;
+        return availableSeats - numberOfTickets >= 0;
     }
 
-    @Override
     public double getPriceForTicket() {
-        return priceForTicket;
+        return price;
     }
 
     public int getAvalibleSeatNumber() {
-        return avalibleSeats;
+        return availableSeats;
     }
     public boolean unbook(int numberOfTickets) {
-        if (numberOfTickets <= 0 || avalibleSeats + numberOfTickets > capacity) {
+        if (numberOfTickets <= 0 || availableSeats + numberOfTickets > capacity) {
             return false;
         }
-        avalibleSeats += numberOfTickets;
+        availableSeats += numberOfTickets;
         return true;
     }
     public boolean setPriceForTicket(double newPrice) {
         if (newPrice < 0) {
             return false;
         }
-        priceForTicket = newPrice;
+        price = newPrice;
         return true;
     }
 
