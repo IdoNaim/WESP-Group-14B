@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderHandler;
@@ -18,6 +19,7 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
+@Transactional
 public class ActiveOrderService implements IActiveOrderService {
     private final ActiveOrderListener activeOrderListener;
     private final ActiveOrderPublisher activeOrderPublisher;
@@ -53,7 +55,7 @@ public class ActiveOrderService implements IActiveOrderService {
         validateSession(sessionToken, "Session validation failed for userId: " + userId, "the session has ended");
         validateUserMatch(sessionToken, userId);
 
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        ActiveOrderItem order = activeOrderRepo.findById(orderId).orElse(null);
         if (order == null) {
             logger.error("Cancel order failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
@@ -74,6 +76,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ActiveOrderDTO getActiveOrderByUserId(SessionToken sessionToken, String userId) throws Exception {
         logger.info("Attempting to retrieve active order for userId: " + userId);
         validateSession(sessionToken, "Session validation failed while retrieving active order for userId: " + userId, "Session has ended");
@@ -94,12 +97,13 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ActiveOrderDTO getActiveOrderInfo(SessionToken sessionToken, String orderId) throws Exception {
         logger.info("Attempting to retrieve active order info. orderId: " + orderId);
         validateSession(sessionToken, "Session validation failed while retrieving order info for orderId: " + orderId, "Session has ended");
 
         String userId = authenticationService.getUser(sessionToken.getToken());
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        ActiveOrderItem order = activeOrderRepo.findById(orderId).orElse(null);
         if(order == null){
             logger.error("Active order not found with id: " + orderId);
             throw new IllegalArgumentException("the active order was not found");
@@ -140,7 +144,7 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Attempting to add seats to order: " + orderId);
         validateSession(sessionToken, "Session validation failed while adding seats to order: " + orderId, "the session has ended");
 
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        ActiveOrderItem order = activeOrderRepo.findById(orderId).orElse(null);
         if (order == null) {
             logger.error("Add seats failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
@@ -178,7 +182,7 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Attempting to add standing area to order: " + orderId + ", areaId: " + areaId + ", quantity: " + quantity);
         validateSession(sessionToken, "Session validation failed while adding standing area to order: " + orderId, "the session has ended");
 
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        ActiveOrderItem order = activeOrderRepo.findById(orderId).orElse(null);
         if (order == null) {
             logger.error("Add standing area failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
@@ -216,7 +220,7 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         validateSession(sessionToken, "Session validation failed while completing order: " + orderId, "the session has ended");
 
-        ActiveOrderItem order = activeOrderRepo.findById(orderId);
+        ActiveOrderItem order = activeOrderRepo.findById(orderId).orElse(null);
         if(order == null){
             logger.error("Complete order failed: Order not found with id: " + orderId);
             throw new IllegalArgumentException("Order not found");
@@ -309,7 +313,7 @@ public class ActiveOrderService implements IActiveOrderService {
         logger.info("Attempting to update active order: " + newOrderDTO.getOrderId());
         validateSession(sessionToken, "Session validation failed while updating order: " + newOrderDTO.getOrderId(), "Session has ended");
 
-        ActiveOrderItem order = activeOrderRepo.findById(newOrderDTO.getOrderId());
+        ActiveOrderItem order = activeOrderRepo.findById(newOrderDTO.getOrderId()).orElse(null);
         if(order == null){
             logger.error("Update order failed: Order not found with id: " + newOrderDTO.getOrderId());
             throw new IllegalArgumentException("couldn't find order to edit");

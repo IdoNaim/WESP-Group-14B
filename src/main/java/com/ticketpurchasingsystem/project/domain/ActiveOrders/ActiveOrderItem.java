@@ -4,19 +4,59 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapKeyColumn;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
+
+@Entity
+@Table(name = "active_orders")
 public class ActiveOrderItem {
+
+    @Id
+    @Column(name = "order_id", nullable = false, length = 255)
     private String orderId;
+
+    @Column(name = "user_id", nullable = false, length = 255)
     private String userId;
+
+    @Column(name = "event_id", nullable = false, length = 255)
     private String eventId;
+
+    @Column(name = "created_at", nullable = false)
     private Timestamp createdAt;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "active_order_seats", joinColumns = @JoinColumn(name = "order_id"))
+    @Column(name = "seat_id")
     private List<String> seatIds;
-    private HashMap<String, Integer> StandingAreaQuantities;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "active_order_standing_areas", joinColumns = @JoinColumn(name = "order_id"))
+    @MapKeyColumn(name = "area_id")
+    @Column(name = "quantity")
+    private Map<String, Integer> StandingAreaQuantities;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
+
+    @Transient
     private boolean processing;
 
 
     public final static int EXPIRATION_TIME_MINUTES = 15;
 
+    protected ActiveOrderItem() {}
 
     public ActiveOrderItem(String orderId, String userId, String eventId) {
         this.orderId = orderId;
@@ -34,6 +74,7 @@ public class ActiveOrderItem {
         this.createdAt = new Timestamp(other.getCreatedAt().getTime());
         this.seatIds = new ArrayList<>(other.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(other.getStandingAreaQuantities());
+        this.version = other.version;
         this.processing = false;
     }
     public ActiveOrderItem(ActiveOrderDTO other){
@@ -128,7 +169,7 @@ public class ActiveOrderItem {
         this.seatIds = seatIds;
     }
 
-    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) {
+    public void setStandingAreaQuantities(Map<String, Integer> standingAreaQuantities) {
         StandingAreaQuantities = standingAreaQuantities;
     }
 
