@@ -43,9 +43,6 @@ public class Event {
     @Column(name = "location")
     private String location; // Merged 'location' and 'eventLocation' into one field
 
-    @Column(name = "ticket_price")
-    private Double ticketPrice;
-
     @Column(name = "image_url")
     private String imageUrl;
 
@@ -132,7 +129,6 @@ public class Event {
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
-        this.ticketPrice = other.ticketPrice;
         this.imageUrl = other.imageUrl;
     }
 
@@ -156,9 +152,6 @@ public class Event {
 
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
-
-    public Double getTicketPrice() { return ticketPrice; }
-    public void setTicketPrice(Double ticketPrice) { this.ticketPrice = ticketPrice; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
