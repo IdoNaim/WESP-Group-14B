@@ -2,6 +2,8 @@ package com.ticketpurchasingsystem.project.domain.event;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.*; // Added for JPA annotations
+
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.AndRule;
@@ -14,37 +16,64 @@ import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.MinTicket
 import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.OrRule;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
+@Entity
+@Table(name = "events")
 public class Event {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID) // Automatically generates a UUID for new events
+    @Column(name = "event_id", updatable = false, nullable = false)
     private String eventId;
 
-    private final int companyId;
+    @Column(name = "company_id", nullable = false)
+    private int companyId;
+
+    @Column(name = "event_name", nullable = false)
     private String eventName;
 
+    @Column(name = "event_capacity", nullable = false)
     private int eventCapacity;
 
+    @Column(name = "is_active")
     private boolean isActive;
 
+    @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
-    private SeatingMap seatingMap;
+    @Column(name = "location")
+    private String location; // Merged 'location' and 'eventLocation' into one field
 
-    private EventDiscountPolicy discountPolicy;
-
-    private EventPurchasePolicy purchasePolicy;
-
-    private ITicketPurchaseRule ticketPurchasePolicy;
-
-    private String eventLocation;
-
+    @Column(name = "ticket_price")
     private Double ticketPrice;
 
+    @Column(name = "image_url")
     private String imageUrl;
 
+    @Version // Tells Hibernate to use this field for Optimistic Locking (concurrency control)
+    @Column(name = "version")
     private int version = 0;
 
-    private String location;
+    // --- COMPLEX DOMAIN OBJECTS ---
+    // Note: I marked these as @Transient so Hibernate ignores them for now.
+    // Depending on your DB schema, these either need to be serialized to JSON (@JdbcTypeCode),
+    // mapped as @Embedded, or mapped as @OneToOne / @OneToMany relations.
+    @Transient
+    private SeatingMap seatingMap;
 
+    @Transient
+    private EventDiscountPolicy discountPolicy;
+
+    @Transient
+    private EventPurchasePolicy purchasePolicy;
+
+    @Transient
+    private ITicketPurchaseRule ticketPurchasePolicy;
+
+
+    // ---------------- CONSTRUCTORS ----------------
+
+    // JPA requires a protected no-args constructor
+    protected Event() {}
 
     public Event(
             int companyId,
@@ -56,15 +85,12 @@ public class Event {
             EventDiscountPolicy discountPolicy,
             int version
     ) {
-
         if (eventName == null || eventName.trim().isEmpty()) {
             throw new IllegalArgumentException("Event name cannot be empty");
         }
-
         if (eventCapacity <= 0) {
             throw new IllegalArgumentException("Event capacity must be greater than 0");
         }
-
         if (eventDate == null) {
             throw new IllegalArgumentException("Event date cannot be null");
         }
@@ -106,78 +132,30 @@ public class Event {
         this.purchasePolicy = other.purchasePolicy;
         this.version = other.version;
         this.ticketPurchasePolicy = other.ticketPurchasePolicy;
-        this.eventLocation = other.eventLocation;
         this.ticketPrice = other.ticketPrice;
         this.imageUrl = other.imageUrl;
     }
 
-    public String getLocation() {
-        return location;
-    }
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    // ---------------- GETTERS & SETTERS ----------------
 
-    // ---------------- GETTERS ----------------
+    public String getEventId() { return eventId; }
+    public void setEventId(String eventId) { this.eventId = eventId; }
 
-    public String getEventId() {
-        return eventId;
-    }
+    public int getCompanyId() { return companyId; }
 
+    public String getEventName() { return eventName; }
 
-    public int getCompanyId() {
-        return companyId;
-    }
-
-
-    public String getEventName() {
-        return eventName;
-    }
-
-
-    public int getEventCapacity() {
-        return eventCapacity;
-    }
-
-    public int getVersion(){
-        return version;
-    }
-
-
-    public boolean isActive() {
-        return isActive;
-    }
-
-
-    public LocalDateTime getEventDate() {
-        return eventDate;
-    }
-
-
-    public SeatingMap getSeatingMap() {
-        return seatingMap;
-    }
-
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
-    }
-
-    public void setEventDate(LocalDateTime eventDate) {
-        this.eventDate = eventDate;
-    }
-
-    public void setSeatingMap(SeatingMap seatingMap) {
-        this.seatingMap = seatingMap;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
+    public int getEventCapacity() { return eventCapacity; }
     public void setEventCapacity(int eventCapacity) { this.eventCapacity = eventCapacity; }
 
-    public String getEventLocation() { return eventLocation; }
-    public void setEventLocation(String eventLocation) { this.eventLocation = eventLocation; }
+    public boolean isActive() { return isActive; }
+
+    public LocalDateTime getEventDate() { return eventDate; }
+    public void setEventDate(LocalDateTime eventDate) { this.eventDate = eventDate; }
+
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
     public Double getTicketPrice() { return ticketPrice; }
     public void setTicketPrice(Double ticketPrice) { this.ticketPrice = ticketPrice; }
@@ -185,17 +163,18 @@ public class Event {
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
-    public ITicketPurchaseRule getTicketPurchasePolicy() {
-        return ticketPurchasePolicy;
-    }
+    public int getVersion() { return version; }
+    public void setVersion(int version) { this.version = version; }
 
-    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) {
-        this.ticketPurchasePolicy = ticketPurchasePolicy;
-    }
+    public SeatingMap getSeatingMap() { return seatingMap; }
+    public void setSeatingMap(SeatingMap seatingMap) { this.seatingMap = seatingMap; }
 
-    public EventPurchasePolicy getPurchasePolicy() {
-        return purchasePolicy;
-    }
+    public ITicketPurchaseRule getTicketPurchasePolicy() { return ticketPurchasePolicy; }
+    public void setTicketPurchasePolicy(ITicketPurchaseRule ticketPurchasePolicy) { this.ticketPurchasePolicy = ticketPurchasePolicy; }
+
+    public EventPurchasePolicy getPurchasePolicy() { return purchasePolicy; }
+
+    // ---------------- BUSINESS LOGIC ----------------
 
     public void setPurchasePolicy(PurchasePolicyDTO dto) {
         EventPurchasePolicy policy = new EventPurchasePolicy();

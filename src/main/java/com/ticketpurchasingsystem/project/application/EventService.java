@@ -6,6 +6,8 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventHandler;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
@@ -18,12 +20,14 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Service
+@Transactional
 public class EventService implements IEventService {
 
     private final EventHandler eventHandler;
     private final loggerDef logger = loggerDef.getInstance();
 
     // Constructor parameters match your original implementation perfectly
+    @Autowired
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
                         AuthenticationService authenticationService) {
