@@ -3,7 +3,6 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import org.springframework.stereotype.Repository;
 
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
-import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -35,5 +34,11 @@ public class MemoryUserRepo implements IUserRepo {
     @Override
     public List<UserInfo> getAllUsers() {
         return new ArrayList<>(users.values());
+    }
+
+    @Override
+    public boolean isAdmin(String userId) {
+        UserInfo user = users.get(userId);
+        return user != null && user.isAdmin();
     }
 }

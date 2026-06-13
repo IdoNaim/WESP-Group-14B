@@ -31,7 +31,9 @@ export type SystemUserDTO = {
   username?: string;
   name?: string;
   email?: string;
-  userGroupDiscount?: string;
+  userState?: string;
+  groupDiscount?: string;
+  isAdmin?: boolean;
   [key: string]: unknown;
 };
 

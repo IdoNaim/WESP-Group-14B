@@ -5,7 +5,6 @@ import com.ticketpurchasingsystem.project.Controllers.AuthController;
 import com.ticketpurchasingsystem.project.Controllers.apidto.LoginRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
@@ -13,7 +12,6 @@ import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.IAdminRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -63,8 +61,7 @@ class AuthApiAcceptanceTest {
                 UserPublisher userPublisher = new UserPublisher(noopPublisher);
                 userService = new UserService(userRepo, userHandler, authService, userPublisher);
 
-                IAdminRepo adminRepo = mock(IAdminRepo.class);
-                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userService, authService, adminRepo)).build();
+                mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userService, authService, userRepo)).build();
                 objectMapper = new ObjectMapper();
         }
 
