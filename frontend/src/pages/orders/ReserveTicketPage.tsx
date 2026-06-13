@@ -289,7 +289,7 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
     }
   }
 
-  rules.push("Resale strictly through EliteTickets platform only.");
+  rules.push("Resale strictly through Idodo Tickets platform only.");
   rules.push(
     `Reserved tickets are held for ${RESERVATION_MINUTES} minutes. Uncompleted orders are released automatically.`
   );
@@ -754,50 +754,6 @@ export default function ReserveTicketsPage() {
       className="flex flex-col min-h-screen relative"
       style={{ fontFamily: "'Inter', sans-serif", backgroundColor: "#fbf9fb", color: "#1b1b1d" }}
     >
-      {/* Nav */}
-      <header
-        style={{ borderBottom: "1px solid #c5c6cd", backgroundColor: "#fbf9fb" }}
-        className="sticky top-0 z-50"
-      >
-        <nav
-          className="flex justify-between items-center px-12 py-4 mx-auto"
-          style={{ maxWidth: 1280 }}
-        >
-          <span style={{ fontSize: 22, fontWeight: 700, color: "#0A192F" }}>EliteTickets</span>
-          <div className="hidden md:flex items-center gap-8">
-            {["Events", "Venues", "My Tickets", "Support"].map((link) => (
-              <a
-                key={link}
-                href="#"
-                style={{
-                  fontSize: 16,
-                  color: link === "My Tickets" ? "#0A192F" : "#5d5f5f",
-                  borderBottom: link === "My Tickets" ? "2px solid #0A192F" : "none",
-                  paddingBottom: link === "My Tickets" ? 4 : 0,
-                  textDecoration: "none",
-                }}
-              >
-                {link}
-              </a>
-            ))}
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(dashboardURL)}
-              className="bg-white px-4 py-1.5 text-sm font-bold rounded-full transition-colors hover:bg-gray-100"
-              style={{ color: "#0A192F", border: "1px solid #c5c6cd" }}
-            >
-              Dashboard
-            </button>
-            <svg className="w-5 h-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-            </svg>
-            <svg className="w-5 h-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-            </svg>
-          </div>
-        </nav>
-      </header>
 
       <main className="flex-grow mx-auto w-full px-12 py-8" style={{ maxWidth: 1280 }}>
         {/* Status Banner */}
@@ -1028,18 +984,6 @@ export default function ReserveTicketsPage() {
           </div>
         </div>
       )}
-
-      <footer className="w-full mt-auto border-t" style={{ borderColor: "#c5c6cd", backgroundColor: "#fff" }}>
-        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-8 gap-3 mx-auto" style={{ maxWidth: 1280 }}>
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#1b1b1d" }}>EliteTickets Global</span>
-          <div className="flex gap-6">
-            {["Privacy Policy", "Terms of Service", "Cookie Settings", "Contact Us"].map((t) => (
-              <a key={t} href="#" className="text-xs hover:text-gray-800 transition-colors" style={{ color: "#5d5f5f" }}>{t}</a>
-            ))}
-          </div>
-          <span className="text-xs" style={{ color: "#5d5f5f" }}>© 2024 EliteTickets Global. All rights reserved.</span>
-        </div>
-      </footer>
     </div>
   );
 }

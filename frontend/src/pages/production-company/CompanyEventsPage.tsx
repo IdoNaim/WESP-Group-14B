@@ -57,11 +57,11 @@ function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, ch
                         <span className="material-symbols-outlined text-[#00dbe7] text-[20px]">{icon}</span>
                         {title}
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1" noValidate>
                     {children}
                     {error && <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                     <button type="submit" disabled={loading}
@@ -109,12 +109,13 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
 
     useEffect(() => {
         const orKeys  = new Set(groups.filter(g => g.type === 'OR').flatMap(g => g.keys));
-        const usedKeys = new Set(groups.flatMap(g => g.keys));
 
-        const minT = usedKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
-        const maxT = usedKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
-        const minA = usedKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
-        const maxA = usedKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
+        // FIXED: Now we ALWAYS parse the values if the user typed them, 
+        // ignoring whether they added them to a specific group or not!
+        const minT = minTickets !== '' ? Number(minTickets) : null;
+        const maxT = maxTickets !== '' ? Number(maxTickets) : null;
+        const minA = minAge !== '' ? Number(minAge) : null;
+        const maxA = maxAge !== '' ? Number(maxAge) : null;
 
         const hasTickets = minT !== null || maxT !== null;
         const hasAge     = minA !== null || maxA !== null;
@@ -128,7 +129,7 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
         });
-    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
+    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine, onChange]);
 
     const addGroup = (type: 'AND' | 'OR') => {
         if (groups.some(g => g.type === type)) return;
@@ -199,10 +200,14 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
                 </p>
 
                 {groups.length === 0 && (
-                    <p className="text-[11px] text-gray-600 font-mono">
-                        Add a group below, then pick which values belong to it.
-                        A rule is only active when assigned to a group.
-                    </p>
+                    <div className="bg-[#00dbe7]/5 border border-[#00dbe7]/15 rounded-lg px-3 py-2.5">
+                        <p className="text-[11px] text-[#00dbe7] font-mono">
+                            Basic policies apply automatically (AND logic).
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                            Add a group below ONLY if you need complex 'OR' conditions (e.g. Min Age OR Max Tickets).
+                        </p>
+                    </div>
                 )}
 
                 {groups.map(group => {
@@ -381,6 +386,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         const pad = (n: number) => String(n).padStart(2, '0');
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })();
+    
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
@@ -443,7 +449,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Location</label>
                         <input className={inputCls} placeholder="e.g. Tel Aviv, Yarkon Park"
-                            value={location} onChange={e => setLocation(e.target.value)} />
+                            value={location} onChange={e => setLocation(e.target.value)} required />
                     </div>
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
@@ -514,7 +520,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     const seats = zoneSeats(zone);
                     return (
                         <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
-                            {/* Zone header */}
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
                                 <button type="button" onClick={() => removeZone(i)}
@@ -523,15 +528,13 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </button>
                             </div>
 
-                            {/* Zone name */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Name</label>
                                 <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
                                     value={zone.label}
-                                    onChange={e => updateZone(i, 'label', e.target.value)} />
+                                    onChange={e => updateZone(i, 'label', e.target.value)} required />
                             </div>
 
-                            {/* Zone type toggle */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Type</label>
                                 <div className="flex gap-2">
@@ -558,7 +561,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             </div>
 
-                            {/* Standing fields */}
                             {zone.kind === 'standing' && (
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
@@ -576,7 +578,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             )}
 
-                            {/* Seating fields */}
                             {zone.kind === 'seating' && (
                                 <>
                                     <div className="grid grid-cols-3 gap-3">
@@ -668,6 +669,7 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
+    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice ? String(event.ticketPrice) : '');
 
     // Photo
     const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
@@ -704,49 +706,70 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const minDateTime = (() => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })();
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
         if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) { setError(dateError); return; }
         if (zoneCapacityError) { setError(zoneCapacityError); return; }
         if (updateSeatingMap && zones.length === 0) { setError('Add at least one zone or disable Update Seating Map.'); return; }
-        setLoading(true); setError(null);
+        
+        setLoading(true); 
+        setError(null);
+        
         try {
             const eventId = event.eventId!;
-            const ops: Promise<boolean>[] = [];
 
-            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
-                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime }));
-            if (Number(capacity) !== event.eventCapacity)
-                ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
+            // ביצוע הבקשות אחת אחרי השנייה כדי למנוע קריסה מול ה-Database
+            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '')) {
+                const ok = await eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime });
+                if (!ok) throw new Error('Failed to update date');
+            }
+
+            if (Number(capacity) !== event.eventCapacity) {
+                const ok = await eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) });
+                if (!ok) throw new Error('Failed to update capacity');
+            }
+
             const newLoc = location || null;
-            if (newLoc !== (event.eventLocation ?? null))
-                ops.push(eventApi.editEventLocation(token, eventId, newLoc));
-            if (imageChanged)
-                ops.push(eventApi.editEventImage(token, eventId, imageUrl));
-            if (updatePolicy)
-                ops.push(eventApi.editEventPolicy(token, eventId, policyDTO));
-            if (updateSeatingMap && zones.length > 0)
-                ops.push(eventApi.editSeatingMap(token, eventId, {
+            if (newLoc !== (event.eventLocation ?? null)) {
+                const ok = await eventApi.editEventLocation(token, eventId, newLoc);
+                if (!ok) throw new Error('Failed to update location');
+            }
+
+            const priceNum = ticketPrice ? Number(ticketPrice) : null;
+            if (priceNum !== (event.ticketPrice ?? null)) {
+                const ok = await eventApi.editEventPrice(token, eventId, priceNum);
+                if (!ok) throw new Error('Failed to update ticket price');
+            }
+
+            if (imageChanged) {
+                const ok = await eventApi.editEventImage(token, eventId, imageUrl);
+                if (!ok) throw new Error('Failed to update image');
+            }
+
+            if (updatePolicy) {
+                const ok = await eventApi.editEventPolicy(token, eventId, policyDTO);
+                if (!ok) throw new Error('Failed to update policy');
+            }
+
+            if (updateSeatingMap && zones.length > 0) {
+                const ok = await eventApi.editSeatingMap(token, eventId, {
                     seatingAreas: zones.filter(z => z.kind === 'seating').map(z => ({ rows: Number(z.rows), seatsPerRow: Number(z.seatsPerRow), price: Number(z.price) })),
                     standingAreas: zones.filter(z => z.kind === 'standing').map(z => ({ capacity: Number(z.capacity), price: Number(z.price) })),
-                }));
+                });
+                if (!ok) throw new Error('Failed to update seating map');
+            }
 
-            if (ops.length === 0) { onClose(); return; }
-            const results = await Promise.all(ops);
-            if (results.some(r => !r)) throw new Error('One or more updates failed');
             onSaved();
-        } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update event'); }
-        setLoading(false);
+        } catch (err) { 
+            setError(err instanceof Error ? err.message : 'Failed to update event'); 
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -763,12 +786,12 @@ function EditEventModal({ event, onClose, onSaved }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Location</label>
                         <input className={inputCls} placeholder="e.g. Tel Aviv, Yarkon Park"
-                            value={location} onChange={e => setLocation(e.target.value)} />
+                            value={location} onChange={e => setLocation(e.target.value)} required />
                     </div>
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
                         <input className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
-                            type="datetime-local" min={minDateTime}
+                            type="datetime-local" 
                             value={dateTime} onChange={e => setDateTime(e.target.value)} required />
                         {dateError && (
                             <p className="text-red-400 text-xs flex items-center gap-1.5 mt-1">
@@ -781,6 +804,11 @@ function EditEventModal({ event, onClose, onSaved }: {
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1}
                             value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1">
+                        <label className={labelCls}>General Ticket Price ($)</label>
+                        <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
+                            value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
                     </div>
 
                     {/* Photo */}
@@ -856,7 +884,7 @@ function EditEventModal({ event, onClose, onSaved }: {
                                     <div className="space-y-1">
                                         <label className={labelCls}>Zone Name</label>
                                         <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
-                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} />
+                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} required />
                                     </div>
                                     <div className="space-y-1">
                                         <label className={labelCls}>Zone Type</label>
