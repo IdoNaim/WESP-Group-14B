@@ -327,6 +327,68 @@ function zoneSeats(z: EventZone): number {
         : (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
 }
 
+// ─── Company policy display ───────────────────────────────────────────────────
+
+function CompanyPolicyDisplay({ dto }: { dto: PurchasePolicyDTO }) {
+    const Badge = ({ type }: { type: 'AND' | 'OR' }) => (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black tracking-widest mx-1.5 ${
+            type === 'AND'
+                ? 'bg-[#00dbe7]/20 text-[#00dbe7]'
+                : 'bg-amber-400/20 text-amber-300'
+        }`}>{type}</span>
+    );
+
+    const ageItems: string[] = [];
+    if (dto.minAge != null) ageItems.push(`Min age: ${dto.minAge}`);
+    if (dto.maxAge != null) ageItems.push(`Max age: ${dto.maxAge}`);
+
+    const qtyItems: string[] = [];
+    if (dto.minTickets != null) qtyItems.push(`Min tickets: ${dto.minTickets}`);
+    if (dto.maxTickets != null) qtyItems.push(`Max tickets: ${dto.maxTickets}`);
+
+    const bothGroups = ageItems.length > 0 && qtyItems.length > 0;
+    const needsAgeParens = bothGroups && ageItems.length > 1;
+    const needsQtyParens = bothGroups && qtyItems.length > 1;
+
+    const ageBlock = ageItems.length === 0 ? null : (
+        <span className="inline-flex items-center">
+            {needsAgeParens && <span className="text-gray-500 text-xs mr-0.5">(</span>}
+            {ageItems.map((item, i) => (
+                <span key={item} className="inline-flex items-center">
+                    {i > 0 && <Badge type={dto.isAgeOr ? 'OR' : 'AND'} />}
+                    <span className="text-amber-300 font-mono text-xs">{item}</span>
+                </span>
+            ))}
+            {needsAgeParens && <span className="text-gray-500 text-xs ml-0.5">)</span>}
+        </span>
+    );
+
+    const qtyBlock = qtyItems.length === 0 ? null : (
+        <span className="inline-flex items-center">
+            {needsQtyParens && <span className="text-gray-500 text-xs mr-0.5">(</span>}
+            {qtyItems.map((item, i) => (
+                <span key={item} className="inline-flex items-center">
+                    {i > 0 && <Badge type={dto.isQuantityOr ? 'OR' : 'AND'} />}
+                    <span className="text-amber-300 font-mono text-xs">{item}</span>
+                </span>
+            ))}
+            {needsQtyParens && <span className="text-gray-500 text-xs ml-0.5">)</span>}
+        </span>
+    );
+
+    if (!ageBlock && !qtyBlock) return null;
+    if (ageBlock && qtyBlock) {
+        return (
+            <span className="inline-flex items-center flex-wrap gap-y-1">
+                {ageBlock}
+                <Badge type={dto.isAgeAndQuantityOr ? 'OR' : 'AND'} />
+                {qtyBlock}
+            </span>
+        );
+    }
+    return <>{ageBlock ?? qtyBlock}</>;
+}
+
 // ─── Create modal ─────────────────────────────────────────────────────────────
 
 function CreateEventModal({ companyId, onClose, onCreated }: {
@@ -371,7 +433,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
 
     const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
 
-    const [companyPolicyDesc, setCompanyPolicyDesc] = useState<string | null>(null);
+    const [companyPolicy, setCompanyPolicy] = useState<PurchasePolicyDTO | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -387,13 +449,9 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
 
     useEffect(() => {
         getCompanyPolicyDTO(companyId).then(dto => {
-            if (!dto) { setCompanyPolicyDesc(null); return; }
-            const parts: string[] = [];
-            if (dto.minAge != null)     parts.push(`Min age: ${dto.minAge}`);
-            if (dto.maxAge != null)     parts.push(`Max age: ${dto.maxAge}`);
-            if (dto.minTickets != null) parts.push(`Min tickets: ${dto.minTickets}`);
-            if (dto.maxTickets != null) parts.push(`Max tickets: ${dto.maxTickets}`);
-            setCompanyPolicyDesc(parts.length > 0 ? parts.join(' · ') : null);
+            if (!dto) { setCompanyPolicy(null); return; }
+            const hasContent = dto.minAge != null || dto.maxAge != null || dto.minTickets != null || dto.maxTickets != null;
+            setCompanyPolicy(hasContent ? dto : null);
         }).catch(() => {});
     }, [companyId]);
 
@@ -647,14 +705,16 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
 
             <PolicyBuilder onChange={setPolicyDTO} />
 
-            {companyPolicyDesc && (
+            {companyPolicy && (
                 <div className="border-t border-gray-800 pt-4">
                     <p className={sectionHdr}>
                         <span className="material-symbols-outlined text-[14px]">domain</span>
                         Company Policy (applies to all events)
                     </p>
                     <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
-                        <p className="text-xs text-amber-300 font-mono">{companyPolicyDesc}</p>
+                        <div className="flex flex-wrap items-center gap-y-1">
+                            <CompanyPolicyDisplay dto={companyPolicy} />
+                        </div>
                         <p className="text-[10px] text-gray-600 mt-1">Event policy is applied on top of this.</p>
                     </div>
                 </div>
