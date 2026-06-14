@@ -6,9 +6,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.infrastructure.persistence.DBEventRepo;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
@@ -22,13 +29,17 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
+@SpringBootTest
+@Transactional
+@ActiveProfiles("test")
 class ReserveTicketsAcceptanceTest {
 
     private EventService eventService;
     private String validToken;
     private String savedEventId;
     private List<String> activeKeysFromMap;
-
+    @Autowired
+    private IEventRepo eventRepo;
     @BeforeEach
     void setUp() {
         // 1. Setup REAL Authentication with a secure 32-byte key
@@ -45,7 +56,7 @@ class ReserveTicketsAcceptanceTest {
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
         // 3. Setup REAL Service
-        eventService = new EventService(new EventRepo(), simplePublisher, authService);
+        eventService = new EventService(eventRepo, simplePublisher, authService);
 
         // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
         // ✅ FIXED: Padded with 3 null values to match the updated 10-parameter record signature
