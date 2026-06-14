@@ -44,13 +44,6 @@ public class EventController {
                 this.eventService = eventService;
         }
 
-        private String extractToken(String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                return authHeader.substring(7);
-        }
-        return authHeader;
-        }
-
         // POST /api/events
         @PostMapping
         public ResponseEntity<String> createEvent(
@@ -107,8 +100,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventDateRequestDTO body) {
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventDate(token, eventId, body.getNewDateTime());
+                boolean success = eventService.editEventDate(authHeader, eventId, body.getNewDateTime());
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -120,8 +112,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventCapacityRequestDTO body) {
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventInventory(token, eventId, body.getNewCapacity());
+                boolean success = eventService.editEventInventory(authHeader, eventId, body.getNewCapacity());
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -133,8 +124,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.removeEvent(token, eventId);
+                boolean success = eventService.removeEvent(authHeader, eventId);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
@@ -146,9 +136,8 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventLocationRequestDTO body) {
-                String token = extractToken(authHeader);
                 
-                boolean success = eventService.editEventLocation(token, eventId, body.getNewLocation());
+                boolean success = eventService.editEventLocation(authHeader, eventId, body.getNewLocation());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
@@ -159,8 +148,7 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventPriceRequestDTO body) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventPrice(token, eventId, body.getNewPrice());
+                boolean success = eventService.editEventPrice(authHeader, eventId, body.getNewPrice());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
@@ -171,8 +159,7 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody EditEventImageRequestDTO body) {
 
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventImage(token, eventId, body.getNewImageUrl());
+                boolean success = eventService.editEventImage(authHeader, eventId, body.getNewImageUrl());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
@@ -183,8 +170,7 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody PurchasePolicyDTO body) {
                 loggerDef.getInstance().info("Received request to edit purchase policy for event " + eventId);
-                String token = extractToken(authHeader);
-                boolean success = eventService.editEventPurchasePolicy(token, eventId, body);
+                boolean success = eventService.editEventPurchasePolicy(authHeader, eventId, body);
                 
                 loggerDef.getInstance().info("Edit event policy for event " + eventId + ": " + (success ? "Success" : "Failure"));
                 loggerDef.getInstance().info("New purchase policy: " + body);
@@ -210,9 +196,8 @@ public class EventController {
                         .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
                         .collect(Collectors.toList());
 
-                String token = extractToken(authHeader);
-                SeatingMap seatingMap = eventService.configureSeatingMap(token, seatingAreas, standingAreas);
-                boolean success = eventService.editEventSeatingMap(token, eventId, seatingMap);
+                SeatingMap seatingMap = eventService.configureSeatingMap(authHeader, seatingAreas, standingAreas);
+                boolean success = eventService.editEventSeatingMap(authHeader, eventId, seatingMap);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();
