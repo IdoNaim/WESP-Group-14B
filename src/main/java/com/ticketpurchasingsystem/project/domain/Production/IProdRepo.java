@@ -11,4 +11,6 @@ public interface IProdRepo {
     Optional<ProductionCompany> findById(Integer companyId);
 
     List<ProductionCompany> findAllByUserId(String userId);
+
+    void deleteAll();
 }

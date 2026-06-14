@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
@@ -53,7 +54,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("createProductionCompany: invalid session token");
@@ -83,7 +84,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -447,7 +448,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule) {
         if (!authenticationService.validate(sessionToken)) {
             return false;

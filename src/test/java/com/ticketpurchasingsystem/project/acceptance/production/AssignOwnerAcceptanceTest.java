@@ -10,13 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
@@ -31,7 +32,6 @@ import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class AssignOwnerAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
@@ -68,6 +68,11 @@ class AssignOwnerAcceptanceTest {
         productionService.createProductionCompany(founderToken,
                 new ProductionCompanyDTO("Events Co", "desc", "events@co.com"));
         companyId = prodRepo.findByName("Events Co").get().getCompanyId();
+    }
+
+    @AfterEach
+    void tearDown() {
+        prodRepo.deleteAll();
     }
 
     @Test
