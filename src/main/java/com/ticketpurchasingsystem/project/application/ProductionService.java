@@ -21,6 +21,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.Pur
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -322,6 +323,38 @@ public class ProductionService implements IProductionService {
         }
         loggerDef.getInstance().error("removeOwner failed after " + maxRetries + " retries");
         return false;
+    }
+
+    @Override
+    @Transactional
+    public boolean setCompanyPurchasePolicy(String sessionToken, Integer companyId, PurchasePolicyDTO dto) {
+        if (!authenticationService.validate(sessionToken)) return false;
+        String userId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) return false;
+        ProductionCompany company = companyOpt.get();
+
+        if (!company.isOwner(userId) && !company.isFounder(userId)) return false;
+
+        company.setPurchasePolicy(dto);
+        try {
+            prodRepo.save(company);
+            loggerDef.getInstance().info("setCompanyPurchasePolicy: policy saved for company " + companyId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("setCompanyPurchasePolicy failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PurchasePolicyDTO getCompanyPurchasePolicy(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) return null;
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) return null;
+        return companyOpt.get().getPurchasePolicyDTO();
     }
 
     @Override

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { eventApi, EventDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { getRolesTree, getPurchaseHistory, HistoryOrderItem } from '../../api/productionCompanyApi';
-import { getCompanyPolicy } from '../../api/purchasePoliciesApi';
+import { getCompanyPolicyDTO } from '../../api/purchasePoliciesApi';
 
 function formatDate(iso: string) {
     try {
@@ -386,9 +386,15 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         : null;
 
     useEffect(() => {
-        getCompanyPolicy(companyId)
-            .then(p => setCompanyPolicyDesc(p?.description ?? null))
-            .catch(() => {});
+        getCompanyPolicyDTO(companyId).then(dto => {
+            if (!dto) { setCompanyPolicyDesc(null); return; }
+            const parts: string[] = [];
+            if (dto.minAge != null)     parts.push(`Min age: ${dto.minAge}`);
+            if (dto.maxAge != null)     parts.push(`Max age: ${dto.maxAge}`);
+            if (dto.minTickets != null) parts.push(`Min tickets: ${dto.minTickets}`);
+            if (dto.maxTickets != null) parts.push(`Max tickets: ${dto.maxTickets}`);
+            setCompanyPolicyDesc(parts.length > 0 ? parts.join(' · ') : null);
+        }).catch(() => {});
     }, [companyId]);
 
     const handleSubmit = async (e: React.FormEvent) => {

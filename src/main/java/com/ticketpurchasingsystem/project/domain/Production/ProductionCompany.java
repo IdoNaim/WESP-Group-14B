@@ -23,6 +23,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.Pur
 import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.tickets.ITicketPurchaseRule;
 
 import jakarta.persistence.CascadeType;
@@ -360,6 +361,101 @@ public class ProductionCompany {
         if (rule instanceof AndRule r) return r.getRules();
         if (rule instanceof OrRule r) return r.getRules();
         return Collections.emptyList();
+    }
+
+    public void setPurchasePolicy(PurchasePolicyDTO dto) {
+        PurchasePolicy policy = new PurchasePolicy();
+
+        IPurchaseRule ageBlock = null;
+        if (dto.minAge() != null && dto.maxAge() != null) {
+            IPurchaseRule minA = new MinAgeRule(dto.minAge());
+            IPurchaseRule maxA = new MaxAgeRule(dto.maxAge());
+            ageBlock = dto.isAgeOr() ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
+        } else if (dto.minAge() != null) {
+            ageBlock = new MinAgeRule(dto.minAge());
+        } else if (dto.maxAge() != null) {
+            ageBlock = new MaxAgeRule(dto.maxAge());
+        }
+
+        IPurchaseRule quantityBlock = null;
+        if (dto.minTickets() != null && dto.maxTickets() != null) {
+            IPurchaseRule minT = new MinTicketsRule(dto.minTickets());
+            IPurchaseRule maxT = new MaxTicketsRule(dto.maxTickets());
+            quantityBlock = dto.isQuantityOr() ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
+        } else if (dto.minTickets() != null) {
+            quantityBlock = new MinTicketsRule(dto.minTickets());
+        } else if (dto.maxTickets() != null) {
+            quantityBlock = new MaxTicketsRule(dto.maxTickets());
+        }
+
+        if (ageBlock != null && quantityBlock != null) {
+            IPurchaseRule root = dto.isAgeAndQuantityOr()
+                    ? new OrRule(ageBlock, quantityBlock)
+                    : new AndRule(ageBlock, quantityBlock);
+            policy.addRule(root);
+        } else if (ageBlock != null) {
+            policy.addRule(ageBlock);
+        } else if (quantityBlock != null) {
+            policy.addRule(quantityBlock);
+        }
+
+        this.purchasePolicy = policy;
+        this.purchaseRules.clear();
+        List<IPurchaseRule> rules = policy.getRules();
+        for (int i = 0; i < rules.size(); i++) {
+            purchaseRules.add(buildRuleEntity(rules.get(i), i));
+        }
+    }
+
+    public PurchasePolicyDTO getPurchasePolicyDTO() {
+        if (purchasePolicy == null || purchasePolicy.getRules().isEmpty()) {
+            return new PurchasePolicyDTO(null, null, false, null, null, false, false);
+        }
+        ProdRuleExtractor extractor = new ProdRuleExtractor();
+        extractor.extract(purchasePolicy.getRules().get(0));
+        return extractor.toDTO();
+    }
+
+    private static class ProdRuleExtractor {
+        Integer minAge, maxAge, minTickets, maxTickets;
+        Boolean isAgeOr, isQuantityOr, isAgeAndQuantityOr;
+
+        void extract(IPurchaseRule rule) {
+            if (rule instanceof MinAgeRule r)      { minAge      = r.getMinimumAge(); }
+            else if (rule instanceof MaxAgeRule r) { maxAge      = r.getMaximumAge(); }
+            else if (rule instanceof MinTicketsRule r) { minTickets = r.getMinimum(); }
+            else if (rule instanceof MaxTicketsRule r) { maxTickets = r.getLimit();   }
+            else if (rule instanceof OrRule r)  { extractBinary(r.getRules(), true);  }
+            else if (rule instanceof AndRule r) { extractBinary(r.getRules(), false); }
+        }
+
+        void extractBinary(List<IPurchaseRule> children, boolean or) {
+            if (children.size() < 2) return;
+            IPurchaseRule left = children.get(0), right = children.get(1);
+            if (isAge(left) && isAge(right))  { isAgeOr = or;              extract(left); extract(right); }
+            else if (isQty(left) && isQty(right)) { isQuantityOr = or;     extract(left); extract(right); }
+            else                              { isAgeAndQuantityOr = or;    extract(left); extract(right); }
+        }
+
+        boolean isAge(IPurchaseRule r) {
+            return r instanceof MinAgeRule || r instanceof MaxAgeRule
+                || (r instanceof AndRule a && !a.getRules().isEmpty() && isAge(a.getRules().get(0)))
+                || (r instanceof OrRule  o && !o.getRules().isEmpty() && isAge(o.getRules().get(0)));
+        }
+
+        boolean isQty(IPurchaseRule r) {
+            return r instanceof MinTicketsRule || r instanceof MaxTicketsRule
+                || (r instanceof AndRule a && !a.getRules().isEmpty() && isQty(a.getRules().get(0)))
+                || (r instanceof OrRule  o && !o.getRules().isEmpty() && isQty(o.getRules().get(0)));
+        }
+
+        PurchasePolicyDTO toDTO() {
+            return new PurchasePolicyDTO(
+                minTickets, maxTickets, Boolean.TRUE.equals(isQuantityOr),
+                minAge,     maxAge,     Boolean.TRUE.equals(isAgeOr),
+                Boolean.TRUE.equals(isAgeAndQuantityOr)
+            );
+        }
     }
 
     // ── Getters / Setters ────────────────────────────────────────────────────
