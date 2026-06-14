@@ -11,7 +11,8 @@ import java.util.List;
 public class EventPurchasePolicy implements IPurchaseRule {
 
     @Id
-    @Column(name = "eventId")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "policy_id", updatable = false, nullable = false)
     private String eventId; // Shares PK/FK with Event
 
     // Database mapped columns (flat representation)
@@ -29,11 +30,6 @@ public class EventPurchasePolicy implements IPurchaseRule {
 
     public EventPurchasePolicy() {
         this.rules = new ArrayList<>();
-    }
-
-    // Assign the event ID so the DB links it to the right event
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
     }
 
     // Called automatically by Hibernate after fetching from DB to rebuild the composite tree

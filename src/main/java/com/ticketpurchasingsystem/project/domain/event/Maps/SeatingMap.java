@@ -21,15 +21,15 @@ public class SeatingMap {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // <--- ADD THIS
     private Long id; // <--- ADD THIS (Database needs a primary key)
 
-    // <--- ADD THESE 2 LINES
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "seating_map_id")
-    private Map<String, AssignedSeat> seats; // Changed from ConcurrentMap to Map for JPA compatibility
+    @MapKey(name = "seatId") // Matches the property name inside AssignedSeat.java
+    private Map<String, AssignedSeat> seats;
 
-    // <--- ADD THESE 2 LINES
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "seating_map_id")
-    private Map<String, StandingArea> standingAreas; // Changed from ConcurrentMap to Map for JPA compatibility
+    @MapKey(name = "areaId") // Matches the property name inside StandingArea.java
+    private Map<String, StandingArea> standingAreas;
 
     @Transient // <--- ADD THIS so DB ignores it
     private final AtomicLong areaIDGenerator = new AtomicLong(0);

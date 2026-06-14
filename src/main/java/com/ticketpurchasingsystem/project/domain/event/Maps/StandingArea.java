@@ -3,16 +3,14 @@ package com.ticketpurchasingsystem.project.domain.event.Maps;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "EventsStandingAres")
-@IdClass(StandingAreaId.class) // Links your standing area composite key class
+@Table(name = "EventsStandingAreas")
 public class StandingArea {
 
     @Id
-    @Column(name = "eventId", insertable = false, updatable = false)
-    private String eventId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Simple, auto-generated database primary key
 
-    @Id
-    @Column(name = "areaId")
+    @Column(name = "areaId", nullable = false)
     private String areaId;
 
     @Column(name = "availableSeats", nullable = false)
@@ -23,19 +21,18 @@ public class StandingArea {
 
     @Column(name = "price", nullable = false)
     private double price;
-//    private String desc;
-
 
     public StandingArea() {}
+
     public StandingArea(int capacity, double priceForTicket, String areaId) {
         this.capacity = capacity;
         this.price = priceForTicket;
-        this.capacity = capacity;
-//        this.desc = desc;
+        this.availableSeats = capacity; // Fixed: Properly initializes available seats
         this.areaId = areaId;
     }
+
     public String getId(){
-        return areaId;
+        return areaId; // Keeps your Map logic working perfectly
     }
 
     public boolean book(String orderId, int numberOfTickets) {
@@ -45,6 +42,7 @@ public class StandingArea {
         }
         return false;
     }
+
     private boolean isBookeable(int numberOfTickets) {
         return availableSeats - numberOfTickets >= 0;
     }
@@ -56,6 +54,7 @@ public class StandingArea {
     public int getAvalibleSeatNumber() {
         return availableSeats;
     }
+
     public boolean unbook(int numberOfTickets) {
         if (numberOfTickets <= 0 || availableSeats + numberOfTickets > capacity) {
             return false;
@@ -63,6 +62,7 @@ public class StandingArea {
         availableSeats += numberOfTickets;
         return true;
     }
+
     public boolean setPriceForTicket(double newPrice) {
         if (newPrice < 0) {
             return false;
@@ -78,10 +78,4 @@ public class StandingArea {
     public int getCapacity() {
         return capacity;
     }
-//    public String getDesc(){
-//        return desc;
-//    }
-//    public void setDesc(String newDesc){
-//        desc = newDesc;
-//    }
 }
