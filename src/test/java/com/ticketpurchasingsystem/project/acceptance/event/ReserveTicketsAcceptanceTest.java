@@ -58,8 +58,7 @@ class ReserveTicketsAcceptanceTest {
         // 3. Setup REAL Service
         eventService = new EventService(eventRepo, simplePublisher, authService);
 
-        // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
-        // ✅ FIXED: Padded with 3 null values to match the updated 10-parameter record signature
+// 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
         EventDTO newEvent = new EventDTO(
                 null,
                 42,
@@ -68,14 +67,16 @@ class ReserveTicketsAcceptanceTest {
                 LocalDateTime.now().plusDays(5),
                 true,
                 "test locaion",
-                null, // imageUrl
-                null, // minZonePrice
-                null  // maxZonePrice
+                null,
+                null,
+                null
         );
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, 0, 120, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
-        savedEventId = "1";
+
+        // ✅ FIXED: Using the actual method available in your IEventRepo
+        savedEventId = eventRepo.findActiveEvents().get(0).getEventId();
 
         // 5. Add a real seating map
         List<SeatingAreaConfig> seatingConfigs = List.of(new SeatingAreaConfig(1, 5, 50.0));
