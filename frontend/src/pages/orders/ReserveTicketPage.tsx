@@ -43,9 +43,7 @@ interface OrderItem {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const RESERVATION_MINUTES = 15;
 const RESERVATION_SECONDS = RESERVATION_MINUTES * 60;
-const DEFAULT_MAX_TICKETS = 4;
 const checkoutWindowURL = "/checkout";
-const dashboardURL = "/dashboard";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +67,7 @@ function parseSeatId(id: string): { zone: string; row: number; number: number } 
   };
 }
 
+// Builds zone and standing layouts based on backend data and currently reserved seats
 function buildZonesFromSeatingMap(
   dto: SeatingMapDTO,
   activeOrder: ActiveOrderDTO | null
@@ -192,13 +191,15 @@ function StandingZoneCard({
   onAdd,
   onRemove,
   totalSelected,
+  maxTickets,
 }: {
   zone: StandingZone;
   onAdd: (id: string) => void;
   onRemove: (id: string) => void;
   totalSelected: number;
+  maxTickets: number | null;
 }) {
-  const canAdd = zone.selected < zone.available && totalSelected < DEFAULT_MAX_TICKETS;
+  const canAdd = zone.selected < zone.available && (maxTickets === null || totalSelected < maxTickets);
   const canRemove = zone.selected > 0;
   const isActive = zone.selected > 0;
 
@@ -249,7 +250,6 @@ function StandingZoneCard({
 
 function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
   const [open, setOpen] = useState(false);
-
   const rules: string[] = [];
 
   if (policy) {
@@ -287,6 +287,9 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
           : "Both the age policy and the ticket quantity policy must be satisfied."
       );
     }
+  } else {
+    // Corrected rule text descriptor
+    rules.push("Minimum of 1 ticket required per order. Maximum amount is unlimited.");
   }
 
   rules.push("Resale strictly through Idodo Tickets platform only.");
@@ -318,12 +321,6 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
       </button>
       {open && (
         <ul className="px-5 pb-4 space-y-1.5 text-sm text-amber-900">
-          {policy === null && (
-            <li className="flex items-start gap-2 text-amber-700/60 italic">
-              <span className="mt-0.5 text-amber-400">•</span>
-              <span>Event purchase policy could not be loaded.</span>
-            </li>
-          )}
           {rules.map((rule, i) => (
             <li key={i} className="flex items-start gap-2">
               <span className="mt-0.5 text-amber-600">•</span>
@@ -468,7 +465,6 @@ export default function ReserveTicketsPage() {
 
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // ── NEW: Modal State ──
   const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
   const [ageInput, setAgeInput] = useState<string>("");
 
@@ -717,12 +713,10 @@ export default function ReserveTicketsPage() {
     }
   };
 
-  // ── Open the Age Modal instead of checking right away ──
   const handleInitiateCheckout = () => {
     setIsAgeModalOpen(true);
   };
 
-  // ── Verify Age and Proceed ──
   const handleConfirmCheckout = async () => {
     const age = parseInt(ageInput, 10);
     if (isNaN(age) || age <= 0) {
@@ -730,8 +724,13 @@ export default function ReserveTicketsPage() {
       return;
     }
 
-    // Close the modal
     setIsAgeModalOpen(false);
+
+    // Corrected check: Validating that they selected 1 or more tickets if there's no custom policy
+    if (!purchasePolicy && totalSelected < 1) {
+      showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
+      return;
+    }
 
     const token = localStorage.getItem("token") ?? "";
     const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, age);
@@ -754,9 +753,7 @@ export default function ReserveTicketsPage() {
       className="flex flex-col min-h-screen relative"
       style={{ fontFamily: "'Inter', sans-serif", backgroundColor: "#fbf9fb", color: "#1b1b1d" }}
     >
-
       <main className="flex-grow mx-auto w-full px-12 py-8" style={{ maxWidth: 1280 }}>
-        {/* Status Banner */}
         {banner && (
           <div
             className={`mb-5 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
@@ -906,6 +903,7 @@ export default function ReserveTicketsPage() {
                             onAdd={handleStandingAdd}
                             onRemove={handleStandingRemove}
                             totalSelected={totalSelected}
+                            maxTickets={effectiveMaxTickets}
                           />
                         ))}
                       </div>
