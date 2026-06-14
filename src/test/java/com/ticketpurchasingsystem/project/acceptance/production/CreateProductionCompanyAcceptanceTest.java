@@ -12,35 +12,44 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
-import com.ticketpurchasingsystem.project.application.SystemAdminService;
+import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
 class CreateProductionCompanyAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
 
+    @Autowired
+    private IProdRepo prodRepo;
+
+    @Autowired
+    private ISessionRepo sessionRepo;
+
     private AuthenticationService authService;
-    private ProdRepo prodRepo;
     private ProductionService productionService;
 
     @BeforeEach
     void setUp() {
-        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();
         authService = new AuthenticationService(domainAuthService, sessionRepo);
-        prodRepo = new ProdRepo();
         ProductionEventPublisher publisher = new ProductionEventPublisher(event -> {});
         productionService = new ProductionService(authService, new ProductionHandler(), prodRepo, publisher);
     }
