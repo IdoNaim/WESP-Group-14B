@@ -34,7 +34,9 @@ function isValidCvv(value: string): boolean {
 }
 
 function isValidCardholderName(value: string): boolean {
-  return value.trim().length >= 2;
+  const trimmedValue = value.trim();
+    // Validates that the length is at least 2 and contains only uppercase/lowercase letters and spaces
+    return trimmedValue.length >= 2 && /^[A-Za-z\s]+$/.test(trimmedValue);
 }
 
 interface ValidationErrors {
