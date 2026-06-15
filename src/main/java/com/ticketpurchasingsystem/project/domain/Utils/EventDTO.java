@@ -1,4 +1,5 @@
 package com.ticketpurchasingsystem.project.domain.Utils;
+
 import java.time.LocalDateTime;
 
 public record EventDTO(
@@ -9,25 +10,12 @@ public record EventDTO(
         LocalDateTime eventDateTime,
         Boolean isActive,
         String eventLocation,
-        Double ticketPrice,
         String imageUrl,
         Double minZonePrice,
         Double maxZonePrice
 ) {
     public EventDTO(String eventId, Integer companyId, String eventName,
                     Integer eventCapacity, LocalDateTime eventDateTime, Boolean isActive) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null, null, null, null);
-    }
-
-    public EventDTO(String eventId, Integer companyId, String eventName,
-                    Integer eventCapacity, LocalDateTime eventDateTime,
-                    Boolean isActive, String eventLocation) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, eventLocation, null, null, null, null);
-    }
-
-    public EventDTO(String eventId, Integer companyId, String eventName,
-                    Integer eventCapacity, LocalDateTime eventDateTime,
-                    Boolean isActive, String eventLocation, Double ticketPrice) {
-        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, eventLocation, ticketPrice, null, null, null);
+        this(eventId, companyId, eventName, eventCapacity, eventDateTime, isActive, null, null, null, null);
     }
 }

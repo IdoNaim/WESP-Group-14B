@@ -197,7 +197,7 @@ public class ProductionHandler {
                     "addPurchasePolicyRule: caller " + userId + " is not an owner of company " + companyId);
             return null;
         }
-        company.getPurchasePolicy().addRule(rule);
+        company.addPurchaseRule(rule);
         return company;
     }
 

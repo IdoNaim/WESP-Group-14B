@@ -14,6 +14,8 @@ public class PurchasePolicy {
         rules.add(rule);
     }
 
+    public List<IPurchaseRule> getRules() { return rules; }
+
     public boolean validate(PurchaseContext context) {
         for (IPurchaseRule rule : rules) {
             if (!rule.validate(context)) {

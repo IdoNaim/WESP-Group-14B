@@ -27,4 +27,5 @@ public interface DBProdRepo extends JpaRepository<ProductionCompany, Integer>, I
     @Query("SELECT DISTINCT p FROM ProductionCompany p LEFT JOIN p.members m " +
            "WHERE p.founderId = :userId OR (m.userId = :userId AND m.permission IS NULL)")
     List<ProductionCompany> findAllByUserId(@Param("userId") String userId);
+
 }
