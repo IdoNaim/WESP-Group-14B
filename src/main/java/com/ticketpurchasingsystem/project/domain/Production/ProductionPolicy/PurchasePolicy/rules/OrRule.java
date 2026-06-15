@@ -13,6 +13,8 @@ public class OrRule implements IPurchaseRule {
         this.rules = Arrays.asList(rules);
     }
 
+    public List<IPurchaseRule> getRules() { return rules; }
+
     @Override
     public boolean validate(PurchaseContext context) {
         for (IPurchaseRule rule : rules) {

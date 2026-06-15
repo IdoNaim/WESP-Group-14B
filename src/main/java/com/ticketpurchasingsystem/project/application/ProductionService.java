@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
@@ -21,6 +22,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.Pur
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -52,7 +54,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Integer createProductionCompany(String sessionToken, ProductionCompanyDTO companyDetails) {
         if (!authenticationService.validate(sessionToken)) {
             loggerDef.getInstance().error("createProductionCompany: invalid session token");
@@ -82,7 +84,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean assignOwner(String sessionToken, Integer companyId, String appointeeUserId) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
@@ -325,6 +327,38 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
+    @Transactional
+    public boolean setCompanyPurchasePolicy(String sessionToken, Integer companyId, PurchasePolicyDTO dto) {
+        if (!authenticationService.validate(sessionToken)) return false;
+        String userId = authenticationService.getUser(sessionToken);
+
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) return false;
+        ProductionCompany company = companyOpt.get();
+
+        if (!company.isOwner(userId) && !company.isFounder(userId)) return false;
+
+        company.setPurchasePolicy(dto);
+        try {
+            prodRepo.save(company);
+            loggerDef.getInstance().info("setCompanyPurchasePolicy: policy saved for company " + companyId);
+            return true;
+        } catch (Exception e) {
+            loggerDef.getInstance().error("setCompanyPurchasePolicy failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PurchasePolicyDTO getCompanyPurchasePolicy(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) return null;
+        Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+        if (companyOpt.isEmpty()) return null;
+        return companyOpt.get().getPurchasePolicyDTO();
+    }
+
+    @Override
     public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets, String userId) {
         throw new UnsupportedOperationException("Unimplemented method 'createEvent'");
     }
@@ -414,7 +448,7 @@ public class ProductionService implements IProductionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule) {
         if (!authenticationService.validate(sessionToken)) {
             return false;

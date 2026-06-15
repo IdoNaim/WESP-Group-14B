@@ -76,14 +76,14 @@ public class EventHandler {
             return null;
         }
 
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+        if (!purchasePolicyDTO.isQuantityOr() && purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
-            logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
+            logger.error("Failed to create event: minTickets cannot be greater than maxTickets in AND rule");
             return null;
         }
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+        if (!purchasePolicyDTO.isAgeOr() && purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
-            logger.error("Failed to create event: minAge cannot be greater than maxAge");
+            logger.error("Failed to create event: minAge cannot be greater than maxAge in AND rule");
             return null;
         }
 
@@ -133,8 +133,7 @@ public class EventHandler {
                 discountPolicy,
                 0
         );
-        event.setEventLocation(eventDTO.eventLocation());
-        event.setTicketPrice(eventDTO.ticketPrice());
+        event.setLocation(eventDTO.eventLocation());
         event.setImageUrl(eventDTO.imageUrl());
 
         try {
@@ -167,8 +166,7 @@ public class EventHandler {
                 displayCapacity,
                 event.getEventDate(),
                 event.isActive(),
-                event.getEventLocation(),
-                event.getTicketPrice(),
+                event.getLocation(),
                 event.getImageUrl(),
                 minPrice,
                 maxPrice
@@ -431,7 +429,7 @@ public class EventHandler {
         try {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
-            event.setEventLocation(newLocation);
+            event.setLocation(newLocation);
             eventRepo.save(event);
             return true;
         } catch (Exception e) {
@@ -447,7 +445,6 @@ public class EventHandler {
         try {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
-            event.setTicketPrice(newPrice);
             eventRepo.save(event);
             return true;
         } catch (Exception e) {
@@ -460,13 +457,13 @@ public class EventHandler {
         if(!authenticationService.validate(extractToken(sesssionToken))){
             throw new IllegalArgumentException("Invalid session token");
         }
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+        if (!purchasePolicyDTO.isQuantityOr() && purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
-            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets");
+            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets in AND rule");
         }
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+        if (!purchasePolicyDTO.isAgeOr() && purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
-            throw new IllegalArgumentException("minAge cannot be greater than maxAge");
+            throw new IllegalArgumentException("minAge cannot be greater than maxAge in AND rule");
         }
         Event event = eventRepo.findById(eventId);
         if(event == null){
