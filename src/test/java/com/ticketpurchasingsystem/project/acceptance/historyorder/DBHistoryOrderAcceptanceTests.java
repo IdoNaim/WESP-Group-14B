@@ -67,6 +67,7 @@ public class DBHistoryOrderAcceptanceTests {
 
     @BeforeEach
     public void setup(){
+        historyOrderRepo.deleteAll();
         sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
