@@ -1,8 +1,9 @@
-System initialization file
-Format: [$var =] command(arg1, arg2, ...);
-Supported commands: guest-entry, register, login, logout,
-create-production-company, create-event, create-history-order
---- Users ---
+# System initialization file
+# Format: [$var =] command(arg1, arg2, ...);
+# Supported commands: guest-entry, register, login, logout,
+#   create-production-company, create-event, create-history-order
+
+# --- Users ---
 $guest1 = guest-entry();
 register($guest1, alice, Alice Smith, pass123, alice@example.com, NONE);
 $alice = login($guest1, alice, pass123);
@@ -11,12 +12,12 @@ $guest2 = guest-entry();
 register($guest2, bob, Bob Jones, pass456, bob@example.com, STUDENT);
 $bob = login($guest2, bob, pass456);
 
---- Production companies ---
+# --- Production companies ---
 $company1 = create-production-company($alice, Live Events Co., Premier live event organizer, contact@liveevents.com);
 $company2 = create-production-company($alice, Comedy Central, Leading comedy event organizer, contact@comedycentral.com);
 
---- Events (create then configure seating map) ---
-configure-event-seating-map(token, eventId, rows, seatsPerRow, price, ...)
+# --- Events (create then configure seating map) ---
+# configure-event-seating-map(token, eventId, rows, seatsPerRow, price, ...)
 create-event($alice, 1, $company1, Rock Night, 500, 2026-07-11T20:00, true, Tel Aviv Arena, 120.0);
 configure-event-seating-map($alice, 1, 10, 10, 120.0, 10, 10, 90.0, 5, 10, 60.0);
 
@@ -26,10 +27,10 @@ configure-event-seating-map($alice, 2, 10, 10, 80.0, 10, 10, 60.0);
 create-event($alice, 3, $company2, Comedy Night 18+, 300, 2026-06-18T20:00, true, Jerusalem Theater, 60.0);
 configure-event-seating-map($alice, 3, 10, 10, 60.0, 10, 10, 45.0, 10, 10, 30.0);
 
---- History orders ---
+# --- History orders ---
 create-history-order(order1, bob, 1, $company1, 100.0, A1, A2);
 create-history-order(order2, bob, 3, $company2, 100.0, A1, A2);
 
---- Logout ---
+# --- Logout ---
 logout(alice, $alice);
 logout(bob, $bob);
