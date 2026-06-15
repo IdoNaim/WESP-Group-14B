@@ -194,6 +194,7 @@ function PolicyBuilder({ onChange, initialDTO }: {
                 && minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return true;
             return false;
         });
+        const hasUnassignedError = filledKeys.length >= 2 && groups.length === 0;
 
         onChange({
             minTickets: minT,
@@ -203,7 +204,7 @@ function PolicyBuilder({ onChange, initialDTO }: {
             maxAge: maxA,
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
-        }, hasAndError);
+        }, hasAndError || hasUnassignedError);
     }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
 
     const addGroup = (type: 'AND' | 'OR') => {
@@ -545,7 +546,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         if (dateError) { setError(dateError); return; }
         if (zones.length === 0) { setError('At least one area zone is required.'); return; }
         if (zoneCapacityError) { setError(zoneCapacityError); return; }
-        if (policyHasError) { setError('Fix the AND group errors in the purchase policy before saving.'); return; }
+        if (policyHasError) { setError('Purchase policy: assign all policies to AND/OR groups, or fix the AND group errors.'); return; }
         setLoading(true); setError(null);
         try {
             const eventId = await eventApi.createEvent(token, {

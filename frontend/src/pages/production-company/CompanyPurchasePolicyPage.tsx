@@ -112,6 +112,7 @@ function PolicyBuilder({
                 && minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return true;
             return false;
         });
+        const hasUnassignedError = filledKeys.length >= 2 && groups.length === 0;
 
         onChange({
             minTickets: minT,
@@ -121,7 +122,7 @@ function PolicyBuilder({
             maxAge: maxA,
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
-        }, hasAndError);
+        }, hasAndError || hasUnassignedError);
     }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
 
     const addGroup = (type: 'AND' | 'OR') => {
@@ -426,7 +427,9 @@ export default function CompanyPurchasePolicyPage() {
                         )}
 
                         {policyHasError && (
-                            <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">Fix the AND group errors above before saving.</p>
+                            <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                                Cannot save — assign all policies to AND/OR groups, or fix the AND group errors above.
+                            </p>
                         )}
                         <button type="submit" disabled={saving || policyHasError}
                             className="w-full py-3 bg-[#2563eb] hover:bg-[#0053db] text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
