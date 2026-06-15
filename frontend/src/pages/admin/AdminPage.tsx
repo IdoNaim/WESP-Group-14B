@@ -85,110 +85,110 @@ export default function AdminPage() {
 
       {!errorMessage && (
         <>
-      <div className="admin-page__stats-grid">
-        <button
-          type="button"
-          className="admin-page__stat-card"
-          onClick={() => setSelectedTab("users")}
-          disabled={loading}
-        >
-          <span className="admin-page__stat-label">Users</span>
-          <strong className="admin-page__stat-value">{data.users.length}</strong>
-        </button>
+          <div className="admin-page__stats-grid">
+            <button
+              type="button"
+              className="admin-page__stat-card"
+              onClick={() => setSelectedTab("users")}
+              disabled={loading}
+            >
+              <span className="admin-page__stat-label">Users</span>
+              <strong className="admin-page__stat-value">{data.users.length}</strong>
+            </button>
 
-        <button
-          type="button"
-          className="admin-page__stat-card"
-          onClick={() => setSelectedTab("activeOrders")}
-          disabled={loading}
-        >
-          <span className="admin-page__stat-label">Active Orders</span>
-          <strong className="admin-page__stat-value">
-            {data.activeOrders.length}
-          </strong>
-        </button>
+            <button
+              type="button"
+              className="admin-page__stat-card"
+              onClick={() => setSelectedTab("activeOrders")}
+              disabled={loading}
+            >
+              <span className="admin-page__stat-label">Active Orders</span>
+              <strong className="admin-page__stat-value">
+                {data.activeOrders.length}
+              </strong>
+            </button>
 
-        <button
-          type="button"
-          className="admin-page__stat-card"
-          onClick={() => setSelectedTab("historyOrders")}
-          disabled={loading}
-        >
-          <span className="admin-page__stat-label">History Orders</span>
-          <strong className="admin-page__stat-value">
-            {data.historyOrders.length}
-          </strong>
-        </button>
+            <button
+              type="button"
+              className="admin-page__stat-card"
+              onClick={() => setSelectedTab("historyOrders")}
+              disabled={loading}
+            >
+              <span className="admin-page__stat-label">History Orders</span>
+              <strong className="admin-page__stat-value">
+                {data.historyOrders.length}
+              </strong>
+            </button>
 
-        <div className="admin-page__stat-card admin-page__stat-card--static">
-          <span className="admin-page__stat-label">Recorded Revenue</span>
-          <strong className="admin-page__stat-value">
-            ₪{totalRevenue.toFixed(2)}
-          </strong>
-        </div>
-      </div>
+            <div className="admin-page__stat-card admin-page__stat-card--static">
+              <span className="admin-page__stat-label">Recorded Revenue</span>
+              <strong className="admin-page__stat-value">
+                ₪{totalRevenue.toFixed(2)}
+              </strong>
+            </div>
+          </div>
 
-      <div className="admin-page__tabs">
-        <button
-          type="button"
-          className={selectedTab === "overview" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
-          onClick={() => setSelectedTab("overview")}
-        >
-          Overview
-        </button>
+          <div className="admin-page__tabs">
+            <button
+              type="button"
+              className={selectedTab === "overview" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
+              onClick={() => setSelectedTab("overview")}
+            >
+              Overview
+            </button>
 
-        <button
-          type="button"
-          className={selectedTab === "users" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
-          onClick={() => setSelectedTab("users")}
-        >
-          Users
-        </button>
+            <button
+              type="button"
+              className={selectedTab === "users" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
+              onClick={() => setSelectedTab("users")}
+            >
+              Users
+            </button>
 
-        <button
-          type="button"
-          className={selectedTab === "activeOrders" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
-          onClick={() => setSelectedTab("activeOrders")}
-        >
-          Active Orders
-        </button>
+            <button
+              type="button"
+              className={selectedTab === "activeOrders" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
+              onClick={() => setSelectedTab("activeOrders")}
+            >
+              Active Orders
+            </button>
 
-        <button
-          type="button"
-          className={selectedTab === "historyOrders" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
-          onClick={() => setSelectedTab("historyOrders")}
-        >
-          History Orders
-        </button>
-      </div>
+            <button
+              type="button"
+              className={selectedTab === "historyOrders" ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"}
+              onClick={() => setSelectedTab("historyOrders")}
+            >
+              History Orders
+            </button>
+          </div>
 
-      <div className="admin-page__panel">
-        {loading && <p className="admin-page__muted">Loading admin data...</p>}
+          <div className="admin-page__panel">
+            {loading && <p className="admin-page__muted">Loading admin data...</p>}
 
-        {!loading && selectedTab === "overview" && (
-          <AdminOverview />
-        )}
+            {!loading && selectedTab === "overview" && (
+              <AdminOverview />
+            )}
 
-        {!loading && selectedTab === "users" && (
-          <AdminUsersTable users={data.users} />
-        )}
+            {!loading && selectedTab === "users" && (
+              <AdminUsersTable users={data.users} />
+            )}
 
-        {!loading && selectedTab === "activeOrders" && (
-          <AdminGenericTable
-            title="Active Orders"
-            emptyMessage="No active orders found."
-            items={data.activeOrders}
-          />
-        )}
+            {!loading && selectedTab === "activeOrders" && (
+              <AdminGenericTable
+                title="Active Orders"
+                emptyMessage="No active orders found."
+                items={data.activeOrders}
+              />
+            )}
 
-        {!loading && selectedTab === "historyOrders" && (
-          <AdminGenericTable
-            title="History Orders"
-            emptyMessage="No history orders found."
-            items={data.historyOrders}
-          />
-        )}
-      </div>
+            {!loading && selectedTab === "historyOrders" && (
+              <AdminGenericTable
+                title="History Orders"
+                emptyMessage="No history orders found."
+                items={data.historyOrders}
+              />
+            )}
+          </div>
         </>
       )}
     </section>
@@ -252,12 +252,7 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
                 <td>{String(user.id ?? user.userId ?? "—")}</td>
                 <td>{String(user.username ?? user.name ?? "—")}</td>
                 <td>{String(user.email ?? "—")}</td>
-<<<<<<< HEAD
-                <td>{String(user.userState ?? "—")}</td>
-                <td>{user.isAdmin === true ? "Yes" : user.isAdmin === false ? "No" : "—"}</td>
-=======
                 <td>{String(user.userGroupDiscount ?? "—")}</td>
->>>>>>> origin/main
               </tr>
             ))}
           </tbody>

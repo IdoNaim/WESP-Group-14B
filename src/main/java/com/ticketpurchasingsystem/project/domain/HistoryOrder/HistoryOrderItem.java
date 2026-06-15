@@ -56,6 +56,15 @@ public class HistoryOrderItem {
     public Timestamp getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
+
+    public List<String> getSeatIds() { return seatIds; }
+    public void setSeatIds(List<String> seatIds) { this.seatIds = seatIds; }
+
+    public HashMap<String, Integer> getStandingAreaQuantities() { return StandingAreaQuantities; }
+    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) { this.StandingAreaQuantities = standingAreaQuantities; }
+
     public HistoryOrderDTO makeDTO() {
         return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, StandingAreaQuantities);
     }

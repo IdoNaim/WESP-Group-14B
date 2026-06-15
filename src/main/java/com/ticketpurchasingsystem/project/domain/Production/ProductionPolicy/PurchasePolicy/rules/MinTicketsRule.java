@@ -10,6 +10,8 @@ public class MinTicketsRule implements IPurchaseRule {
         this.minimum = minimum;
     }
 
+    public int getMinimum() { return minimum; }
+
     @Override
     public boolean validate(PurchaseContext context) {
         return context.getRequestedAmount() >= minimum;

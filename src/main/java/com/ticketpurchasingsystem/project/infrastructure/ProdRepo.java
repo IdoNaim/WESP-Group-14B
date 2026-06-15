@@ -91,4 +91,11 @@ public class ProdRepo implements IProdRepo {
         }
         return result;
     }
+
+    @Override
+    public void deleteAll() {
+        storage.clear();
+        nameToId.clear();
+        idGenerator.set(1);
+    }
 }
