@@ -59,7 +59,7 @@ function PolicyBuilder({
     onChange,
 }: {
     initialDTO: PurchasePolicyDTO | null;
-    onChange: (dto: PurchasePolicyDTO) => void;
+    onChange: (dto: PurchasePolicyDTO, hasError: boolean) => void;
 }) {
     const init = dtoToFields(initialDTO);
     const initGroups = dtoToGroups(initialDTO);
@@ -87,13 +87,31 @@ function PolicyBuilder({
         const orKeys  = new Set(groups.filter(g => g.type === 'OR').flatMap(g => g.keys));
         const usedKeys = new Set(groups.flatMap(g => g.keys));
 
-        const minT = usedKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
-        const maxT = usedKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
-        const minA = usedKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
-        const maxA = usedKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
+        const filledKeys: PolicyKey[] = [];
+        if (minTickets !== '') filledKeys.push('minTickets');
+        if (maxTickets !== '') filledKeys.push('maxTickets');
+        if (minAge !== '') filledKeys.push('minAge');
+        if (maxAge !== '') filledKeys.push('maxAge');
+        const effectiveKeys = usedKeys.size === 0 && filledKeys.length === 1
+            ? new Set<PolicyKey>([filledKeys[0]])
+            : usedKeys;
+
+        const minT = effectiveKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
+        const maxT = effectiveKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
+        const minA = effectiveKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
+        const maxA = effectiveKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
 
         const hasTickets = minT !== null || maxT !== null;
         const hasAge     = minA !== null || maxA !== null;
+
+        const hasAndError = groups.some(g => {
+            if (g.type !== 'AND') return false;
+            if (g.keys.includes('minTickets') && g.keys.includes('maxTickets')
+                && minTickets !== '' && maxTickets !== '' && Number(minTickets) > Number(maxTickets)) return true;
+            if (g.keys.includes('minAge') && g.keys.includes('maxAge')
+                && minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return true;
+            return false;
+        });
 
         onChange({
             minTickets: minT,
@@ -103,7 +121,7 @@ function PolicyBuilder({
             maxAge: maxA,
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
-        });
+        }, hasAndError);
     }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
 
     const addGroup = (type: 'AND' | 'OR') => {
@@ -169,10 +187,18 @@ function PolicyBuilder({
                 </p>
 
                 {groups.length === 0 && (
-                    <p className="text-[11px] text-gray-600 font-mono">
-                        Add a group below, then pick which values belong to it.
-                        A rule is only active when assigned to a group.
-                    </p>
+                    available.length === 1
+                        ? <p className="text-[11px] text-green-500 font-mono">
+                            One policy — no AND/OR group needed.
+                          </p>
+                        : available.length >= 2
+                            ? <p className="text-[11px] text-red-400 font-mono">
+                                {available.length} policies set — you must assign them to AND/OR groups below.
+                              </p>
+                            : <p className="text-[11px] text-gray-600 font-mono">
+                                Add a group below, then pick which values belong to it.
+                                A rule is only active when assigned to a group.
+                              </p>
                 )}
 
                 {groups.map(group => {
@@ -276,6 +302,7 @@ export default function CompanyPurchasePolicyPage() {
 
     const [currentDTO, setCurrentDTO] = useState<PurchasePolicyDTO | null>(null);
     const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
+    const [policyHasError, setPolicyHasError] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -387,7 +414,7 @@ export default function CompanyPurchasePolicyPage() {
                             {hasCurrentPolicy ? 'Replace Policy' : 'Set Policy'}
                         </p>
 
-                        <PolicyBuilder initialDTO={currentDTO} onChange={setPolicyDTO} />
+                        <PolicyBuilder initialDTO={currentDTO} onChange={(dto, hasError) => { setPolicyDTO(dto); setPolicyHasError(hasError); }} />
 
                         <p className="text-[10px] text-gray-600 border-t border-gray-800 pt-3">
                             Saving replaces the existing company policy. Leave all fields empty to clear the policy.
@@ -398,7 +425,10 @@ export default function CompanyPurchasePolicyPage() {
                             <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
                         )}
 
-                        <button type="submit" disabled={saving}
+                        {policyHasError && (
+                            <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">Fix the AND group errors above before saving.</p>
+                        )}
+                        <button type="submit" disabled={saving || policyHasError}
                             className="w-full py-3 bg-[#2563eb] hover:bg-[#0053db] text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                             {saving && <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>}
                             SAVE POLICY

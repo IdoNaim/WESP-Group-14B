@@ -87,13 +87,71 @@ const POLICY_META: { key: PolicyKey; label: string }[] = [
     { key: 'maxAge',     label: 'Max Age'            },
 ];
 
-function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => void }) {
-    const [minTickets, setMinTickets] = useState('');
-    const [maxTickets, setMaxTickets] = useState('');
-    const [minAge,     setMinAge]     = useState('');
-    const [maxAge,     setMaxAge]     = useState('');
-    const [groups,     setGroups]     = useState<PolicyGroup[]>([]);
-    const [groupCombine, setGroupCombine] = useState<'AND' | 'OR'>('AND');
+function dtoToFields(dto: PurchasePolicyDTO | null) {
+    return {
+        minTickets: dto?.minTickets != null ? String(dto.minTickets) : '',
+        maxTickets: dto?.maxTickets != null ? String(dto.maxTickets) : '',
+        minAge:     dto?.minAge     != null ? String(dto.minAge)     : '',
+        maxAge:     dto?.maxAge     != null ? String(dto.maxAge)     : '',
+    };
+}
+
+function dtoToGroups(dto: PurchasePolicyDTO | null): { groups: PolicyGroup[]; combine: 'AND' | 'OR' } {
+    if (!dto) return { groups: [], combine: 'AND' };
+    const hasAge = dto.minAge != null || dto.maxAge != null;
+    const hasQty = dto.minTickets != null || dto.maxTickets != null;
+    const groups: PolicyGroup[] = [];
+    const ageKeys: PolicyKey[] = [];
+    if (dto.minAge != null) ageKeys.push('minAge');
+    if (dto.maxAge != null) ageKeys.push('maxAge');
+    const qtyKeys: PolicyKey[] = [];
+    if (dto.minTickets != null) qtyKeys.push('minTickets');
+    if (dto.maxTickets != null) qtyKeys.push('maxTickets');
+    if (hasAge && ageKeys.length > 0) groups.push({ id: 'age', type: dto.isAgeOr ? 'OR' : 'AND', keys: ageKeys });
+    if (hasQty && qtyKeys.length > 0) groups.push({ id: 'qty', type: dto.isQuantityOr ? 'OR' : 'AND', keys: qtyKeys });
+    const combine = (hasAge && hasQty && dto.isAgeAndQuantityOr) ? 'OR' : 'AND';
+    return { groups, combine };
+}
+
+function reconstructSeatingZones(assignedSeats: { id: string; priceForTicket: number }[]): EventZone[] {
+    const zoneData = new Map<string, { maxRow: number; maxCol: number; price: number }>();
+    for (const seat of assignedSeats) {
+        const parts = seat.id.split('_');
+        if (parts.length < 3) continue;
+        const zoneId = parts[0];
+        const row = parseInt(parts[1]);
+        const col = parseInt(parts[2]);
+        const existing = zoneData.get(zoneId);
+        if (!existing) {
+            zoneData.set(zoneId, { maxRow: row, maxCol: col, price: seat.priceForTicket });
+        } else {
+            existing.maxRow = Math.max(existing.maxRow, row);
+            existing.maxCol = Math.max(existing.maxCol, col);
+        }
+    }
+    return Array.from(zoneData.entries()).map(([, data], i) => ({
+        label: `Seating Zone ${i + 1}`,
+        kind: 'seating' as ZoneKind,
+        capacity: '',
+        rows: String(data.maxRow),
+        seatsPerRow: String(data.maxCol),
+        price: String(data.price),
+    }));
+}
+
+function PolicyBuilder({ onChange, initialDTO }: {
+    onChange: (dto: PurchasePolicyDTO, hasError: boolean) => void;
+    initialDTO?: PurchasePolicyDTO | null;
+}) {
+    const init = dtoToFields(initialDTO ?? null);
+    const initGroups = dtoToGroups(initialDTO ?? null);
+
+    const [minTickets, setMinTickets] = useState(init.minTickets);
+    const [maxTickets, setMaxTickets] = useState(init.maxTickets);
+    const [minAge,     setMinAge]     = useState(init.minAge);
+    const [maxAge,     setMaxAge]     = useState(init.maxAge);
+    const [groups,     setGroups]     = useState<PolicyGroup[]>(initGroups.groups);
+    const [groupCombine, setGroupCombine] = useState<'AND' | 'OR'>(initGroups.combine);
 
     const vals: Record<PolicyKey, string> = { minTickets, maxTickets, minAge, maxAge };
 
@@ -111,13 +169,31 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
         const orKeys  = new Set(groups.filter(g => g.type === 'OR').flatMap(g => g.keys));
         const usedKeys = new Set(groups.flatMap(g => g.keys));
 
-        const minT = usedKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
-        const maxT = usedKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
-        const minA = usedKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
-        const maxA = usedKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
+        const filledKeys: PolicyKey[] = [];
+        if (minTickets !== '') filledKeys.push('minTickets');
+        if (maxTickets !== '') filledKeys.push('maxTickets');
+        if (minAge !== '') filledKeys.push('minAge');
+        if (maxAge !== '') filledKeys.push('maxAge');
+        const effectiveKeys = usedKeys.size === 0 && filledKeys.length === 1
+            ? new Set<PolicyKey>([filledKeys[0]])
+            : usedKeys;
+
+        const minT = effectiveKeys.has('minTickets') && minTickets !== '' ? Number(minTickets) : null;
+        const maxT = effectiveKeys.has('maxTickets') && maxTickets !== '' ? Number(maxTickets) : null;
+        const minA = effectiveKeys.has('minAge')     && minAge     !== '' ? Number(minAge)     : null;
+        const maxA = effectiveKeys.has('maxAge')     && maxAge     !== '' ? Number(maxAge)     : null;
 
         const hasTickets = minT !== null || maxT !== null;
         const hasAge     = minA !== null || maxA !== null;
+
+        const hasAndError = groups.some(g => {
+            if (g.type !== 'AND') return false;
+            if (g.keys.includes('minTickets') && g.keys.includes('maxTickets')
+                && minTickets !== '' && maxTickets !== '' && Number(minTickets) > Number(maxTickets)) return true;
+            if (g.keys.includes('minAge') && g.keys.includes('maxAge')
+                && minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return true;
+            return false;
+        });
 
         onChange({
             minTickets: minT,
@@ -127,7 +203,7 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
             maxAge: maxA,
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
-        });
+        }, hasAndError);
     }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
 
     const addGroup = (type: 'AND' | 'OR') => {
@@ -199,10 +275,18 @@ function PolicyBuilder({ onChange }: { onChange: (dto: PurchasePolicyDTO) => voi
                 </p>
 
                 {groups.length === 0 && (
-                    <p className="text-[11px] text-gray-600 font-mono">
-                        Add a group below, then pick which values belong to it.
-                        A rule is only active when assigned to a group.
-                    </p>
+                    available.length === 1
+                        ? <p className="text-[11px] text-green-500 font-mono">
+                            One policy — no AND/OR group needed.
+                          </p>
+                        : available.length >= 2
+                            ? <p className="text-[11px] text-red-400 font-mono">
+                                {available.length} policies set — you must assign them to AND/OR groups below.
+                              </p>
+                            : <p className="text-[11px] text-gray-600 font-mono">
+                                Add a group below, then pick which values belong to it.
+                                A rule is only active when assigned to a group.
+                              </p>
                 )}
 
                 {groups.map(group => {
@@ -432,6 +516,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         : null;
 
     const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
+    const [policyHasError, setPolicyHasError] = useState(false);
 
     const [companyPolicy, setCompanyPolicy] = useState<PurchasePolicyDTO | null>(null);
     const [loading, setLoading] = useState(false);
@@ -460,6 +545,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         if (dateError) { setError(dateError); return; }
         if (zones.length === 0) { setError('At least one area zone is required.'); return; }
         if (zoneCapacityError) { setError(zoneCapacityError); return; }
+        if (policyHasError) { setError('Fix the AND group errors in the purchase policy before saving.'); return; }
         setLoading(true); setError(null);
         try {
             const eventId = await eventApi.createEvent(token, {
@@ -703,7 +789,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                 )}
             </div>
 
-            <PolicyBuilder onChange={setPolicyDTO} />
+            <PolicyBuilder onChange={(dto, hasError) => { setPolicyDTO(dto); setPolicyHasError(hasError); }} />
 
             {companyPolicy && (
                 <div className="border-t border-gray-800 pt-4">
@@ -752,7 +838,11 @@ function EditEventModal({ event, onClose, onSaved }: {
 
     // Purchase policy
     const [policyDTO, setPolicyDTO] = useState<PurchasePolicyDTO>({ isQuantityOr: false, isAgeOr: false, isAgeAndQuantityOr: false });
+    const [policyHasError, setPolicyHasError] = useState(false);
     const [updatePolicy, setUpdatePolicy] = useState(false);
+    const [companyPolicy, setCompanyPolicy] = useState<PurchasePolicyDTO | null>(null);
+    const [currentEventPolicy, setCurrentEventPolicy] = useState<PurchasePolicyDTO | null>(null);
+    const [loadingInitial, setLoadingInitial] = useState(true);
 
     // Seating map
     const [updateSeatingMap, setUpdateSeatingMap] = useState(false);
@@ -770,6 +860,33 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    useEffect(() => {
+        Promise.all([
+            getCompanyPolicyDTO(event.companyId ?? 0).catch(() => null),
+            eventApi.getEventPurchasePolicy(token, event.eventId!).catch(() => null),
+            eventApi.getEventSeatingMap(token, event.eventId!).catch(() => null),
+        ]).then(([cp, ep, sm]) => {
+            const hasContent = cp && (cp.minAge != null || cp.maxAge != null || cp.minTickets != null || cp.maxTickets != null);
+            setCompanyPolicy(hasContent ? cp : null);
+            setCurrentEventPolicy(ep);
+            if (sm) {
+                const loadedZones: EventZone[] = [
+                    ...sm.standingAreas.map((area, i) => ({
+                        label: `Standing Zone ${i + 1}`,
+                        kind: 'standing' as ZoneKind,
+                        capacity: String(area.capacity),
+                        rows: '',
+                        seatsPerRow: '',
+                        price: String(area.priceForTicket),
+                    })),
+                    ...reconstructSeatingZones(sm.assignedSeats),
+                ];
+                setZones(loadedZones);
+            }
+            setLoadingInitial(false);
+        });
+    }, [event.eventId]);
+
     const minDateTime = (() => {
         const d = new Date();
         d.setSeconds(0, 0);
@@ -785,6 +902,7 @@ function EditEventModal({ event, onClose, onSaved }: {
         if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) { setError(dateError); return; }
         if (zoneCapacityError) { setError(zoneCapacityError); return; }
         if (updateSeatingMap && zones.length === 0) { setError('Add at least one zone or disable Update Seating Map.'); return; }
+        if (updatePolicy && policyHasError) { setError('Fix the AND group errors in the purchase policy before saving.'); return; }
         setLoading(true); setError(null);
         try {
             const eventId = event.eventId!;
@@ -883,7 +1001,34 @@ function EditEventModal({ event, onClose, onSaved }: {
                     </span>
                     <span className="material-symbols-outlined text-[18px]">{updatePolicy ? 'expand_less' : 'expand_more'}</span>
                 </button>
-                {updatePolicy && <div className="mt-3"><PolicyBuilder onChange={setPolicyDTO} /></div>}
+                {updatePolicy && (
+                    <div className="mt-3 space-y-3">
+                        {loadingInitial
+                            ? <div className="flex justify-center py-4">
+                                <span className="material-symbols-outlined animate-spin text-[20px] text-[#00dbe7]">refresh</span>
+                              </div>
+                            : <PolicyBuilder
+                                key={event.eventId}
+                                initialDTO={currentEventPolicy}
+                                onChange={(dto, hasError) => { setPolicyDTO(dto); setPolicyHasError(hasError); }}
+                              />
+                        }
+                        {!loadingInitial && companyPolicy && (
+                            <div className="border-t border-gray-800 pt-3">
+                                <p className={sectionHdr}>
+                                    <span className="material-symbols-outlined text-[14px]">domain</span>
+                                    Company Policy (applies to all events)
+                                </p>
+                                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                                    <div className="flex flex-wrap items-center gap-y-1">
+                                        <CompanyPolicyDisplay dto={companyPolicy} />
+                                    </div>
+                                    <p className="text-[10px] text-gray-600 mt-1">Event policy is applied on top of this.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Seating map toggle */}
