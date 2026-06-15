@@ -5,23 +5,31 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
-
+import org.springframework.transaction.annotation.Transactional;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
 class LoginAcceptanceTest {
 
     private static final String TEST_SECRET = "my-test-secret-key-for-jwt-testing-only!";
 
     private AuthenticationService authService;
-
+    @Autowired
+    private ISessionRepo sessionRepo;
     @BeforeEach
     void setUp() {
-        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
         ReflectionTestUtils.setField(domainAuthService, "secret", TEST_SECRET);
         domainAuthService.init();

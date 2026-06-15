@@ -76,14 +76,14 @@ public class EventHandler {
             return null;
         }
 
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+        if (!purchasePolicyDTO.isQuantityOr() && purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
-            logger.error("Failed to create event: minTickets cannot be greater than maxTickets");
+            logger.error("Failed to create event: minTickets cannot be greater than maxTickets in AND rule");
             return null;
         }
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+        if (!purchasePolicyDTO.isAgeOr() && purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
-            logger.error("Failed to create event: minAge cannot be greater than maxAge");
+            logger.error("Failed to create event: minAge cannot be greater than maxAge in AND rule");
             return null;
         }
 
@@ -457,13 +457,13 @@ public class EventHandler {
         if(!authenticationService.validate(extractToken(sesssionToken))){
             throw new IllegalArgumentException("Invalid session token");
         }
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
+        if (!purchasePolicyDTO.isQuantityOr() && purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null
                 && purchasePolicyDTO.minTickets() > purchasePolicyDTO.maxTickets()) {
-            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets");
+            throw new IllegalArgumentException("minTickets cannot be greater than maxTickets in AND rule");
         }
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
+        if (!purchasePolicyDTO.isAgeOr() && purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null
                 && purchasePolicyDTO.minAge() > purchasePolicyDTO.maxAge()) {
-            throw new IllegalArgumentException("minAge cannot be greater than maxAge");
+            throw new IllegalArgumentException("minAge cannot be greater than maxAge in AND rule");
         }
         Event event = eventRepo.findById(eventId);
         if(event == null){

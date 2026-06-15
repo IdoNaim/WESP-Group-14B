@@ -10,6 +10,8 @@ public class MinAgeRule implements IPurchaseRule {
         this.minimumAge = minimumAge;
     }
 
+    public int getMinimumAge() { return minimumAge; }
+
     @Override
     public boolean validate(PurchaseContext context) {
         return context.getUserAge() >= minimumAge;

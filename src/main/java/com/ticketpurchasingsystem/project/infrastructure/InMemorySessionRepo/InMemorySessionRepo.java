@@ -13,8 +13,9 @@ public class InMemorySessionRepo implements ISessionRepo {
     private final ConcurrentHashMap<String, SessionToken> sessions = new ConcurrentHashMap<>();
 
     @Override
-    public void save(SessionToken sessionToken) {
+    public SessionToken save(SessionToken sessionToken) {
         sessions.put(sessionToken.getToken(), sessionToken);
+        return sessionToken;
     }
 
     @Override

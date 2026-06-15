@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../../api/productionCompanyApi';
-import { getCompanyPolicy, assignCompanyPolicy, PolicyFormData } from '../../api/purchasePoliciesApi';
 import { authApi } from '../../api/authApi';
 
 type UserRole = 'FOUNDER' | 'OWNER' | 'MANAGER';
@@ -18,7 +17,7 @@ function myPermissions(userId: string, rolesTree: api.RolesTreeDTO): Set<api.Man
 
 
 type Tab = 'TEAM' | 'HISTORY' | 'ACTIONS';
-type ModalType = 'assignOwner' | 'appointManager' | 'companyPolicy' | { type: 'editPerms'; managerId: string } | null;
+type ModalType = 'assignOwner' | 'appointManager' | { type: 'editPerms'; managerId: string } | null;
 
 const PERM_LABELS: Record<api.ManagerPermission, string> = {
     INVENTORY_MANAGEMENT: 'Inventory Management',
@@ -340,156 +339,6 @@ function HistoryTab({ history, loading }: { history: api.HistoryOrderItem[]; loa
                     </div>
                 </div>
             ))}
-        </div>
-    );
-}
-
-// ─── Company Policy Modal ─────────────────────────────────────────────────────
-
-const inputCls = 'w-full bg-[#0b1326] border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-[#2563eb] transition-colors';
-const labelCls = 'text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400';
-const sectionCls = 'flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-[#2563eb] mb-3';
-
-
-function CompanyPolicyModal({ companyId, onClose, onSaved }: {
-    companyId: number; onClose: () => void; onSaved: () => void;
-}) {
-    const [minTickets, setMinTickets] = useState('');
-    const [maxTickets, setMaxTickets] = useState('');
-    const [minAge, setMinAge] = useState('');
-    const [maxAge, setMaxAge] = useState('');
-    const [composition, setComposition] = useState<'AND' | 'OR'>('AND');
-    const [currentPolicy, setCurrentPolicy] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        getCompanyPolicy(companyId)
-            .then(p => setCurrentPolicy(p?.description ?? 'No policy set'))
-            .catch(() => setCurrentPolicy(null));
-    }, [companyId]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true); setError(null);
-        try {
-            const form: PolicyFormData = {
-                minTickets: minTickets !== '' ? Number(minTickets) : null,
-                maxTickets: maxTickets !== '' ? Number(maxTickets) : null,
-                minAge: minAge !== '' ? Number(minAge) : null,
-                maxAge: maxAge !== '' ? Number(maxAge) : null,
-                composition,
-            };
-            await assignCompanyPolicy(companyId, form);
-            onSaved();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update company policy');
-        }
-        setLoading(false);
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-[#171f33] border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
-                    <h3 className="font-black text-white tracking-wide text-sm flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#2563eb] text-[20px]">policy</span>
-                        COMPANY PURCHASE POLICY
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
-                </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
-                    {/* Current policy */}
-                    {currentPolicy && (
-                        <div className="bg-[#2563eb]/5 border border-[#2563eb]/20 rounded-lg px-3 py-2.5">
-                            <p className="text-[10px] font-mono font-bold text-[#2563eb] uppercase tracking-widest mb-1">Current Policy</p>
-                            <p className="text-xs text-gray-300 font-mono">{currentPolicy}</p>
-                        </div>
-                    )}
-
-                    {/* Quantity */}
-                    <div>
-                        <p className={sectionCls}>
-                            <span className="material-symbols-outlined text-[14px]">confirmation_number</span>
-                            Ticket Quantity
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <label className={labelCls}>Min Tickets / User</label>
-                                <input className={inputCls} type="number" min={0} placeholder="e.g. 1"
-                                    value={minTickets} onChange={e => setMinTickets(e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Max Tickets / User</label>
-                                <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
-                                    value={maxTickets} onChange={e => setMaxTickets(e.target.value)} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Age */}
-                    <div className="border-t border-gray-800 pt-4">
-                        <p className={sectionCls}>
-                            <span className="material-symbols-outlined text-[14px]">person</span>
-                            Age Restriction <span className="text-gray-600 normal-case font-normal">(optional)</span>
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <label className={labelCls}>Min Age</label>
-                                <input className={inputCls} type="number" min={0} max={120} placeholder="e.g. 18"
-                                    value={minAge} onChange={e => setMinAge(e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Max Age</label>
-                                <input className={inputCls} type="number" min={0} max={120} placeholder="e.g. 65"
-                                    value={maxAge} onChange={e => setMaxAge(e.target.value)} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Composition */}
-                    <div className="border-t border-gray-800 pt-4">
-                        <p className={sectionCls}>
-                            <span className="material-symbols-outlined text-[14px]">merge</span>
-                            Rule Composition
-                        </p>
-                        <div className="flex gap-2">
-                            {(['AND', 'OR'] as const).map(opt => (
-                                <button
-                                    key={opt}
-                                    type="button"
-                                    onClick={() => setComposition(opt)}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${composition === opt
-                                        ? 'bg-[#2563eb] border-[#2563eb] text-white'
-                                        : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'
-                                        }`}
-                                >
-                                    {opt}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[10px] text-gray-600 mt-2">
-                            {composition === 'AND'
-                                ? 'AND — buyers must satisfy ALL rules (quantity AND age).'
-                                : 'OR — buyers must satisfy ANY one rule (quantity OR age).'}
-                        </p>
-                    </div>
-
-                    <p className="text-[10px] text-gray-600 border-t border-gray-800 pt-3">
-                        This policy applies to all events of this company and is enforced alongside each event's own policy.
-                        Leave fields empty to remove that constraint.
-                    </p>
-
-                    {error && <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
-                    <button type="submit" disabled={loading}
-                        className="w-full py-3 bg-[#2563eb] hover:bg-[#0053db] text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
-                        {loading && <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>}
-                        SAVE POLICY
-                    </button>
-                </form>
-            </div>
         </div>
     );
 }
@@ -918,20 +767,11 @@ export default function ProductionCompanyPage() {
                         myPerms={myPerms}
                         onAssignOwner={() => { setActiveTab('TEAM'); openModal('assignOwner'); }}
                         onAppointManager={() => { setActiveTab('TEAM'); openModal('appointManager'); }}
-                        onManagePolicies={() => openModal('companyPolicy')}
+                        onManagePolicies={() => navigate(`/company/${numericId}/purchase-policy`)}
                         onSwitchToHistory={() => setActiveTab('HISTORY')}
                     />
                 )}
             </div>
-
-            {/* Modal: Company Policy */}
-            {modal === 'companyPolicy' && (
-                <CompanyPolicyModal
-                    companyId={numericId}
-                    onClose={closeModal}
-                    onSaved={() => { closeModal(); showToast('Company policy updated!'); }}
-                />
-            )}
 
             {/* Modal: Assign Owner */}
             {modal === 'assignOwner' && (
