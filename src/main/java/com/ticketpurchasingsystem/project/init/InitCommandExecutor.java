@@ -176,16 +176,22 @@ public class InitCommandExecutor {
             // ── Event commands ────────────────────────────────────────────
 
             case "create-event" -> {
-                // create-event(token, eventId, companyId, name, capacity, date, hasSeats, location, price)
-                eventService.createEvent(arg(args, 0),
-                        new EventDTO(arg(args, 1), Integer.parseInt(arg(args, 2)),
-                                arg(args, 3), Integer.parseInt(arg(args, 4)),
+                // create-event(token, eventId, companyId, name, capacity, date, hasSeats, location)
+                yield eventService.createEvent(arg(args, 0),
+                        new EventDTO(
+                                arg(args, 1),
+                                Integer.parseInt(arg(args, 2)),
+                                arg(args, 3),
+                                Integer.parseInt(arg(args, 4)),
                                 LocalDateTime.parse(arg(args, 5)),
-                                Boolean.parseBoolean(arg(args, 6)), arg(args, 7),
-                                Double.parseDouble(arg(args, 8))),
+                                Boolean.parseBoolean(arg(args, 6)),
+                                arg(args, 7),
+                                null,
+                                null,
+                                null
+                        ),
                         new PurchasePolicyDTO(null, null, false, null, null, false, false),
                         List.of());
-                yield null;
             }
 
             case "remove-event" -> {

@@ -6,9 +6,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.infrastructure.persistence.DBEventRepo;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
@@ -22,13 +29,17 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
+@SpringBootTest
+@Transactional
+@ActiveProfiles("test")
 class ReserveTicketsAcceptanceTest {
 
     private EventService eventService;
     private String validToken;
     private String savedEventId;
     private List<String> activeKeysFromMap;
-
+    @Autowired
+    private IEventRepo eventRepo;
     @BeforeEach
     void setUp() {
         // 1. Setup REAL Authentication with a secure 32-byte key
@@ -45,21 +56,35 @@ class ReserveTicketsAcceptanceTest {
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
         // 3. Setup REAL Service
-        eventService = new EventService(new EventRepo(), simplePublisher, authService);
+        eventService = new EventService(eventRepo, simplePublisher, authService);
 
-        // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
-        EventDTO newEvent = new EventDTO(null, 42, "Rock Concert", 100, LocalDateTime.now().plusDays(5), true, "test locaion");
+// 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
+        EventDTO newEvent = new EventDTO(
+                null,
+                42,
+                "Rock Concert",
+                100,
+                LocalDateTime.now().plusDays(5),
+                true,
+                "test locaion",
+                null,
+                null,
+                null
+        );
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, 0, 120, false, false);
 
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
-        savedEventId = "1";
+
+        // ✅ FIXED: Using the actual method available in your IEventRepo
+        savedEventId = eventRepo.findActiveEvents().get(0).getEventId();
 
         // 5. Add a real seating map
         List<SeatingAreaConfig> seatingConfigs = List.of(new SeatingAreaConfig(1, 5, 50.0));
         SeatingMap map = eventService.configureSeatingMap(validToken, seatingConfigs, new ArrayList<>());
         eventService.editEventSeatingMap(validToken, savedEventId, map);
 
-        activeKeysFromMap = map.getPurchaseAreas().keySet().stream().limit(2).toList();
+        // ✅ FIXED: Uncommented and switched to map.getSeatIds() to populate keys safely and prevent NullPointerExceptions
+        activeKeysFromMap = map.getSeatIds().stream().limit(2).toList();
     }
 
     @Test
