@@ -106,6 +106,12 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         }
         return null;
     }
+    @Override
+    public Optional<ActiveOrderItem> findByIdForUpdate(String orderId) {
+        return findById(orderId);
+    }
+
+    @Override
     public boolean markAsProcessing(String orderId){
         ReentrantLock lock = orderLocks.get(orderId);
         if(lock == null){

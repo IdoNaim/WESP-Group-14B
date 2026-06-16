@@ -10,5 +10,6 @@ public interface IActiveOrderRepo {
     void update(ActiveOrderItem order);
     List<ActiveOrderItem> findAll();
     ActiveOrderItem findByUserId(String userId);
+    Optional<ActiveOrderItem> findByIdForUpdate(String orderId);
     boolean markAsProcessing(String orderId);
 }

@@ -103,7 +103,7 @@ public class ActiveOrderServiceUnitTest {
     void GivenOrderNotFound_WhenCancelActiveOrder_ThenThrowIllegalArgumentException() {
         // Arrange
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
@@ -119,7 +119,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem wrongUsersOrder = orderForUser(OTHER_USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(wrongUsersOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(wrongUsersOrder));
         // validateOrderOwnership is void — stub the throw directly
         doThrow(new IllegalArgumentException("this order does not belong to this user"))
                 .when(activeOrderHandlerMock)
@@ -138,7 +138,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         // validateOrderOwnership is void — default mock does nothing (passes), which is correct here
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(false);
 
@@ -154,7 +154,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
 
@@ -508,7 +508,7 @@ public class ActiveOrderServiceUnitTest {
         // Arrange
         List<String> seats = List.of("seat-1", "seat-2");
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
@@ -524,7 +524,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID); // Assuming helper sets valid timestamp/not expired
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         // Publisher fails to reserve the seats on the bus/broker
         when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID,EVENT_ID, requestedSeats)).thenReturn(false);
@@ -544,7 +544,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         // Handler returns null meaning adding seats failed business rules
@@ -567,7 +567,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem updatedOrder = orderWithSeats(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
@@ -591,7 +591,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem updatedOrder = orderWithSeats(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderHandlerMock.getSeatsToReserve(validOrder.getSeatIds(), requestedSeats)).thenReturn(requestedSeats);
         when(activeOrderPublisherMock.publishReserveSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, requestedSeats)).thenReturn(true);
         when(activeOrderHandlerMock.addSeatsToActiveOrder(validOrder, requestedSeats)).thenReturn(updatedOrder);
@@ -625,7 +625,7 @@ public class ActiveOrderServiceUnitTest {
     void GivenOrderNotFound_WhenAddStandingAreaToActiveOrder_ThenThrowIllegalArgumentException() {
         // Arrange
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
@@ -640,7 +640,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         // Publisher fails to block the inventory allotment
         when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(false);
 
@@ -658,7 +658,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem validOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         // Business logic handler rejects the modification layout
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(null);
@@ -678,7 +678,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem updatedOrder = orderForUser(USER_ID); // Mocking returned modified object
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(updatedOrder);
 
@@ -702,7 +702,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem updatedOrder = orderForUser(USER_ID);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishReserveStandingArea(VALID_TOKEN, EVENT_ID, AREA_ID, QUANTITY)).thenReturn(true);
         when(activeOrderHandlerMock.addStandingAreaToActiveOrder(validOrder, AREA_ID, QUANTITY)).thenReturn(updatedOrder);
 
@@ -724,7 +724,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -745,7 +745,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -778,7 +778,7 @@ public class ActiveOrderServiceUnitTest {
         // Arrange
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
@@ -799,7 +799,7 @@ public class ActiveOrderServiceUnitTest {
         expiredOrder.setStandingAreaQuantities(standingArea);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(expiredOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(expiredOrder));
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderHandlerMock.isOrderExpired(expiredOrder)).thenReturn(true);
         when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(true);
@@ -826,7 +826,7 @@ public class ActiveOrderServiceUnitTest {
         validOrder.setStandingAreaQuantities(standingArea);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -853,7 +853,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -879,7 +879,7 @@ public class ActiveOrderServiceUnitTest {
         validOrder.setSeatIds(List.of("D-1"));
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
         when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
@@ -1085,7 +1085,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(currentOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(currentOrder));
         when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
 
         // Handler Math Stubbing
@@ -1130,7 +1130,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderDTO newOrderDTO = mock(ActiveOrderDTO.class);
         when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
@@ -1148,7 +1148,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(expiredOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(expiredOrder));
 
         // Expiration guard simulation
         when(activeOrderHandlerMock.isOrderExpired(expiredOrder)).thenReturn(true);
@@ -1170,7 +1170,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(currentOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(currentOrder));
         when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
 
         when(activeOrderHandlerMock.getSeatsToReserve(any(), any())).thenReturn(seatsToReserve);
@@ -1206,7 +1206,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(newOrderDTO.getOrderId()).thenReturn(ORDER_ID);
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(currentOrder));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(currentOrder));
         when(activeOrderHandlerMock.isOrderExpired(currentOrder)).thenReturn(false);
 
         when(activeOrderHandlerMock.getSeatsToReserve(any(), any())).thenReturn(seatsToReserve);
@@ -1246,7 +1246,7 @@ public class ActiveOrderServiceUnitTest {
         orderBelongingToUserB.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         orderBelongingToUserB.setSeatIds(List.of("VIP-1", "VIP-2"));
 
-        when(activeOrderRepoMock.findById("order1")).thenReturn(Optional.of(orderBelongingToUserB));
+        when(activeOrderRepoMock.findByIdForUpdate("order1")).thenReturn(Optional.of(orderBelongingToUserB));
         // validateOrderOwnership calls isUsersOrder then throws — stub it to throw directly
         doThrow(new IllegalArgumentException("Unauthorized: Order does not belong to the current user"))
                 .when(activeOrderHandlerMock)
@@ -1270,7 +1270,7 @@ public class ActiveOrderServiceUnitTest {
         ActiveOrderItem updatedOrderMock = mock(ActiveOrderItem.class);
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
-        when(activeOrderRepoMock.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderPublisherMock.publishCheckSeatsReserved(
