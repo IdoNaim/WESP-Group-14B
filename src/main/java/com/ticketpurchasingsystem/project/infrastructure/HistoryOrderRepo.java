@@ -67,6 +67,11 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
     }
 
     @Override
+    public void deleteAll() {
+        storage.clear();
+    }
+
+    @Override
     public HistoryOrderItem findByOrderId(String orderId) {
         HistoryOrderItem item = null;
         for (HistoryOrderItem historyOrder : storage.values()) {
