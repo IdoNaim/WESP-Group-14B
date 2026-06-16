@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi, UserPermissionsDTO } from '../../api/authApi';
+import { getUserFriendlyError } from '../../utils/errorUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,25 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Companies',  icon: 'business',             href: '#',       memberOnly: true },
   { label: 'Admin Panel',   icon: 'admin_panel_settings', href: '#',       memberOnly: true, active: true },
 ];
+
+function getAccountSaveError(error: unknown): string {
+  const message = getUserFriendlyError(error);
+
+  if (/invalid email format/i.test(message)) {
+    return 'Enter a valid email address.';
+  }
+  if (/old password does not match current password/i.test(message)) {
+    return 'Current password is incorrect.';
+  }
+  if (/password cannot be empty/i.test(message)) {
+    return 'Enter a new password before saving.';
+  }
+  if (/password must be at least 7 characters/i.test(message)) {
+    return 'Password must be at least 7 characters long and include both letters and numbers.';
+  }
+
+  return message || 'We could not save your account changes. Please try again.';
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -85,6 +105,8 @@ export default function AccountSettingsPage() {
     email: ''
   });
   const [tempProfileData, setTempProfileData] = useState<UserProfileData>({ ...profileData });
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   // Password fields state
   const [passwordForm, setPasswordForm] = useState({
@@ -151,6 +173,8 @@ export default function AccountSettingsPage() {
   // Form Change Handlers
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
+    setSaveError(null);
+    setSaveSuccess(null);
     if (id === 'input-username') {
       setTempProfileData(prev => ({ ...prev, username: value }));
     } else if (id === 'input-email') {
@@ -159,10 +183,14 @@ export default function AccountSettingsPage() {
   };
 
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>, field: keyof typeof passwordForm) => {
+    setSaveError(null);
+    setSaveSuccess(null);
     setPasswordForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
   const handleToggleEdit = () => {
+    setSaveError(null);
+    setSaveSuccess(null);
     if (isEditing) {
       setTempProfileData({ ...profileData });
       setIsEditing(false);
@@ -174,12 +202,16 @@ export default function AccountSettingsPage() {
   const handleCancel = () => {
     setTempProfileData({ ...profileData });
     setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    setSaveError(null);
+    setSaveSuccess(null);
     setIsEditing(false);
   };
 
   const handleSave = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
+    setSaveError(null);
+    setSaveSuccess(null);
 
     // 1. Destructure the password form values
     const { currentPassword, newPassword, confirmNewPassword } = passwordForm;
@@ -190,11 +222,11 @@ export default function AccountSettingsPage() {
     // 2. Validate password fields if a password change is being attempted
     if (isChangingPassword) {
       if (!currentPassword || !newPassword || !confirmNewPassword) {
-        alert('Please complete all password fields to update your password.');
+        setSaveError('Complete all password fields to update your password.');
         return;
       }
       if (newPassword !== confirmNewPassword) {
-        alert('Validation error: New password and confirmation do not match.');
+        setSaveError('New password and confirmation do not match.');
         return;
       }
     }
@@ -219,11 +251,10 @@ export default function AccountSettingsPage() {
       setUsername(tempProfileData.username);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
       setIsEditing(false);
-      
-      alert('Account changes saved successfully!');
+      setSaveSuccess('Your account changes were saved.');
     } catch (error: any) {
       console.error('[Settings] Update failed:', error.message);
-      alert(`Failed to save changes: ${error.message}`);
+      setSaveError(getAccountSaveError(error));
     }
   };
 
@@ -254,6 +285,7 @@ export default function AccountSettingsPage() {
   );
 
   const initials = username ? username.slice(0, 2).toUpperCase() : 'G';
+  const hasEmailError = Boolean(saveError && /email/i.test(saveError));
 
   if (loading) {
     return (
@@ -428,6 +460,31 @@ export default function AccountSettingsPage() {
                   )}
                 </div>
 
+                {(saveError || saveSuccess) && (
+                  <div
+                    role={saveError ? 'alert' : 'status'}
+                    className={`mx-6 mt-6 flex items-start gap-3 rounded-lg border p-4 ${
+                      saveError
+                        ? 'border-[#f2b8b5] bg-[#fff8f7] text-[#410002]'
+                        : 'border-[#b8d7c0] bg-[#f7fff9] text-[#0d2818]'
+                    }`}
+                  >
+                    <MaterialIcon
+                      name={saveError ? 'error' : 'check_circle'}
+                      className={`mt-0.5 text-[20px] ${saveError ? 'text-[#ba1a1a]' : 'text-[#247a3d]'}`}
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    />
+                    <div>
+                      <p className="text-sm font-bold">
+                        {saveError ? "Couldn't save changes" : 'Changes saved'}
+                      </p>
+                      <p className="text-sm leading-5 mt-1">
+                        {saveError || saveSuccess}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Form Controls Workspace */}
                 <div className="p-6 space-y-6">
                   
@@ -467,12 +524,23 @@ export default function AccountSettingsPage() {
                           onChange={handleInputChange}
                           className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#0b1c30] focus:ring-2 focus:ring-[#3980f4] focus:outline-none transition-all ${
                             isEditing 
-                              ? 'bg-white border-[#3980f4]' 
+                              ? hasEmailError
+                                ? 'bg-white border-[#ba1a1a] focus:ring-[#ba1a1a]'
+                                : 'bg-white border-[#3980f4]'
                               : 'bg-[#eff4ff] border-transparent opacity-75 cursor-not-allowed'
                           }`}
                         />
-                        <MaterialIcon name="check_circle" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3980f4]" style={{ fontVariationSettings: "'FILL' 1" }} />
+                        <MaterialIcon
+                          name={hasEmailError ? 'error' : 'check_circle'}
+                          className={`absolute right-3 top-1/2 -translate-y-1/2 ${hasEmailError ? 'text-[#ba1a1a]' : 'text-[#3980f4]'}`}
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        />
                       </div>
+                      {hasEmailError && (
+                        <p className="text-xs font-medium text-[#ba1a1a]">
+                          Enter a valid email address.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -550,7 +618,7 @@ export default function AccountSettingsPage() {
                         
                         <div className="bg-[#eff4ff] p-3 rounded-lg border-l-4 border-[#3980f4]">
                           <p className="text-xs text-[#444749] leading-relaxed">
-                            Password must be at least 12 characters long and include an alphanumeric symbol and numbers.
+                            Password must be at least 7 characters long and include both letters and numbers.
                           </p>
                         </div>
                       </div>
