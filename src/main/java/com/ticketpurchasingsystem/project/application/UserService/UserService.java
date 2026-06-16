@@ -3,8 +3,11 @@ package com.ticketpurchasingsystem.project.application.UserService;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
+
+import jakarta.transaction.Transactional;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
@@ -15,24 +18,29 @@ import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 @Service
+@Transactional
 public class UserService implements IUserService {
 
-    private final IUserRepo userRepo;    
+    private final IUserRepo userRepo;
     private final UserHandler userHandler;
     private final AuthenticationService authenticationService;
     private final UserPublisher userPublisher;
 
+    @Autowired
     public UserService(IUserRepo userRepo, UserHandler userHandler, AuthenticationService authenticationService, UserPublisher userPublisher) {
         this.userRepo = userRepo;
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
 
-        //creating admin for testing purposes
-        UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
-        if (newUser != null) {
-            newUser.setAdmin(true);
-            userRepo.store(newUser);
+        // Seed the default admin once. SystemAdminService also seeds "admin-1" at
+        // startup, so guard on existence to avoid a duplicate insert against the DB repo.
+        if (userRepo.findByID("admin-1") == null) {
+            UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
+            if (newUser != null) {
+                newUser.setAdmin(true);
+                userRepo.store(newUser);
+            }
         }
         // UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
         // UserProduction userProduction = new UserProduction();

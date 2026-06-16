@@ -10,20 +10,24 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestEnterPlatformEvent;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
-import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +35,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SpringBootTest
+@ActiveProfiles("test")
 class UserAcceptanceTests {
 
     private static final String JWT_SECRET = "myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong";
@@ -44,14 +50,23 @@ class UserAcceptanceTests {
     private static final String BOB_EMAIL = "bob@test.com";
     private static final String BOB_PASS  = "password456";
 
-    private MemoryUserRepo userRepo;
+    @Autowired
+    private IUserRepo userRepo;
+
     private UserService userService;
     private AuthenticationService authService;
     private String lastGuestToken;
 
     @BeforeEach
     void setUp() throws Exception {
-        userRepo = new MemoryUserRepo();
+        // Start from a clean users table so the admin-1 seed performed by the
+        // UserService constructor below does not collide with the startup bean's
+        // seed (or leftovers from a previous test) on the shared DB.
+        userRepo.deleteAll();
+
+        // Sessions stay in-memory: this test exercises the User aggregate's DB
+        // persistence, and the non-transactional service wiring built here cannot
+        // satisfy the DB session repo's transaction-bound deleteByToken query.
         InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
 
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
@@ -72,6 +87,11 @@ class UserAcceptanceTests {
         });
 
         userService = new UserService(userRepo, userHandler, authService, publisher);
+    }
+
+    @AfterEach
+    void tearDown() {
+        userRepo.deleteAll();
     }
 
     /** Calls guestEntry and returns the token that was just issued. */
