@@ -1,3 +1,5 @@
+import { getUserFriendlyError } from '../utils/errorUtils';
+
 // Define your base URL
 const BASE_URL = '/api/identity';
 
@@ -67,7 +69,7 @@ const getHeaders = (token?: string) => {
 const parseResponse = async (response: Response) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(data.error || 'An unexpected error occurred');
+        throw new Error(getUserFriendlyError(data) || 'An unexpected error occurred');
     }
     return data;
 };

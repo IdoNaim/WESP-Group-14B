@@ -100,7 +100,7 @@ class AuthControllerTest {
                 RegisterRequestDTO dto = new RegisterRequestDTO();
                 dto.setUserId("eden");
                 dto.setName("Eden");
-                dto.setPassword("pass");
+                dto.setPassword("pass123");
                 dto.setEmail("eden@test.com");
                 doThrow(new RuntimeException("User already exists")).when(userService)
                                 .registerUser(any(), any(), any(), any(), any(), any());
