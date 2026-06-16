@@ -217,6 +217,7 @@ export const eventApi = {
             headers: getHeaders(token),
             body: JSON.stringify(policy),
         });
+        console.log(policy);
         return response.ok;
     },
 

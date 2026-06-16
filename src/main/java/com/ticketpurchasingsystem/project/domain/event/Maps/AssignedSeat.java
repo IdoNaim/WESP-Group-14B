@@ -1,74 +1,80 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-public class AssignedSeat implements Bookable {
-    private String id;              //includes zone, row and number
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "EventsSeats")
+public class AssignedSeat {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Simple, auto-generated database primary key
+
+    @Column(name = "seatId", nullable = false)
+    private String seatId;
+
+    @Column(name = "isBooked", nullable = false)
     private boolean isBooked;
+
+    @Column(name = "orderId")
     private String orderId;
-    private double priceForTicket;
+
+    @Column(name = "price", nullable = false)
+    private double price;
+
+    public AssignedSeat() {}
 
     public AssignedSeat(String zone, int row, int number, double priceForTicket) {
-        this.id = String.format("%s_%d_%d", zone, row, number);
+        // Generates the unique seat identifier string (e.g., "ZoneA_1_5")
+        this.seatId = String.format("%s_%d_%d", zone, row, number);
         this.isBooked = false;
         this.orderId = null;
-        this.priceForTicket = priceForTicket;
+        this.price = priceForTicket;
     }
 
-    @Override
     public boolean isbooked(String orderId) {
         if(orderId == null){
             return false;
         }
-        else{
-            return orderId.equals(this.orderId);
-        }
+        return orderId.equals(this.orderId);
     }
 
-
-    @Override
     public String getId() {
-        return id;
+        return seatId; // Keeps your Map keys intact
     }
 
     public boolean isBooked() {
         return isBooked;
     }
 
-    @Override
     public boolean book(String orderId, int numberOfTickets) {
-        if (numberOfTickets != 1) {
-            return false; // Assigned seats can only be booked one at a time
-        }
-        if (isBooked) {
-            return false; // Seat is already booked
+        if (numberOfTickets != 1 || isBooked) {
+            return false;
         }
         this.isBooked = true;
         this.orderId = orderId;
-        return true; // Booking successful
+        return true;
     }
 
     public boolean unbook(int numberOfTickets) {
-        if(numberOfTickets != 1) {
-            return false; // Assigned seats can only be unbooked one at a time
-        }
-        if (!isBooked) {
-            return false; // Seat is not booked
+        if(numberOfTickets != 1 || !isBooked) {
+            return false;
         }
         this.isBooked = false;
         this.orderId = null;
-        return true; // Unbooking successful
+        return true;
     }
 
-    @Override
     public double getPriceForTicket(){
-        return priceForTicket;
+        return price;
     }
 
     public boolean setPriceForTicket(double newPrice) {
         if (newPrice < 0) {
-            return false; // Price cannot be negative
+            return false;
         }
-        this.priceForTicket = newPrice;
-        return true; // Price updated successfully
+        this.price = newPrice;
+        return true;
     }
 
     public String getOrderId() {

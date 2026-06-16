@@ -23,6 +23,7 @@ import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 
 @RestController
@@ -192,6 +193,31 @@ public class ProductionController {
                 return history != null
                                 ? ResponseEntity.ok(history)
                                 : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // GET /api/production/companies/{companyId}/purchase-policy
+        @GetMapping("/companies/{companyId}/purchase-policy")
+        public ResponseEntity<PurchasePolicyDTO> getCompanyPurchasePolicy(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId) {
+                String token = extractToken(authHeader);
+                PurchasePolicyDTO dto = productionService.getCompanyPurchasePolicy(token, companyId);
+                return dto != null
+                                ? ResponseEntity.ok(dto)
+                                : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // PUT /api/production/companies/{companyId}/purchase-policy
+        @PutMapping("/companies/{companyId}/purchase-policy")
+        public ResponseEntity<Map<String, String>> setCompanyPurchasePolicy(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId,
+                        @RequestBody PurchasePolicyDTO dto) {
+                String token = extractToken(authHeader);
+                boolean ok = productionService.setCompanyPurchasePolicy(token, companyId, dto);
+                return ok
+                                ? ResponseEntity.ok(Map.of("message", "Company purchase policy saved."))
+                                : ResponseEntity.badRequest().body(Map.of("error", "Failed to save company purchase policy."));
         }
 
         private String extractToken(String authHeader) {

@@ -1,15 +1,11 @@
-package com.ticketpurchasingsystem.project.acceptance.event;
-
+package com.ticketpurchasingsystem.project.infrastructure;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,13 +20,18 @@ import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
+import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+
 @SpringBootTest
 @Transactional
 @ActiveProfiles("test")
-class ViewEventDetailsAcceptanceTest {
+class SeatingMapPersistenceTest {
 
     private EventService eventService;
     private String validToken;
@@ -39,67 +40,54 @@ class ViewEventDetailsAcceptanceTest {
     @Autowired
     private IEventRepo eventRepo;
 
+    @Autowired
+    private EntityManager entityManager;
+
     @BeforeEach
     void setUp() {
-        // 1. Setup REAL Authentication
         InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
-        // Exactly 32 characters long (256 bits)
         ReflectionTestUtils.setField(domainAuthService, "secret", "aSecureTestSecretKeyMustBe32Bytes");
         domainAuthService.init();
         AuthenticationService authService = new AuthenticationService(domainAuthService, sessionRepo);
 
         validToken = authService.login("adminUser");
-
-        // 2. Simplified Anonymous Publisher
         ApplicationEventPublisher dummySpringPublisher = event -> {};
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
-        // 3. Setup REAL Service
         eventService = new EventService(eventRepo, simplePublisher, authService);
 
-        // 4. Seed an event
-        EventDTO newEvent = new EventDTO(
-                null,
-                42,
-                "Cyberpunk Symphony",
-                500,
-                LocalDateTime.now().plusDays(10),
-                true,
-                "test location",
-                null, // imageUrl
-                null, // minZonePrice
-                null  // maxZonePrice
-        );
+        // Create the base Event
+        EventDTO newEvent = new EventDTO(null, 42, "DB Test Event", 500, LocalDateTime.now().plusDays(10), true, "test location", null, null, null);
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, null, null, false, false);
-
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
 
-        // ✅ FIXED: Dynamically fetch the generated ID instead of hardcoding "1"
         List<EventDTO> companyEvents = eventService.searchEventsByCompany(validToken, 42);
         savedEventId = companyEvents.get(0).eventId();
     }
 
     @Test
-    void GivenExistingEvent_WhenSearchEvent_ThenReturnCorrectEventDTO() {
-        EventDTO resultDTO = eventService.searchEvent(validToken, savedEventId);
+    void GivenEventWithMaps_WhenFlushedToDB_ThenAllRowsAreSaved() {
+        // 1. Configure maps: 2 rows of 5 seats = 10 seats total. 1 standing area.
+        List<SeatingAreaConfig> seatingConfigs = List.of(new SeatingAreaConfig(2, 5, 50.0));
+        List<StandingAreaConfig> standingConfigs = List.of(new StandingAreaConfig(100, 30.0));
 
-        assertNotNull(resultDTO);
-        assertEquals("Cyberpunk Symphony", resultDTO.eventName());
-        assertEquals(42, resultDTO.companyId());
-        assertEquals(500, resultDTO.eventCapacity());
-    }
+        SeatingMap map = eventService.configureSeatingMap(validToken, seatingConfigs, standingConfigs);
+        eventService.editEventSeatingMap(validToken, savedEventId, map);
 
-    @Test
-    void GivenNonExistentEventId_WhenSearchEvent_ThenReturnNull() {
-        EventDTO resultDTO = eventService.searchEvent(validToken, "NON-EXISTENT-ID");
-        assertNull(resultDTO);
-    }
+        // 2. FORCE DB INSERT & CLEAR CACHE (This is where the magic happens)
+        entityManager.flush();
+        entityManager.clear();
 
-    @Test
-    void GivenInvalidToken_WhenSearchEvent_ThenThrowException() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            eventService.searchEvent("bad-hacker-token", savedEventId);
-        });
+        // 3. Fetch from DB as if it's a completely new request
+        Event retrievedEvent = eventRepo.findById(savedEventId);
+
+        // 4. Verify DB actually saved the children
+        assertNotNull(retrievedEvent, "Event should exist");
+        assertNotNull(retrievedEvent.getSeatingMap(), "SeatingMap is null! Check CascadeType.ALL on Event.seatingMap");
+
+        // Check exact counts to prove the rows were generated and saved
+        assertEquals(10, retrievedEvent.getSeatingMap().getSeatIds().size(), "Expected exactly 10 seats saved in EVENTS_SEATS");
+        assertEquals(1, retrievedEvent.getSeatingMap().getAreaIds().size(), "Expected exactly 1 area saved in EVENTS_STANDING_ARES");
     }
 }

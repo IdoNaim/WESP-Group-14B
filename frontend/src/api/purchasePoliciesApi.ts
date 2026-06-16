@@ -1,4 +1,34 @@
+import type { PurchasePolicyDTO } from './eventsApi';
+
 const BASE_URL = '/api/policies';
+const PROD_URL = '/api/production';
+
+// ── New DTO-based company policy endpoints (DB-backed) ────────────────────────
+
+export async function getCompanyPolicyDTO(companyId: number): Promise<PurchasePolicyDTO | null> {
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch(`${PROD_URL}/companies/${companyId}/purchase-policy`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 403 || res.status === 404) return null;
+    if (!res.ok) throw new Error(`Failed to fetch company policy (${res.status})`);
+    return res.json();
+}
+
+export async function setCompanyPolicyDTO(companyId: number, dto: PurchasePolicyDTO): Promise<void> {
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch(`${PROD_URL}/companies/${companyId}/purchase-policy`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(dto),
+    });
+    if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `Failed to save company policy (${res.status})`);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface PolicyResponse {
     description: string;

@@ -37,10 +37,8 @@ import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 /**
  * Acceptance tests for the EventController HTTP layer.
  * Uses real services wired without Spring context — same pattern as existing
- * acceptance tests
- * but verified through HTTP requests instead of direct service calls.
- * ApplicationEventPublisher is mocked (no-op) since it is Spring
- * infrastructure, not business logic.
+ * acceptance tests but verified through HTTP requests instead of direct service calls.
+ * ApplicationEventPublisher is mocked (no-op) since it is Spring infrastructure, not business logic.
  */
 class EventApiAcceptanceTest {
 
@@ -82,7 +80,20 @@ class EventApiAcceptanceTest {
     void GivenInvalidPolicy_WhenCreateEvent_ThenReturn400() throws Exception {
         // minTickets > maxTickets violates the policy validation rule
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null, 1, "Bad Policy Show", 200, LocalDateTime.now().plusDays(30), true, "test location"));
+
+        // ✅ FIXED: Padded with null parameters to match updated 10-field record signature
+        dto.setEvent(new EventDTO(
+                null,
+                1,
+                "Bad Policy Show",
+                200,
+                LocalDateTime.now().plusDays(30),
+                true,
+                "test location",
+                null, // imageUrl
+                null, // minZonePrice
+                null  // maxZonePrice
+        ));
         dto.setPurchasePolicy(new PurchasePolicyDTO(10, 1, false, 0, 120, false, false)); // minTickets=10 > maxTickets=1
         dto.setDiscounts(Collections.emptyList());
 
@@ -234,7 +245,20 @@ class EventApiAcceptanceTest {
     // helpers
     private CreateEventRequestDTO buildCreateEventRequest(int companyId, String name, int capacity) {
         CreateEventRequestDTO dto = new CreateEventRequestDTO();
-        dto.setEvent(new EventDTO(null, companyId, name, capacity, LocalDateTime.now().plusDays(30), true, "test location"));
+
+        // ✅ FIXED: Padded with null parameters to match updated 10-field record signature
+        dto.setEvent(new EventDTO(
+                null,
+                companyId,
+                name,
+                capacity,
+                LocalDateTime.now().plusDays(30),
+                true,
+                "test location",
+                null, // imageUrl
+                null, // minZonePrice
+                null  // maxZonePrice
+        ));
         dto.setPurchasePolicy(new PurchasePolicyDTO(1, 10, false, 0, 120, false, false));
         dto.setDiscounts(Collections.emptyList());
         return dto;

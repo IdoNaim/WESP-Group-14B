@@ -11,12 +11,28 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.ticketpurchasingsystem.project.domain.Utils.AssignedSeatDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.StandingAreaDTO;
-public class SeatingMap {
-    private ConcurrentMap<String,AssignedSeat> seats;
-    private ConcurrentMap<String, StandingArea> standingAreas;
-    //private HashMap<String, Bookable> PurchaseAreas;
-    private final AtomicLong areaIDGenerator = new AtomicLong(0);
+import jakarta.persistence.*;
 
+@Entity // <--- ADD THIS
+@Table(name = "SeatingMaps") // <--- ADD THIS
+
+public class SeatingMap {
+    @Id // <--- ADD THIS
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // <--- ADD THIS
+    private Long id; // <--- ADD THIS (Database needs a primary key)
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "seating_map_id")
+    @MapKey(name = "seatId") // Matches the property name inside AssignedSeat.java
+    private Map<String, AssignedSeat> seats;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "seating_map_id")
+    @MapKey(name = "areaId") // Matches the property name inside StandingArea.java
+    private Map<String, StandingArea> standingAreas;
+
+    @Transient // <--- ADD THIS so DB ignores it
+    private final AtomicLong areaIDGenerator = new AtomicLong(0);
     public SeatingMap() {
         this.seats = new ConcurrentHashMap<>();
         this.standingAreas = new ConcurrentHashMap<>();
@@ -180,11 +196,11 @@ public class SeatingMap {
         return available;
     }
 
-    public Map<String, Bookable> getPurchaseAreas(){
-        Map<String, Bookable> combined = new HashMap<>(seats);
-        combined.putAll(standingAreas);
-        return combined;
-    }
+//    public Map<String, Object> getPurchaseAreas(){
+//        Map<String, Bookable> combined = new HashMap<>(seats);
+//        combined.putAll(standingAreas);
+//        return combined;
+//    }
 
     // public boolean addAssignedSeat(String zone, int row, int number, double priceForTicket){
     //     if(row <= 0 || number <= 0 || priceForTicket <= 0){

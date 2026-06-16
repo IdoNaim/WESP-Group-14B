@@ -10,6 +10,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 
 public interface IProductionService {
         public void createEvent(String eventName, String eventDate, String eventLocation, int totalTickets,
@@ -47,6 +48,10 @@ public interface IProductionService {
         public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId);
 
         public boolean addPurchasePolicyRule(String sessionToken, Integer companyId, IPurchaseRule rule);
+
+        public boolean setCompanyPurchasePolicy(String sessionToken, Integer companyId, PurchasePolicyDTO dto);
+
+        public PurchasePolicyDTO getCompanyPurchasePolicy(String sessionToken, Integer companyId);
 
         public List<CompanySummaryDTO> getMyCompanies(String sessionToken);
 

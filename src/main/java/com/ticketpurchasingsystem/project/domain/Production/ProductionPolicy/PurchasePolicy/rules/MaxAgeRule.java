@@ -10,6 +10,8 @@ public class MaxAgeRule implements IPurchaseRule {
         this.maximumAge = maximumAge;
     }
 
+    public int getMaximumAge() { return maximumAge; }
+
     @Override
     public boolean validate(PurchaseContext context) {
         return context.getUserAge() <= maximumAge;

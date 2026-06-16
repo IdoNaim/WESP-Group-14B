@@ -1,56 +1,73 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-public class StandingArea implements Bookable {
-    private String areaId;
-    private int avalibleSeats;
-    private int capacity;
-    private double priceForTicket;
-//    private String desc;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "EventsStandingAreas")
+public class StandingArea {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Simple, auto-generated database primary key
+
+    @Column(name = "areaId", nullable = false)
+    private String areaId;
+
+    @Column(name = "availableSeats", nullable = false)
+    private int availableSeats;
+
+    @Column(name = "capacity", nullable = false)
+    private int capacity;
+
+    @Column(name = "price", nullable = false)
+    private double price;
+
+    public StandingArea() {}
 
     public StandingArea(int capacity, double priceForTicket, String areaId) {
         this.capacity = capacity;
-        this.priceForTicket = priceForTicket;
-        this.avalibleSeats = capacity;
-//        this.desc = desc;
+        this.price = priceForTicket;
+        this.availableSeats = capacity; // Fixed: Properly initializes available seats
         this.areaId = areaId;
     }
-    @Override
+
     public String getId(){
-        return areaId;
+        return areaId; // Keeps your Map logic working perfectly
     }
-    @Override
+
     public boolean book(String orderId, int numberOfTickets) {
         if(isBookeable(numberOfTickets)) {
-            avalibleSeats -= numberOfTickets;
+            availableSeats -= numberOfTickets;
             return true;
         }
         return false;
     }
+
     private boolean isBookeable(int numberOfTickets) {
-        return avalibleSeats - numberOfTickets >= 0;
+        return availableSeats - numberOfTickets >= 0;
     }
 
-    @Override
     public double getPriceForTicket() {
-        return priceForTicket;
+        return price;
     }
 
     public int getAvalibleSeatNumber() {
-        return avalibleSeats;
+        return availableSeats;
     }
+
     public boolean unbook(int numberOfTickets) {
-        if (numberOfTickets <= 0 || avalibleSeats + numberOfTickets > capacity) {
+        if (numberOfTickets <= 0 || availableSeats + numberOfTickets > capacity) {
             return false;
         }
-        avalibleSeats += numberOfTickets;
+        availableSeats += numberOfTickets;
         return true;
     }
+
     public boolean setPriceForTicket(double newPrice) {
         if (newPrice < 0) {
             return false;
         }
-        priceForTicket = newPrice;
+        price = newPrice;
         return true;
     }
 
@@ -61,10 +78,4 @@ public class StandingArea implements Bookable {
     public int getCapacity() {
         return capacity;
     }
-//    public String getDesc(){
-//        return desc;
-//    }
-//    public void setDesc(String newDesc){
-//        desc = newDesc;
-//    }
 }
