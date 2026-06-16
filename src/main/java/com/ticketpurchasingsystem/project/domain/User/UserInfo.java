@@ -1,9 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-import org.springframework.boot.autoconfigure.jms.JmsProperties.Listener.Session;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
 //** just a very early version of the user info class, we will add more fields and methods to it as we go along
 // the user type can be hybrid can be owner on one group and founder of another, but for now we will just have one user type for each user, we will add more fields to the user info class as we go along, and we will also add more methods to it as we go along
