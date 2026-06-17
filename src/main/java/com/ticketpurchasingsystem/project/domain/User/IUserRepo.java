@@ -7,4 +7,5 @@ public interface IUserRepo {
     public UserInfo findByID(String userId) ;
     public List<UserInfo> getAllUsers() ;
     boolean isAdmin(String userId);
+    void deleteAll();
 }

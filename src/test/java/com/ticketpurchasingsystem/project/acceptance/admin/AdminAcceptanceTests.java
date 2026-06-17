@@ -9,6 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.SystemAdminService;
@@ -34,10 +37,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SpringBootTest
+@ActiveProfiles("test")
 class AdminAcceptanceTests {
 
     private static final String JWT_SECRET = "myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong";
     private static final String ADMIN_ID   = "sysadmin";
+
+    @Autowired
+    private MemoryUserRepo userRepository;
 
     private ActiveOrderMemRepo activeOrderRepo;
     private HistoryOrderRepo historyOrderRepo;
@@ -46,13 +54,14 @@ class AdminAcceptanceTests {
 
     @BeforeEach
     void setUp() throws Exception {
+        userRepository.deleteAll();
+
         activeOrderRepo = new ActiveOrderMemRepo();
         historyOrderRepo = new HistoryOrderRepo();
 
-        MemoryUserRepo userRepo = new MemoryUserRepo();
         UserInfo adminUser = new UserInfo(ADMIN_ID, ADMIN_ID, "admin@system.com", "admin", UserGroupDiscount.NONE);
         adminUser.setAdmin(true);
-        userRepo.store(adminUser);
+        userRepository.store(adminUser);
 
         InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
@@ -73,7 +82,7 @@ class AdminAcceptanceTests {
                 e.setResult(historyOrderRepo.findAll());
         });
 
-        adminService = new SystemAdminService(userRepo, adminPublisher, authService);
+        adminService = new SystemAdminService(userRepository, adminPublisher, authService);
     }
 
     // ─── getAllActiveOrders ───────────────────────────────────────────────────
