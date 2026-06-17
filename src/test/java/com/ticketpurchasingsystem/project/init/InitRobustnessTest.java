@@ -146,6 +146,19 @@ class InitRobustnessTest {
         assertThrows(RuntimeException.class, () -> executor.execute(createOrder));
     }
 
+    @Test
+    void GivenHistoryOrderServiceThrowsDuringInit_WhenCreateHistoryOrderExecuted_ThenInitFails() {
+        when(historyOrderService.createHistoryOrder(anyString(), anyString(), anyString(),
+                anyInt(), any(), anyDouble(), anyList(), any()))
+                .thenThrow(new RuntimeException("DB write failed for history order"));
+
+        // create-history-order(orderId, userId, eventId, companyId, price, seat1, seat2)
+        ParsedCommand createHistory = new ParsedCommand(null, "create-history-order",
+                List.of("order1", "bob", "ev1", "1", "100.0", "A1", "A2"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(createHistory));
+    }
+
     // ── Malformed / logically invalid init files ──────────────────────────────
 
     @Test
@@ -220,12 +233,37 @@ class InitRobustnessTest {
 
         InitFileLoader loader = buildLoader(tmp.toString());
 
-        // Loader will call System.exit(1); run in a way that captures the side effects
+        // A failing command must abort the run by throwing (the loader no longer calls System.exit).
         assertThrows(RuntimeException.class,
                 () -> loader.run(new DefaultApplicationArguments()));
 
         verify(productionService, never()).createProductionCompany(anyString(), any());
         verify(eventService, never()).createEvent(anyString(), any(), any(), any());
+    }
+
+    @Test
+    void GivenInitFileFailsMidway_WhenLoaderRuns_ThenThrownErrorIdentifiesFailingCommand() throws Exception {
+        when(userService.guestEntry()).thenReturn("gt1");
+        when(userService.loginUser(anyString(), anyString(), anyString()))
+                .thenThrow(new RuntimeException("Invalid credentials"));
+
+        Path tmp = Files.createTempFile("error_context_init", ".txt");
+        Files.writeString(tmp,
+                "$g1 = guest-entry();\n" +
+                        "$tok = login($g1, alice, pass);\n");
+
+        InitFileLoader loader = buildLoader(tmp.toString());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> loader.run(new DefaultApplicationArguments()));
+
+        // The loader should wrap the failure with which command (by name and index) broke init.
+        assertTrue(ex.getMessage().contains("login"),
+                "Expected the failing command name in the error, but was: " + ex.getMessage());
+        assertTrue(ex.getMessage().contains("Init failed at command"),
+                "Expected init-failure context in the error, but was: " + ex.getMessage());
+        // The original cause must be preserved for diagnosis.
+        assertNotNull(ex.getCause());
     }
 
     @Test

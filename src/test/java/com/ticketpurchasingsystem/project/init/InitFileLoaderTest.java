@@ -5,6 +5,7 @@ import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -281,6 +284,135 @@ class InitFileLoaderTest {
                 () -> loader.run(new DefaultApplicationArguments()));
 
         verify(userService, never()).logoutUser(anyString(), anyString());
+    }
+
+    // ── Parser tests: multi-line / formatting edge cases ──────────────────────
+
+    @Test
+    void GivenMultipleCommandLines_WhenParsed_ThenAllReturnedInOrder() throws Exception {
+        InitCommandParser parser = new InitCommandParser();
+        InputStream input = toStream(
+                "$g = guest-entry();\n" +
+                        "register($g, alice, Alice, pass, a@a.com, NONE);\n" +
+                        "logout(alice, $g);\n");
+
+        var commands = parser.parse(input);
+
+        assertEquals(3, commands.size());
+        assertEquals("guest-entry", commands.get(0).name());
+        assertEquals("register", commands.get(1).name());
+        assertEquals("logout", commands.get(2).name());
+    }
+
+    @Test
+    void GivenCommandWithoutTrailingSemicolon_WhenParsed_ThenParsedCorrectly() throws Exception {
+        InitCommandParser parser = new InitCommandParser();
+        InputStream input = toStream("$tok = guest-entry()");
+
+        var commands = parser.parse(input);
+
+        assertEquals(1, commands.size());
+        assertEquals("tok", commands.get(0).varName());
+        assertEquals("guest-entry", commands.get(0).name());
+    }
+
+    @Test
+    void GivenAssignmentWithSurroundingWhitespace_WhenParsed_ThenVarAndCommandTrimmed() throws Exception {
+        InitCommandParser parser = new InitCommandParser();
+        InputStream input = toStream("   $tok    =    guest-entry()  ;  ");
+
+        var commands = parser.parse(input);
+
+        assertEquals(1, commands.size());
+        assertEquals("tok", commands.get(0).varName());
+        assertEquals("guest-entry", commands.get(0).name());
+        assertTrue(commands.get(0).args().isEmpty());
+    }
+
+    @Test
+    void GivenMalformedCommandOnLaterLine_WhenParsed_ThenExceptionMentionsLineNumber() {
+        InitCommandParser parser = new InitCommandParser();
+        // line 1 valid, line 2 blank, line 3 malformed (no parentheses)
+        InputStream input = toStream("$g = guest-entry();\n\nbroken-line;\n");
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> parser.parse(input));
+        assertTrue(ex.getMessage().contains("Line 3"),
+                "Expected the error to point at line 3, but was: " + ex.getMessage());
+    }
+
+    // ── Executor tests: argument conversion failures ──────────────────────────
+
+    @Test
+    void GivenRegisterWithInvalidGroupDiscount_WhenExecuted_ThenThrows() {
+        // POSH is not a valid UserGroupDiscount → valueOf throws
+        ParsedCommand cmd = new ParsedCommand(null, "register",
+                List.of("guestToken", "alice", "Alice", "pass", "a@a.com", "POSH"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(cmd));
+        verify(userService, never()).registerUser(anyString(), anyString(), anyString(),
+                anyString(), any(), anyString());
+    }
+
+    @Test
+    void GivenCreateEventWithNonNumericCapacity_WhenExecuted_ThenThrows() {
+        // capacity "lots" cannot be parsed to int
+        ParsedCommand cmd = new ParsedCommand("e1", "create-event",
+                List.of("tok", "ev1", "1", "Rock Night", "lots",
+                        "2026-07-11T20:00", "true", "Tel Aviv Arena"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(cmd));
+        verify(eventService, never()).createEvent(anyString(), any(), any(), any());
+    }
+
+    @Test
+    void GivenCreateEventWithMalformedDate_WhenExecuted_ThenThrows() {
+        // "next friday" is not an ISO LocalDateTime
+        ParsedCommand cmd = new ParsedCommand("e1", "create-event",
+                List.of("tok", "ev1", "1", "Rock Night", "500",
+                        "next friday", "true", "Tel Aviv Arena"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(cmd));
+        verify(eventService, never()).createEvent(anyString(), any(), any(), any());
+    }
+
+    // ── Executor tests: variadic commands ─────────────────────────────────────
+
+    @Test
+    void GivenAppointManagerWithPermissions_WhenExecuted_ThenPermissionsParsedAndDelegated() {
+        when(productionService.createProductionCompany(anyString(), any())).thenReturn(7);
+
+        executor.execute(new ParsedCommand("c1", "create-production-company",
+                List.of("tok", "Co", "Desc", "c@c.com")));
+
+        // appoint-manager(token, companyId, managerId, perm1, perm2)
+        executor.execute(new ParsedCommand(null, "appoint-manager",
+                List.of("tok", "$c1", "bob",
+                        "INVENTORY_MANAGEMENT", "SALES_REPORT_GENERATION")));
+
+        verify(productionService).appointManager(
+                eq("tok"), eq(7), eq("bob"),
+                eq(EnumSet.of(ManagerPermission.INVENTORY_MANAGEMENT,
+                        ManagerPermission.SALES_REPORT_GENERATION)));
+    }
+
+    @Test
+    void GivenConfigureSeatingMapWithIncompleteTriplet_WhenExecuted_ThenThrows() {
+        // triplets must come in groups of 3 after (token, eventId); here one value is missing
+        ParsedCommand cmd = new ParsedCommand(null, "configure-event-seating-map",
+                List.of("tok", "ev1", "10", "10", "120.0", "10"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(cmd));
+        verify(eventService, never()).configureSeatingMap(anyString(), any(), any());
+    }
+
+    @Test
+    void GivenVariableBoundToVoidCommand_WhenReferencedLater_ThenThrowsUndefinedVariable() {
+        // logout returns nothing, so "$x = logout(...)" must NOT store $x
+        executor.execute(new ParsedCommand("x", "logout", List.of("alice", "tok")));
+
+        ParsedCommand usesX = new ParsedCommand(null, "logout", List.of("alice", "$x"));
+
+        assertThrows(RuntimeException.class, () -> executor.execute(usesX));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
