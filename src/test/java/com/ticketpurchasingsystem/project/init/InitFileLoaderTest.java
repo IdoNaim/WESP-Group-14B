@@ -221,18 +221,14 @@ class InitFileLoaderTest {
     }
 
     @Test
-    void GivenInitFileWithInvalidCommand_WhenLoaderRuns_ThenSystemExitsWithFailure() throws Exception {
+    void GivenInitFileWithInvalidCommand_WhenLoaderRuns_ThenThrowsInitializationException() throws Exception {
         Path tmp = Files.createTempFile("bad_init", ".txt");
         Files.writeString(tmp, "totally-invalid-command();\n");
 
         InitFileLoader loader = buildLoader(tmp.toString());
 
-        // InitFileLoader calls System.exit(1) on failure;
-        // catch it via a SecurityManager stub or verify the logger / exception path.
-        // Since System.exit cannot be easily intercepted without a SecurityManager,
-        // we test the executor directly for the same scenario and trust loader wires it.
-        ParsedCommand bad = new ParsedCommand(null, "totally-invalid-command", java.util.List.of());
-        assertThrows(RuntimeException.class, () -> executor.execute(bad));
+        assertThrows(RuntimeException.class,
+                () -> loader.run(new DefaultApplicationArguments()));
     }
 
     @Test
@@ -267,7 +263,8 @@ class InitFileLoaderTest {
     }
 
     @Test
-    void GivenInitFileWhereMiddleCommandFails_WhenLoaderRuns_ThenInitHaltsAndDoesNotContinue() throws Exception {
+    void GivenInitFileWhereMiddleCommandFails_WhenLoaderRuns_ThenThrowsAndSubsequentCommandsSkipped()
+            throws Exception {
         when(userService.guestEntry()).thenReturn("gt1");
         when(userService.loginUser(anyString(), anyString(), anyString()))
                 .thenThrow(new RuntimeException("Wrong password"));
@@ -276,16 +273,12 @@ class InitFileLoaderTest {
         Files.writeString(tmp,
                 "$g1 = guest-entry();\n" +
                         "$tok = login($g1, alice, wrongpass);\n" +
-                        // This line must never be reached:
                         "logout(alice, $tok);\n");
 
         InitFileLoader loader = buildLoader(tmp.toString());
 
-        // Loader calls System.exit(1); we can't catch that without a SecurityManager.
-        // Instead, verify that logout is never called (init halted after the failure).
-        try {
-            loader.run(new DefaultApplicationArguments());
-        } catch (Exception ignored) {}
+        assertThrows(RuntimeException.class,
+                () -> loader.run(new DefaultApplicationArguments()));
 
         verify(userService, never()).logoutUser(anyString(), anyString());
     }

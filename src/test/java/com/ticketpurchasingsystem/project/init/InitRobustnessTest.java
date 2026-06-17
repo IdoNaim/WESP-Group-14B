@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.DefaultApplicationArguments;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -220,9 +221,8 @@ class InitRobustnessTest {
         InitFileLoader loader = buildLoader(tmp.toString());
 
         // Loader will call System.exit(1); run in a way that captures the side effects
-        try {
-            loader.run(new org.springframework.boot.DefaultApplicationArguments());
-        } catch (Exception ignored) {}
+        assertThrows(RuntimeException.class,
+                () -> loader.run(new DefaultApplicationArguments()));
 
         verify(productionService, never()).createProductionCompany(anyString(), any());
         verify(eventService, never()).createEvent(anyString(), any(), any(), any());
