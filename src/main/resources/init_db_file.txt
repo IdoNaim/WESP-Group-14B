@@ -31,6 +31,10 @@ configure-event-seating-map($alice, $event3, 10, 10, 60.0, 10, 10, 45.0, 10, 10,
 create-history-order(order1, bob, $event1, $company1, 100.0, A1, A2);
 create-history-order(order2, bob, $event3, $company2, 100.0, A1, A2);
 
+# --- Active orders (persisted to DB — check H2 console ACTIVE_ORDERS table) ---
+$activeOrder1 = create-active-order($bob, bob, 1);
+add-seats-to-order($bob, $activeOrder1, 0_1_1, 0_1_2, 0_1_3);
+
 # --- Logout ---
 logout(alice, $alice);
 logout(bob, $bob);

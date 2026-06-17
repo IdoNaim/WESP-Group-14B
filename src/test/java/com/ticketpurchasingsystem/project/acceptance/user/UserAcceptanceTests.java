@@ -93,7 +93,7 @@ class UserAcceptanceTests {
         assertDoesNotThrow(() -> userService.registerUser(USER_ID, USER_NAME, USER_PASS, USER_EMAIL, UserGroupDiscount.NONE, token));
         String sessionToken = userService.loginUser(USER_ID, USER_PASS, token);
         assertDoesNotThrow(() -> userService.editEmail(USER_ID, USER_EMAIL, "newemail@test.com", sessionToken));
-        assertDoesNotThrow(() -> userService.editPassword(USER_ID, USER_PASS, "newPass", sessionToken));
+        assertDoesNotThrow(() -> userService.editPassword(USER_ID, USER_PASS, "newPass1", sessionToken));
         assertDoesNotThrow(() -> userService.editUsername(USER_ID, USER_NAME, "NewName", sessionToken));
         assertDoesNotThrow(() -> userService.setUserGroupDiscount(USER_ID, UserGroupDiscount.STUDENT, sessionToken));
         String newGuestToken = userService.logoutUser(USER_ID, sessionToken);
@@ -441,7 +441,7 @@ class UserAcceptanceTests {
         new Thread(() -> {
             try {
                 startLatch.await();
-                userService.registerUser("tomer", "Tomer", "pass1", "tomer@test.com",
+                userService.registerUser("tomer", "Tomer", "pass123", "tomer@test.com",
                         UserGroupDiscount.NONE, itayToken);
                 successCount.incrementAndGet();
             } catch (Exception e) {
@@ -454,7 +454,7 @@ class UserAcceptanceTests {
         new Thread(() -> {
             try {
                 startLatch.await();
-                userService.registerUser("tomer", "Tomer2", "pass2", "tomer2@test.com",
+                userService.registerUser("tomer", "Tomer2", "pass456", "tomer2@test.com",
                         UserGroupDiscount.NONE, edenToken);
                 successCount.incrementAndGet();
             } catch (Exception e) {
@@ -510,9 +510,9 @@ class UserAcceptanceTests {
     @Test
     void GivenLoggedInUser_WhenConcurrentDelete_ThenUserIsRemovedWithoutDeadlock() throws Exception {
         String guestToken = enterAsGuest();
-        userService.registerUser("itay", "Itay", "pass", "itay@test.com",
+        userService.registerUser("itay", "Itay", "pass123", "itay@test.com",
                 UserGroupDiscount.NONE, guestToken);
-        String sessionToken = userService.loginUser("itay", "pass", guestToken);
+        String sessionToken = userService.loginUser("itay", "pass123", guestToken);
 
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(2);
@@ -549,7 +549,7 @@ class UserAcceptanceTests {
         new Thread(() -> {
             try {
                 startLatch.await();
-                userService.registerUser("eden", "Eden", "pass", "eden@test.com",
+                userService.registerUser("eden", "Eden", "pass123", "eden@test.com",
                         UserGroupDiscount.NONE, edenToken);
                 successCount.incrementAndGet();
             } catch (Exception e) {
@@ -562,7 +562,7 @@ class UserAcceptanceTests {
         new Thread(() -> {
             try {
                 startLatch.await();
-                userService.registerUser("tomer", "Tomer", "pass", "tomer@test.com",
+                userService.registerUser("tomer", "Tomer", "pass123", "tomer@test.com",
                         UserGroupDiscount.NONE, "invalid-token");
                 successCount.incrementAndGet();
             } catch (Exception e) {

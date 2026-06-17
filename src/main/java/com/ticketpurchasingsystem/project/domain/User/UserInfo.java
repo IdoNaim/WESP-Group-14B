@@ -1,7 +1,6 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -10,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
+
 
 //** just a very early version of the user info class, we will add more fields and methods to it as we go along
 // the user type can be hybrid can be owner on one group and founder of another, but for now we will just have one user type for each user, we will add more fields to the user info class as we go along, and we will also add more methods to it as we go along

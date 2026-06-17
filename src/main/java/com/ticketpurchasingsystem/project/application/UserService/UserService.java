@@ -306,7 +306,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Username edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit username: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -321,7 +321,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Password edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit password: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -336,7 +336,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Email edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit email: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 

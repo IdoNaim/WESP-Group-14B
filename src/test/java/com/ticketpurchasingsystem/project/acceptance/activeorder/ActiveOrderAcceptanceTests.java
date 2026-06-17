@@ -758,7 +758,7 @@ public class ActiveOrderAcceptanceTests {
 
             assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
             assertThrows(Exception.class, () -> activeOrderService.getActiveOrderInfo(session, order.getOrderId()));
-            assertNull(activeOrderRepo.findById(order.getOrderId()));
+            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
 
             ActiveOrderItem order2 = assertDoesNotThrow(() -> activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId()));
             assertNotNull(order2);
@@ -817,7 +817,7 @@ public class ActiveOrderAcceptanceTests {
             order.setCreatedAt(java.sql.Timestamp.valueOf("1977-10-10 00:00:00"));
             activeOrderRepo.update(new ActiveOrderItem(order));
             assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
-            assertNull(activeOrderRepo.findById(order.getOrderId()));
+            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
@@ -841,7 +841,7 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(-1);
 
             assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
-            assertNull(activeOrderRepo.findById(order.getOrderId()));
+            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
@@ -865,7 +865,7 @@ public class ActiveOrderAcceptanceTests {
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
             assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
-            assertNull(activeOrderRepo.findById(order.getOrderId()));
+            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
             fail("got exception : " + e.getMessage() + '\n' + java.util.Arrays.toString(e.getStackTrace()));
@@ -907,7 +907,7 @@ public class ActiveOrderAcceptanceTests {
         }
         assertDoesNotThrow(() -> activeOrderService.cancelActiveOrder(session, USER1_ID, orderItem.getOrderId()));
         assertThrows(Exception.class, () -> activeOrderService.getActiveOrderInfo(session, orderItem.getOrderId()));
-        assertNull(activeOrderRepo.findById(orderItem.getOrderId()));
+        assertTrue(activeOrderRepo.findById(orderItem.getOrderId()).isEmpty());
     }
 
     @Test

@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class UserHandler {
+    private static final int MIN_PASSWORD_LENGTH = 7;
+    private static final String PASSWORD_RULE_MESSAGE =
+            "Password must be at least 7 characters long and include both letters and numbers.";
 
     public UserHandler() {
     }
@@ -18,6 +21,7 @@ public class UserHandler {
 
     public UserInfo registerUser(String userId, String name, String email, String password, UserGroupDiscount userGroupDiscount) {
         validateEmailFormat(email);
+        validateNewPassword(password);
         String encryptedPass = PasswordEncoderUtil.encodePassword(password);
         return new UserInfo(userId, name, email, encryptedPass, userGroupDiscount);
     }
@@ -147,8 +151,11 @@ public class UserHandler {
     }
 
     private void validateNewPassword(String password) {
-        if (password == null || password.isEmpty()) {
-            throw new RuntimeException("Password cannot be empty.");
+        if (password == null
+                || password.length() < MIN_PASSWORD_LENGTH
+                || !password.matches(".*[A-Za-z].*")
+                || !password.matches(".*\\d.*")) {
+            throw new RuntimeException(PASSWORD_RULE_MESSAGE);
         }
     }
 

@@ -121,7 +121,7 @@ class AuthApiAcceptanceTest {
                 RegisterRequestDTO dto = new RegisterRequestDTO();
                 dto.setUserId("duplicate-user");
                 dto.setName("Dup");
-                dto.setPassword("pass");
+                dto.setPassword("pass123");
                 dto.setEmail("dup@test.com");
                 dto.setUserGroupDiscount(UserGroupDiscount.NONE);
 
@@ -152,7 +152,7 @@ class AuthApiAcceptanceTest {
                 RegisterRequestDTO reg = new RegisterRequestDTO();
                 reg.setUserId("loginUser");
                 reg.setName("Login User");
-                reg.setPassword("mypassword");
+                reg.setPassword("mypassword1");
                 reg.setEmail("login@test.com");
                 reg.setUserGroupDiscount(UserGroupDiscount.NONE);
                 mockMvc.perform(post("/api/identity/register")
@@ -164,7 +164,7 @@ class AuthApiAcceptanceTest {
                 String loginGuestToken = extractToken(mockMvc.perform(post("/api/identity/guest")).andReturn());
                 LoginRequestDTO login = new LoginRequestDTO();
                 login.setUserId("loginUser");
-                login.setPassword("mypassword");
+                login.setPassword("mypassword1");
 
                 mockMvc.perform(post("/api/identity/login")
                                 .header("Authorization", "Bearer " + loginGuestToken)
@@ -214,7 +214,7 @@ class AuthApiAcceptanceTest {
                 RegisterRequestDTO reg = new RegisterRequestDTO();
                 reg.setUserId("logout-user");
                 reg.setName("Logout User");
-                reg.setPassword("pass");
+                reg.setPassword("pass123");
                 reg.setEmail("logout@test.com");
                 reg.setUserGroupDiscount(UserGroupDiscount.NONE);
                 mockMvc.perform(post("/api/identity/register")
@@ -225,7 +225,7 @@ class AuthApiAcceptanceTest {
                 String loginGuestToken = extractToken(mockMvc.perform(post("/api/identity/guest")).andReturn());
                 LoginRequestDTO login = new LoginRequestDTO();
                 login.setUserId("logout-user");
-                login.setPassword("pass");
+                login.setPassword("pass123");
                 String userToken = extractToken(mockMvc.perform(post("/api/identity/login")
                         .header("Authorization", "Bearer " + loginGuestToken)
                         .contentType(MediaType.APPLICATION_JSON)
