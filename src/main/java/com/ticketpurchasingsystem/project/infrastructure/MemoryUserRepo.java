@@ -41,4 +41,9 @@ public class MemoryUserRepo implements IUserRepo {
         UserInfo user = users.get(userId);
         return user != null && user.isAdmin();
     }
+
+    @Override
+    public void deleteAll() {
+        users.clear();
+    }
 }
