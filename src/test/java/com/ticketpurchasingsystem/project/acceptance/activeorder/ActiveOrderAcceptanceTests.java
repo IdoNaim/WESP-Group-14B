@@ -50,7 +50,6 @@ import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
-import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -131,7 +130,7 @@ public class ActiveOrderAcceptanceTests {
     @AfterEach
     public void tearDown() {
         activeOrderRepo.deleteAll();
-        ((EventRepo) eventRepo).deleteAll();
+        eventRepo.deleteAll();
     }
 
     @Test

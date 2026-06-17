@@ -41,6 +41,8 @@ class ViewEventDetailsAcceptanceTest {
 
     @BeforeEach
     void setUp() {
+        eventRepo.deleteAll();
+
         // 1. Setup REAL Authentication
         InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
         DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
