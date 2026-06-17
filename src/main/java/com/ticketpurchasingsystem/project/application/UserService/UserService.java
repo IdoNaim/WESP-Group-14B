@@ -1,9 +1,12 @@
 package com.ticketpurchasingsystem.project.application.UserService;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -101,7 +104,45 @@ public class UserService implements IUserService {
             throw new RuntimeException(e);
         }
     }
- 
+
+    /**
+     * Safety net for an "irregular exit": a guest who leaves without calling
+     * {@link #Exit} (e.g. just closes the browser tab). Their JWT eventually
+     * expires, but the SessionToken row and the guest UserInfo row have no
+     * synchronous trigger to remove them, so this scheduled sweep purges every
+     * expired session together with the guest accounts tied to one. Registered
+     * members keep their account — only their now-dead session row is dropped.
+     * The interval is configurable via {@code guest.session.cleanup.interval-ms}
+     * (default 30 minutes); {@code @Scheduled} ignores the return value, which is
+     * returned so the sweep can be invoked and asserted on directly in tests.
+     *
+     * @return the number of expired sessions removed
+     */
+    @Scheduled(fixedDelayString = "${guest.session.cleanup.interval-ms:1800000}")
+    public int purgeExpiredSessions() {
+        List<String> expiredTokens = authenticationService.getExpiredSessionTokens();
+        if (expiredTokens.isEmpty()) {
+            return 0;
+        }
+        Set<String> expiredTokenSet = new HashSet<>(expiredTokens);
+
+        // Remove orphaned guest accounts whose session has expired; members are kept.
+        for (UserInfo user : userRepo.getAllUsers()) {
+            if (Boolean.TRUE.equals(user.isGuest())
+                    && user.getSessionTokenStr() != null
+                    && expiredTokenSet.contains(user.getSessionTokenStr())) {
+                userRepo.delete(user.getId());
+                userPublisher.publishGuestExited(user.getId(), user.getSessionTokenStr());
+            }
+        }
+
+        for (String token : expiredTokens) {
+            authenticationService.removeSessionManually(token);
+        }
+        loggerDef.getInstance().info("Session cleanup purged " + expiredTokens.size() + " expired session(s).");
+        return expiredTokens.size();
+    }
+
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
         try {
             if (!authenticationService.validate(sessionTokenStr)) {

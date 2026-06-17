@@ -1,7 +1,5 @@
 package com.ticketpurchasingsystem.project.acceptance.user;
 
-import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,16 +16,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
-import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
-import com.ticketpurchasingsystem.project.domain.User.Events.GuestEvents.GuestEnterPlatformEvent;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserDTO;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
-import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -39,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ActiveProfiles("test")
 class UserAcceptanceTests {
 
-    private static final String JWT_SECRET = "myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong";
     private static final String USER_ID    = "alice";
     private static final String USER_NAME  = "Alice";
     private static final String USER_EMAIL = "alice@test.com";
@@ -53,40 +47,26 @@ class UserAcceptanceTests {
     @Autowired
     private IUserRepo userRepo;
 
+    // Autowired alongside IUserRepo so the whole flow runs against the real
+    // Spring-managed, DB-backed session store (DBSessionRepo is @Primary) rather
+    // than a hand-built in-memory stub. Because the autowired services below are
+    // @Transactional proxies, the session repo's transaction-bound deleteByToken
+    // now runs inside a transaction, so guest sessions are actually removed on
+    // logout/exit instead of lingering in the DB.
+    @Autowired
+    private ISessionRepo sessionRepo;
+
+    @Autowired
     private UserService userService;
+
+    @Autowired
     private AuthenticationService authService;
-    private String lastGuestToken;
 
     @BeforeEach
-    void setUp() throws Exception {
-        // Start from a clean users table so the admin-1 seed performed by the
-        // UserService constructor below does not collide with the startup bean's
-        // seed (or leftovers from a previous test) on the shared DB.
+    void setUp() {
+        // Start from a clean users table so a previous test's leftovers (or the
+        // admin-1 seed) do not skew the user-count assertions on the shared DB.
         userRepo.deleteAll();
-
-        // Sessions stay in-memory: this test exercises the User aggregate's DB
-        // persistence, and the non-transactional service wiring built here cannot
-        // satisfy the DB session repo's transaction-bound deleteByToken query.
-        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
-
-        DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
-        Field secretField = DomainAuthService.class.getDeclaredField("secret");
-        secretField.setAccessible(true);
-        secretField.set(domainAuthService, JWT_SECRET);
-        domainAuthService.init();
-
-        authService = new AuthenticationService(domainAuthService, sessionRepo);
-        UserHandler userHandler = new UserHandler();
-
-        // captures any guest token published (covers both direct guestEntry and
-        // the auto-guest created inside logoutUser)
-        UserPublisher publisher = new UserPublisher(event -> {
-            if (event instanceof GuestEnterPlatformEvent e) {
-                lastGuestToken = e.getSessionToken();
-            }
-        });
-
-        userService = new UserService(userRepo, userHandler, authService, publisher);
     }
 
     @AfterEach
@@ -260,15 +240,45 @@ class UserAcceptanceTests {
 
         userService.Exit(guestToken);
         assertNull(userRepo.findByID(guestId));
+        assertTrue(sessionRepo.findByToken(guestToken).isEmpty(),
+                "Guest session must be deleted from the session store on exit, not left lingering in the DB");
     }
 
     @Test
     void GivenLoggedInMember_WhenExit_ThenMemberIsStoredAsLoggedOut() {
         String sessionToken = registerAndLogin();
-        
+
         userService.Exit(sessionToken);
         assertFalse(userRepo.findByID(USER_ID).isLoggedIn());
         assertNull(userRepo.findByID(USER_ID).getSessionTokenStr());
+    }
+
+    // ─── Irregular exit (abandoned guest) ─────────────────────────────────────
+
+    @Test
+    void GivenGuestAbandonsWithoutExit_WhenSessionExpires_ThenCleanupRemovesGuestAndSession() {
+        // An "irregular exit": a guest who never calls Exit and whose session has
+        // already expired. We persist an expired session + guest directly because
+        // the JWT's 2h clock cannot be fast-forwarded in a unit test.
+        String expiredToken = "expired-guest-token";
+        String abandonedGuestId = "abandoned-guest";
+        sessionRepo.save(new SessionToken(expiredToken, System.currentTimeMillis() - 1_000));
+        userRepo.store(new UserInfo(abandonedGuestId, expiredToken));
+
+        // A second guest with a still-valid session that must survive the sweep.
+        String liveToken = enterAsGuest();
+        String liveGuestId = authService.getUser(liveToken);
+
+        userService.purgeExpiredSessions();
+
+        // The abandoned guest and its expired session are gone…
+        assertNull(userRepo.findByID(abandonedGuestId));
+        assertTrue(sessionRepo.findByToken(expiredToken).isEmpty(),
+                "Expired guest session must be purged from the DB on cleanup");
+        // …while the live guest and its session are left untouched.
+        assertNotNull(userRepo.findByID(liveGuestId));
+        assertTrue(sessionRepo.findByToken(liveToken).isPresent(),
+                "A guest with a valid (unexpired) session must not be purged");
     }
 
     // ─── getAllUsers ──────────────────────────────────────────────────────────
@@ -330,9 +340,10 @@ class UserAcceptanceTests {
         String sessionToken = registerAndLogin();
 
         userService.editPassword(USER_ID, USER_PASS, "newPass456", sessionToken);
-        userService.logoutUser(USER_ID, sessionToken); // lastGuestToken updated to the auto-created guest
+        // logoutUser returns the token of the auto-created guest, which we reuse to log back in
+        String newGuestToken = userService.logoutUser(USER_ID, sessionToken);
 
-        String newSession = userService.loginUser(USER_ID, "newPass456", lastGuestToken);
+        String newSession = userService.loginUser(USER_ID, "newPass456", newGuestToken);
         assertNotNull(newSession);
     }
 
