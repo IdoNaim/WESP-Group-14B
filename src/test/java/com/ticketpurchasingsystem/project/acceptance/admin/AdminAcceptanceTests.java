@@ -56,9 +56,12 @@ class AdminAcceptanceTests {
 
     @BeforeEach
     void setUp() {
+        userRepo.deleteAll();
+
         UserInfo adminUser = new UserInfo(ADMIN_ID, ADMIN_ID, "admin@system.com", "admin", UserGroupDiscount.NONE);
         adminUser.setAdmin(true);
         userRepo.store(adminUser);
+
         adminToken = authService.login(ADMIN_ID, "admin");
     }
 
