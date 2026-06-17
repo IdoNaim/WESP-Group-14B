@@ -204,6 +204,9 @@ export default function RegisterPage() {
                                     required
                                 />
                             </div>
+                            <p className="text-[10px] text-[#5d6475] ml-1 leading-4">
+                                Password must be at least 7 characters long and include both letters and numbers.
+                            </p>
                         </div>
 
                         <button

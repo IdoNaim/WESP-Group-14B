@@ -1,10 +1,16 @@
 package com.ticketpurchasingsystem.project.application.UserService;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
+
+import jakarta.transaction.Transactional;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
@@ -15,24 +21,29 @@ import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 @Service
+@Transactional
 public class UserService implements IUserService {
 
-    private final IUserRepo userRepo;    
+    private final IUserRepo userRepo;
     private final UserHandler userHandler;
     private final AuthenticationService authenticationService;
     private final UserPublisher userPublisher;
 
+    @Autowired
     public UserService(IUserRepo userRepo, UserHandler userHandler, AuthenticationService authenticationService, UserPublisher userPublisher) {
         this.userRepo = userRepo;
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
 
-        //creating admin for testing purposes
-        UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
-        if (newUser != null) {
-            newUser.setAdmin(true);
-            userRepo.store(newUser);
+        // Seed the default admin once. SystemAdminService also seeds "admin-1" at
+        // startup, so guard on existence to avoid a duplicate insert against the DB repo.
+        if (userRepo.findByID("admin-1") == null) {
+            UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
+            if (newUser != null) {
+                newUser.setAdmin(true);
+                userRepo.store(newUser);
+            }
         }
         // UserInfo idonaim = userHandler.registerUser("idonaim56@gmail.com", "Ido Naim", "idonaim56@gmail.com", "idonaim56", UserGroupDiscount.NONE);
         // UserProduction userProduction = new UserProduction();
@@ -93,7 +104,45 @@ public class UserService implements IUserService {
             throw new RuntimeException(e);
         }
     }
- 
+
+    /**
+     * Safety net for an "irregular exit": a guest who leaves without calling
+     * {@link #Exit} (e.g. just closes the browser tab). Their JWT eventually
+     * expires, but the SessionToken row and the guest UserInfo row have no
+     * synchronous trigger to remove them, so this scheduled sweep purges every
+     * expired session together with the guest accounts tied to one. Registered
+     * members keep their account — only their now-dead session row is dropped.
+     * The interval is configurable via {@code guest.session.cleanup.interval-ms}
+     * (default 30 minutes); {@code @Scheduled} ignores the return value, which is
+     * returned so the sweep can be invoked and asserted on directly in tests.
+     *
+     * @return the number of expired sessions removed
+     */
+    @Scheduled(fixedDelayString = "${guest.session.cleanup.interval-ms:1800000}")
+    public int purgeExpiredSessions() {
+        List<String> expiredTokens = authenticationService.getExpiredSessionTokens();
+        if (expiredTokens.isEmpty()) {
+            return 0;
+        }
+        Set<String> expiredTokenSet = new HashSet<>(expiredTokens);
+
+        // Remove orphaned guest accounts whose session has expired; members are kept.
+        for (UserInfo user : userRepo.getAllUsers()) {
+            if (Boolean.TRUE.equals(user.isGuest())
+                    && user.getSessionTokenStr() != null
+                    && expiredTokenSet.contains(user.getSessionTokenStr())) {
+                userRepo.delete(user.getId());
+                userPublisher.publishGuestExited(user.getId(), user.getSessionTokenStr());
+            }
+        }
+
+        for (String token : expiredTokens) {
+            authenticationService.removeSessionManually(token);
+        }
+        loggerDef.getInstance().info("Session cleanup purged " + expiredTokens.size() + " expired session(s).");
+        return expiredTokens.size();
+    }
+
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
         try {
             if (!authenticationService.validate(sessionTokenStr)) {
@@ -257,7 +306,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Username edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit username: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -272,7 +321,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Password edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit password: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -287,7 +336,7 @@ public class UserService implements IUserService {
             loggerDef.getInstance().info("Email edited successfully for user: " + userId);
         } catch (Exception e) {
             loggerDef.getInstance().error("Failed to edit email: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 

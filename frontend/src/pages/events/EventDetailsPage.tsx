@@ -74,7 +74,8 @@ export default function EventDetailsPage() {
                     navigate('/orders/active');
                     return;
                 } else {
-                    setOrderError(`You already have an active order for: ${existingOrder.eventId}`);
+                    const eventName = await eventApi.getEvent(token, existingOrder.eventId).then(e => e?.eventName || 'your current event');
+                    setOrderError(`You already have an active order for: ${eventName}`);
                     return;
                 }
             }

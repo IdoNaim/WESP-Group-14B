@@ -1,27 +1,70 @@
 package com.ticketpurchasingsystem.project.domain.User;
 
-import org.springframework.boot.autoconfigure.jms.JmsProperties.Listener.Session;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
+
 
 //** just a very early version of the user info class, we will add more fields and methods to it as we go along
 // the user type can be hybrid can be owner on one group and founder of another, but for now we will just have one user type for each user, we will add more fields to the user info class as we go along, and we will also add more methods to it as we go along
 // TODO
 // Not sure where to put user premissions and roles, maybe we can have a separate class for that and link it to the user info class, or maybe we can just have a field in the user info class for that, we will decide on that later when we have a better understanding of the requirements and the design of the system
 //  */
+@Entity
+@Table(name = "users")
 public class UserInfo {
+    @Id
+    @Column(name = "id")
     private String id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "email")
     private String email;
+
+    @Column(name = "password")
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_state")
     private UserState userState;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_group_discount")
     private UserGroupDiscount userGroupDiscount;
+
+    @Column(name = "logged_in")
     private boolean LoggedIn = false ;
+
+    @Column(name = "session_token_str")
     private String sessionTokenStr;
+
+    // Authoritative production-role data lives in the Production context
+    // (users_production_companies + ProductionCompany.founderId, keyed by user_id).
+    // On the User side it is a read-side projection, so it is not persisted here.
+    @Transient
     private UserProduction userProduction;
+
     @JsonProperty("isAdmin")
+    @Column(name = "is_admin")
     private boolean isAdmin = false;
+
+    // Nullable on purpose: UserInfo has an app-assigned id (email / guest-uuid),
+    // so Spring Data's isNew() relies on a null version to fire INSERT for new
+    // users and UPDATE once the version has been set by Hibernate.
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
+    // JPA requires a no-arg constructor
+    protected UserInfo() {}
 
     // registration
     public UserInfo(String id, String name, String email, String password, UserGroupDiscount userGroupDiscount) {

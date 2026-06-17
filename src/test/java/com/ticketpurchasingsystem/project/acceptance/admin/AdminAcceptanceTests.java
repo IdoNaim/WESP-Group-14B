@@ -1,12 +1,12 @@
 package com.ticketpurchasingsystem.project.acceptance.admin;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,19 +17,13 @@ import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderItem;
-import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderListener;
+import com.ticketpurchasingsystem.project.domain.ActiveOrders.IActiveOrderRepo;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
-import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
-import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.AdminPublisher;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllActiveOrdersEvent;
-import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllHistoryOrdersEvent;
-import com.ticketpurchasingsystem.project.infrastructure.ActiveOrderMemRepo;
-import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
-import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
-import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -41,48 +35,40 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ActiveProfiles("test")
 class AdminAcceptanceTests {
 
-    private static final String JWT_SECRET = "myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong";
-    private static final String ADMIN_ID   = "sysadmin";
+    private static final String ADMIN_ID = "sysadmin";
 
     @Autowired
-    private MemoryUserRepo userRepository;
+    private IActiveOrderRepo activeOrderRepo;
 
-    private ActiveOrderMemRepo activeOrderRepo;
-    private HistoryOrderRepo historyOrderRepo;
+    @Autowired
+    private IHistoryOrderRepo historyOrderRepo;
+
+    @Autowired
+    private IUserRepo userRepo;
+
+    @Autowired
     private SystemAdminService adminService;
+
+    @Autowired
+    private AuthenticationService authService;
+
     private String adminToken;
 
     @BeforeEach
-    void setUp() throws Exception {
-        userRepository.deleteAll();
-
-        activeOrderRepo = new ActiveOrderMemRepo();
-        historyOrderRepo = new HistoryOrderRepo();
+    void setUp() {
+        userRepo.deleteAll();
 
         UserInfo adminUser = new UserInfo(ADMIN_ID, ADMIN_ID, "admin@system.com", "admin", UserGroupDiscount.NONE);
         adminUser.setAdmin(true);
-        userRepository.store(adminUser);
+        userRepo.store(adminUser);
 
-        InMemorySessionRepo sessionRepo = new InMemorySessionRepo();
-        DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
-        Field secretField = DomainAuthService.class.getDeclaredField("secret");
-        secretField.setAccessible(true);
-        secretField.set(domainAuthService, JWT_SECRET);
-        domainAuthService.init();
-
-        AuthenticationService authService = new AuthenticationService(domainAuthService, sessionRepo);
         adminToken = authService.login(ADMIN_ID, "admin");
+    }
 
-        ActiveOrderListener activeOrderListener = new ActiveOrderListener(activeOrderRepo);
-
-        AdminPublisher adminPublisher = new AdminPublisher(event -> {
-            if (event instanceof GetAllActiveOrdersEvent e)
-                activeOrderListener.handleGetAllActiveOrdersEvent(e);
-            else if (event instanceof GetAllHistoryOrdersEvent e)
-                e.setResult(historyOrderRepo.findAll());
-        });
-
-        adminService = new SystemAdminService(userRepository, adminPublisher, authService);
+    @AfterEach
+    void tearDown() {
+        activeOrderRepo.findAll().forEach(o -> activeOrderRepo.delete(o.getOrderId()));
+        historyOrderRepo.deleteAll();
     }
 
     // ─── getAllActiveOrders ───────────────────────────────────────────────────
@@ -162,8 +148,7 @@ class AdminAcceptanceTests {
             executor.submit(() -> {
                 try {
                     startLatch.await();
-                    List<com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO> result =
-                            adminService.getAllActiveOrders(adminToken);
+                    List<ActiveOrderDTO> result = adminService.getAllActiveOrders(adminToken);
                     resultSizes.add(result.size());
                 } catch (Exception e) {
                     errorCount.incrementAndGet();
@@ -200,8 +185,7 @@ class AdminAcceptanceTests {
             executor.submit(() -> {
                 try {
                     startLatch.await();
-                    List<com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO> result =
-                            adminService.getAllHistoryOrders(adminToken);
+                    List<HistoryOrderDTO> result = adminService.getAllHistoryOrders(adminToken);
                     resultSizes.add(result.size());
                 } catch (Exception e) {
                     errorCount.incrementAndGet();

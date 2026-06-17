@@ -84,6 +84,15 @@ public class UserHandlerTests {
     }
 
     @Test
+    void GivenWeakPassword_WhenRegisterUser_ThenThrowRuntimeException() {
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+            handler.registerUser(USER_ID, USERNAME, EMAIL, "password", UserGroupDiscount.NONE)
+        );
+
+        assertEquals("Password must be at least 7 characters long and include both letters and numbers.", exception.getMessage());
+    }
+
+    @Test
     void GivenGuestEntry_WhenHandleGuestEntry_ThenGuestInitialized() {
         UserInfo guest = buildGuestUser();
 
@@ -341,9 +350,9 @@ public class UserHandlerTests {
         user.setSessionTokenStr(TOKEN);
         user.setLoggedIn(true);
 
-        handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
+        handler.editPassword(user, USER_ID, PASSWORD, "newpass1", TOKEN);
 
-        assertTrue(PasswordEncoderUtil.matches("new-pass", user.getPassword()));
+        assertTrue(PasswordEncoderUtil.matches("newpass1", user.getPassword()));
         assertFalse(PasswordEncoderUtil.matches(PASSWORD, user.getPassword()));
     }
 
@@ -353,7 +362,7 @@ public class UserHandlerTests {
         user.setSessionTokenStr(TOKEN);
         user.setLoggedIn(true);
 
-        handler.editPassword(user, USER_ID, PASSWORD, "new-pass", TOKEN);
+        handler.editPassword(user, USER_ID, PASSWORD, "newpass1", TOKEN);
 
         verify(user).setPassword(anyString());
     }
@@ -362,9 +371,10 @@ public class UserHandlerTests {
     void GivenWrongOldPassword_WhenEditPassword_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
-            handler.editPassword(user, USER_ID, "wrong-old", "new-pass", TOKEN)
+            handler.editPassword(user, USER_ID, "wrong-old", "newpass1", TOKEN)
         );
     }
 
@@ -372,9 +382,43 @@ public class UserHandlerTests {
     void GivenEmptyNewPassword_WhenEditPassword_ThenThrowRuntimeException() {
         UserInfo user = buildMemberUser();
         user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
 
         assertThrows(RuntimeException.class, () ->
             handler.editPassword(user, USER_ID, PASSWORD, "", TOKEN)
+        );
+    }
+
+    @Test
+    void GivenShortNewPassword_WhenEditPassword_ThenThrowRuntimeException() {
+        UserInfo user = buildMemberUser();
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        assertThrows(RuntimeException.class, () ->
+            handler.editPassword(user, USER_ID, PASSWORD, "abc12", TOKEN)
+        );
+    }
+
+    @Test
+    void GivenNewPasswordWithoutNumber_WhenEditPassword_ThenThrowRuntimeException() {
+        UserInfo user = buildMemberUser();
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        assertThrows(RuntimeException.class, () ->
+            handler.editPassword(user, USER_ID, PASSWORD, "password", TOKEN)
+        );
+    }
+
+    @Test
+    void GivenNewPasswordWithoutLetter_WhenEditPassword_ThenThrowRuntimeException() {
+        UserInfo user = buildMemberUser();
+        user.setSessionTokenStr(TOKEN);
+        user.setLoggedIn(true);
+
+        assertThrows(RuntimeException.class, () ->
+            handler.editPassword(user, USER_ID, PASSWORD, "1234567", TOKEN)
         );
     }
 

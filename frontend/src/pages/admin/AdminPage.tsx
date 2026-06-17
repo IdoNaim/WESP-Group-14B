@@ -252,7 +252,12 @@ function AdminUsersTable({ users }: { users: SystemUserDTO[] }) {
                 <td>{String(user.id ?? user.userId ?? "—")}</td>
                 <td>{String(user.username ?? user.name ?? "—")}</td>
                 <td>{String(user.email ?? "—")}</td>
-                <td>{String(user.userGroupDiscount ?? "—")}</td>
+{/* <<<<<<< HEAD */}
+                <td>{String(user.userState ?? "—")}</td>
+                <td>{user.isAdmin === true ? "Yes" : user.isAdmin === false ? "No" : "—"}</td>
+{/* // =======
+//                 <td>{String(user.userGroupDiscount ?? "—")}</td>
+// >>>>>>> origin/main */}
               </tr>
             ))}
           </tbody>

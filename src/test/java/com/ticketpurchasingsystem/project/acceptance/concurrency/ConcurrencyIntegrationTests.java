@@ -168,7 +168,20 @@ public class ConcurrencyIntegrationTests {
         PurchasePolicyDTO purchasePolicyDTO = new PurchasePolicyDTO(0, eventCapacity, false, 0, 60, true, false);
         List<DiscountDTO> discounts = new ArrayList<>();
 
-        EventDTO e = new EventDTO(null, companyId, eventName, eventCapacity, eventDate, true, eventLocation);
+        // ✅ FIXED: Expanded initialization with 10 arguments to adhere to updated record schema
+        EventDTO e = new EventDTO(
+                null,
+                companyId,
+                eventName,
+                eventCapacity,
+                eventDate,
+                true,
+                eventLocation,
+                null, // imageUrl
+                null, // minZonePrice
+                null  // maxZonePrice
+        );
+
         eventService.createEvent(sessionToken, e, purchasePolicyDTO, discounts);
 
         List<EventDTO> events = eventService.searchEventsByCompany(sessionToken, companyId);
@@ -333,7 +346,6 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                // Direct call to reserveSeats (which modifies the shared in-memory SeatingMap)
                 eventService.reserveSeats(tokenA, "order-a", eventId, List.of(seatId));
                 successCount.incrementAndGet();
             } catch (Exception e) {
@@ -346,7 +358,6 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                // Direct call to reserveSeats (which modifies the shared in-memory SeatingMap)
                 eventService.reserveSeats(tokenB, "order-b", eventId, List.of(seatId));
                 successCount.incrementAndGet();
             } catch (Exception e) {

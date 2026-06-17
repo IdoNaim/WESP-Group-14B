@@ -31,9 +31,9 @@ public class SystemAdminService implements ISystemAdminService {
         this.adminPublisher = adminPublisher;
         this.authenticationService = authenticationService;
 
-        UserInfo defaultAdmin = new UserInfo("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
-        defaultAdmin.setAdmin(true);
-        userRepo.store(defaultAdmin);
+        // admin-1 is seeded by UserService (which hashes the password via UserHandler).
+        // Seeding here with a plain UserInfo constructor would store a plain-text
+        // password and break BCrypt verification if this bean is constructed first.
     }
 
     @Override
