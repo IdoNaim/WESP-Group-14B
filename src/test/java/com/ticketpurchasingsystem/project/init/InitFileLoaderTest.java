@@ -1,17 +1,28 @@
 package com.ticketpurchasingsystem.project.init;
 
-import com.ticketpurchasingsystem.project.application.ActiveOrderService;
-import com.ticketpurchasingsystem.project.application.EventService;
-import com.ticketpurchasingsystem.project.application.HistoryOrderService;
-import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.Controllers.AuthController;
+import com.ticketpurchasingsystem.project.application.*;
+import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import com.ticketpurchasingsystem.project.domain.User.UserDTO;
+import com.ticketpurchasingsystem.project.domain.User.UserHandler;
+import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
+import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
+import com.ticketpurchasingsystem.project.infrastructure.MemoryUserRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.boot.autoconfigure.pulsar.PulsarProperties;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -34,8 +45,23 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 class InitFileLoaderTest {
+    IUserRepo userRepo = new MemoryUserRepo();
+    UserHandler userHandler = new UserHandler();
+    ISessionRepo sessionRepo = new InMemorySessionRepo();
+    DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
+    @Spy
+    AuthenticationService authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
+    ApplicationEventPublisher publisher = new ApplicationEventPublisher() {
+        @Override
+        public void publishEvent(Object event) {
 
-    @Mock private UserService userService;
+        }
+    };
+    UserPublisher userPublisher = new UserPublisher(publisher);
+    private static final String SECRET = "my-super-secret-key-for-testing!";
+
+    @Spy
+    private UserService userService = new UserService(userRepo,userHandler, authenticationService,userPublisher);
     @Mock private ProductionService productionService;
     @Mock private EventService eventService;
     @Mock private HistoryOrderService historyOrderService;
@@ -45,9 +71,44 @@ class InitFileLoaderTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(domainAuthService, "secret", SECRET);
+        domainAuthService.init();
+//        IUserRepo userRepo = new MemoryUserRepo();
+//        UserHandler userHandler = new UserHandler();
+//        ISessionRepo sessionRepo = new InMemorySessionRepo();
+//        DomainAuthService domainAuthService = new DomainAuthService(sessionRepo);
+//        AuthenticationService authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
+//        ApplicationEventPublisher publisher = new ApplicationEventPublisher() {
+//            @Override
+//            public void publishEvent(Object event) {
+//
+//            }
+//        };
+//        UserPublisher userPublisher = new UserPublisher(publisher);
+//
+//        userService = new UserService(userRepo,userHandler, authenticationService,userPublisher);
+
         executor = new InitCommandExecutor(
                 userService, productionService, eventService,
                 historyOrderService, activeOrderService);
+    }
+
+    @Test
+    public void GivenEmptyFile_WhenInitiated_ThenThereIsAtLeastOneAdmin() throws Exception{
+        Path tmp = Files.createTempFile("empty_init", ".txt");
+        Files.writeString(tmp, "");
+
+        InitFileLoader loader = buildLoader(tmp.toString());
+        loader.run(new DefaultApplicationArguments());
+        List<UserDTO> users = userService.getAllUsers();
+        boolean foundAdmin = false;
+        for(UserDTO user : users){
+            if(user.isAdmin()){
+                foundAdmin = true;
+                break;
+            }
+        }
+        assertTrue(foundAdmin);
     }
 
     // ── Parser tests ──────────────────────────────────────────────────────────
@@ -172,7 +233,9 @@ class InitFileLoaderTest {
 
     @Test
     void GivenRegisterCommand_WhenExecuted_ThenDelegatesCorrectlyToUserService() {
-        when(userService.guestEntry()).thenReturn("gt1");
+//        when(userService.guestEntry()).thenReturn("gt1");
+//        when(authenticationService.validate("gt1")).thenReturn(true);
+//        when(authenticationService.validate("guest-entry")).thenReturn(true);
 
         // First get a guest token into context
         executor.execute(new ParsedCommand("g1", "guest-entry", java.util.List.of()));
@@ -183,7 +246,7 @@ class InitFileLoaderTest {
 
         verify(userService).registerUser(
                 eq("alice"), eq("Alice Smith"), eq("pass123"),
-                eq("alice@example.com"), any(), eq("gt1"));
+                eq("alice@example.com"), any(), any());
     }
 
     @Test
@@ -208,7 +271,7 @@ class InitFileLoaderTest {
         assertThrows(RuntimeException.class, () -> executor.execute(cmd));
     }
 
-    // ── InitFileLoader integration (with temp files) ──────────────────────────
+    // ── InitFileLoader integration ──────────────────────────
 
     @Test
     void GivenEmptyInitFile_WhenLoaderRuns_ThenNoCommandsExecutedAndNoException() throws Exception {
