@@ -41,4 +41,10 @@ public class InMemoryNotificationRepo implements INotificationRepo {
                 .filter(n -> n.getUserId().equals(userId) && !n.isRead())
                 .count();
     }
+
+    @Override
+    public void deleteAll() {
+        store.clear();
+    }
 }
+
