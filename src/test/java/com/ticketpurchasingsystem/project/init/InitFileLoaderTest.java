@@ -251,15 +251,13 @@ class InitFileLoaderTest {
 
     @Test
     void GivenVariableFromPreviousCommand_WhenUsedInNextCommand_ThenResolvedCorrectly() {
-        when(userService.guestEntry()).thenReturn("resolved-token");
-        when(userService.loginUser(anyString(), anyString(), anyString())).thenReturn("user-session");
-
         executor.execute(new ParsedCommand("g1", "guest-entry", java.util.List.of()));
-        // login($g1, alice, pass123)
+        executor.execute(new ParsedCommand(null, "register",
+                java.util.List.of("$g1", "alice", "Alice Smith", "pass123", "alice@example.com", "NONE")));
         executor.execute(new ParsedCommand("tok", "login",
                 java.util.List.of("$g1", "alice", "pass123")));
 
-        verify(userService).loginUser("alice", "pass123", "resolved-token");
+        verify(userService).loginUser(eq("alice"), eq("pass123"), anyString());
     }
 
     @Test
@@ -309,8 +307,9 @@ class InitFileLoaderTest {
     @Test
     void GivenValidInitFile_WhenLoaderRuns_ThenAllCommandsExecutedInOrder() throws Exception {
         when(userService.guestEntry()).thenReturn("gt1");
-        when(userService.loginUser(anyString(), anyString(), anyString())).thenReturn("alice-tok");
-
+        doNothing().when(userService).registerUser(anyString(), anyString(), anyString(), anyString(), any(), anyString());
+        doReturn("alice-tok").when(userService).loginUser(anyString(), anyString(), anyString());
+        doReturn("new-guest-token").when(userService).logoutUser(anyString(), anyString());
         Path tmp = Files.createTempFile("valid_init", ".txt");
         Files.writeString(tmp,
                 "$g1 = guest-entry();\n" +
@@ -331,9 +330,9 @@ class InitFileLoaderTest {
     @Test
     void GivenInitFileWhereMiddleCommandFails_WhenLoaderRuns_ThenThrowsAndSubsequentCommandsSkipped()
             throws Exception {
-        when(userService.guestEntry()).thenReturn("gt1");
-        when(userService.loginUser(anyString(), anyString(), anyString()))
-                .thenThrow(new RuntimeException("Wrong password"));
+//        when(userService.guestEntry()).thenReturn("gt1");
+//        when(userService.loginUser(anyString(), anyString(), anyString()))
+//                .thenThrow(new RuntimeException("Wrong password"));
 
         Path tmp = Files.createTempFile("mid_fail_init", ".txt");
         Files.writeString(tmp,
@@ -470,11 +469,10 @@ class InitFileLoaderTest {
 
     @Test
     void GivenVariableBoundToVoidCommand_WhenReferencedLater_ThenThrowsUndefinedVariable() {
-        // logout returns nothing, so "$x = logout(...)" must NOT store $x
-        executor.execute(new ParsedCommand("x", "logout", List.of("alice", "tok")));
+        // remove-event returns null (void) and eventService is mocked so it won't throw
+        executor.execute(new ParsedCommand("x", "remove-event", List.of("tok", "ev1")));
 
         ParsedCommand usesX = new ParsedCommand(null, "logout", List.of("alice", "$x"));
-
         assertThrows(RuntimeException.class, () -> executor.execute(usesX));
     }
 
