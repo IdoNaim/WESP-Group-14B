@@ -33,7 +33,10 @@ public interface DBActiveOrderRepo extends JpaRepository<ActiveOrderItem, String
 
     @Override
     default void update(ActiveOrderItem order) {
-        saveAndFlush(order);
+        ((JpaRepository<ActiveOrderItem, String>) this).findById(order.getOrderId()).ifPresent(existing -> {
+            existing.editOrder(order);
+            saveAndFlush(existing);
+        });
     }
 
     // ── markAsProcessing with pessimistic row lock ────────────────────────

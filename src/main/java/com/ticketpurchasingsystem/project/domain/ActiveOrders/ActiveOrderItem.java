@@ -15,7 +15,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 
 @Entity
@@ -50,7 +49,7 @@ public class ActiveOrderItem {
     @Column(name = "version")
     private Long version;
 
-    @Transient
+    @Column(name = "processing", nullable = false)
     private boolean processing;
 
 
