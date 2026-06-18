@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { authApi, UserProfileDTO } from '../../api/authApi';
 import { activeOrderApi, ActiveOrderDTO } from '../../api/activeOrderApi';
-import { eventApi, EventDTO, SeatingMapDTO } from '../../api/eventsApi';
+import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
 const RESERVE_ROUTE = '/events/:eventId/reserve';
@@ -27,7 +27,8 @@ export default function ActiveOrderPage() {
   const [activeOrder, setActiveOrder] = useState<ActiveOrderDTO | null>(null);
   const [event, setEvent] = useState<EventDTO | null>(null);
   const [seatingMap, setSeatingMap] = useState<SeatingMapDTO | null>(null);
-  
+  const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
+  const minSeatsAllowed = purchasePolicy?.minTickets || 1;
   // ─── UX/UI State ────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCanceling, setIsCanceling] = useState<boolean>(false);
@@ -77,20 +78,22 @@ export default function ActiveOrderPage() {
 
         setActiveOrder(orderData);
 
-        // 4. Fetch Event Details & Seating Map concurrently
-        const [eventDetails, seatingMapData] = await Promise.all([
+        // 4. Fetch Event Details, Seating Map, & Purchase Policy concurrently
+        const [eventDetails, seatingMapData, policyData] = await Promise.all([
           eventApi.getEvent(token, orderData.eventId),
-          eventApi.getEventSeatingMap(token, orderData.eventId)
+          eventApi.getEventSeatingMap(token, orderData.eventId),
+          eventApi.getEventPurchasePolicy(token, orderData.eventId) // Add this line!
         ]);
 
         if (!eventDetails) {
           throw new Error('Failed to retrieve details for the assigned event.');
         }
-        
+
         console.log('[ActiveOrderPage Debug] Fetched Event Data:', eventDetails);
-        
+
         setEvent(eventDetails);
         setSeatingMap(seatingMapData);
+        setPurchasePolicy(policyData); // Save the fetched policy to state
 
         // 5. Setup Timer
         const rawData = orderData as any;
@@ -496,14 +499,25 @@ export default function ActiveOrderPage() {
                     <span className="text-xl font-bold text-black">${totalDue.toFixed(2)}</span>
                   </div>
                   <div className="pt-4 space-y-2">
-                    <button 
-                      onClick={handleCheckoutSimulation}
-                      disabled={checkoutState !== 'idle' || isCanceling}
-                      className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
-                        checkoutState === 'purchased' 
-                        ? 'bg-[#15803d] text-white cursor-default' 
-                        : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
-                      }`}
+                    {/* 1. Show a warning if they haven't met the minimum */}
+                    {totalTicketsCount < minSeatsAllowed && (
+                        <div className="bg-[#ffdad6] text-[#93000a] p-3 rounded-lg flex items-center gap-2 mb-2">
+                          <span className="material-symbols-outlined text-sm">info</span>
+                          <p className="text-xs font-semibold">
+                            Policy requires a minimum of {minSeatsAllowed} tickets.
+                          </p>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleCheckoutSimulation}
+                        // 2. Disable the button if the minimum isn't met!
+                        disabled={checkoutState !== 'idle' || isCanceling || totalTicketsCount < minSeatsAllowed}
+                        className={`w-full font-bold py-3 rounded-lg flex items-center justify-center gap-3 transition-all duration-300 ${
+                            checkoutState === 'purchased'
+                                ? 'bg-[#15803d] text-white cursor-default'
+                                : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
+                        }`}
                     >
                       <span>
                         {checkoutState === 'idle' && 'Go to Checkout'}
@@ -512,15 +526,15 @@ export default function ActiveOrderPage() {
                         {checkoutState === 'purchased' && 'Redirecting...'}
                       </span>
                       {(checkoutState === 'processing' || checkoutState === 'finalizing') && (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       )}
                     </button>
 
                     {/* ─── Cancel Order Button ─── */}
                     <button
-                      onClick={handleManualCancel}
-                      disabled={checkoutState !== 'idle' || isCanceling}
-                      className="w-full bg-white text-red-600 border border-[#e2e2e9] hover:border-red-600 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50/50 active:scale-[0.98] transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none text-sm"
+                        onClick={handleManualCancel}
+                        disabled={checkoutState !== 'idle' || isCanceling}
+                        className="w-full bg-white text-red-600 border border-[#e2e2e9] hover:border-red-600 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-red-50/50 active:scale-[0.98] transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none text-sm"
                     >
                       <span className="material-symbols-outlined text-lg leading-none">close</span>
                       <span>{isCanceling ? 'Canceling Order...' : 'Cancel Order'}</span>
