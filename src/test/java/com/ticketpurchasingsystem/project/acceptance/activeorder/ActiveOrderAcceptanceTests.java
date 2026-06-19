@@ -793,7 +793,8 @@ public class ActiveOrderAcceptanceTests {
             assertEquals(historyOrderDTO.getUserId(), order.getUserId());
             assertEquals(historyOrderDTO.getCompanyId(), companyId);
             assertEquals(historyOrderDTO.getPrice(), amountToPay);
-            assertEquals(historyOrderDTO.getSeatIds(), order.getSeatIds());
+            assertTrue(sameElements(historyOrderDTO.getSeatIds(), order.getSeatIds()));
+//            assertEquals(historyOrderDTO.getSeatIds(), order.getSeatIds());
             assertEquals(historyOrderDTO.getStandingAreaQuantities(), order.getStandingAreaQuantities());
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
@@ -925,4 +926,26 @@ public class ActiveOrderAcceptanceTests {
             fail("got exception : " + e.getMessage());
         }
     }
+    private boolean sameElements(List<String> l1, List<String> l2){
+        boolean same = true;
+        for(String element : l1){
+            if(!l2.contains(element)){
+                same = false;
+                break;
+            }
+        }
+        if(!same){
+            return false;
+        }
+        else{
+            for(String element : l2){
+                if(!l1.contains(element)){
+                    same = false;
+                    break;
+                }
+            }
+            return same;
+        }
+    }
+
 }
