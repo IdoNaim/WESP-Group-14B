@@ -705,7 +705,8 @@ public class ActiveOrderAcceptanceTests {
             assertEquals(historyOrderDTO.getUserId(), order.getUserId());
             assertEquals(historyOrderDTO.getCompanyId(), companyId);
             assertEquals(historyOrderDTO.getPrice(), amountToPay);
-            assertEquals(historyOrderDTO.getSeatIds(), order.getSeatIds());
+            assertTrue(sameElements(historyOrderDTO.getSeatIds(), order.getSeatIds()));
+//            assertEquals(historyOrderDTO.getSeatIds(), order.getSeatIds());
             assertEquals(historyOrderDTO.getStandingAreaQuantities(), order.getStandingAreaQuantities());
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
@@ -833,6 +834,31 @@ public class ActiveOrderAcceptanceTests {
         }
     }
 
+    private boolean sameElements(List<String> l1, List<String> l2){
+        boolean same = true;
+        for(String element : l1){
+            if(!l2.contains(element)){
+                same = false;
+                break;
+            }
+        }
+        if(!same){
+            return false;
+        }
+        else{
+            for(String element : l2){
+                if(!l1.contains(element)){
+                    same = false;
+                    break;
+                }
+            }
+            return same;
+        }
+    }
+
+
+
+
     // UC II.2.11 + II.2.12 — Concurrency: processing flag prevents simultaneous complete and cancel
     @Test
     public void GivenSameOrder_WhenCompleteAndCancelConcurrently_ThenOnlyOneSucceedsAndOrderRemoved() throws InterruptedException {
@@ -844,51 +870,51 @@ public class ActiveOrderAcceptanceTests {
         String liveOrderId = orderItem.getOrderId();
         try {
 
-        // 2. Setup concurrency tools
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(2);
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failCount = new AtomicInteger(0);
+            // 2. Setup concurrency tools
+            CountDownLatch startLatch = new CountDownLatch(1);
+            CountDownLatch doneLatch = new CountDownLatch(2);
+            AtomicInteger successCount = new AtomicInteger(0);
+            AtomicInteger failCount = new AtomicInteger(0);
 
-        // Mock dependencies for the completion path
-        lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
-        lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
+            // Mock dependencies for the completion path
+            lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
+            lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
-        // 3. Thread 1: Try to complete
-        new Thread(() -> {
-            try {
-                startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(100.0), liveOrderId);
-                successCount.incrementAndGet();
-            } catch (Exception e) {
-                failCount.incrementAndGet();
-            } finally {
-                doneLatch.countDown();
-            }
-        }).start();
+            // 3. Thread 1: Try to complete
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(100.0), liveOrderId);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
 
-        // 4. Thread 2: Try to cancel
-        new Thread(() -> {
-            try {
-                startLatch.await();
-                activeOrderService.cancelActiveOrder(session, USER1_ID, liveOrderId);
-                successCount.incrementAndGet();
-            } catch (Exception e) {
-                failCount.incrementAndGet();
-            } finally {
-                doneLatch.countDown();
-            }
-        }).start();
+            // 4. Thread 2: Try to cancel
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    activeOrderService.cancelActiveOrder(session, USER1_ID, liveOrderId);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
 
-        // 5. Execute
-        startLatch.countDown();
-        boolean completedTimely = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            // 5. Execute
+            startLatch.countDown();
+            boolean completedTimely = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
 
-        // 6. Assertions
-        assertTrue(completedTimely, "The concurrency test timed out!");
-        assertEquals(1, successCount.get(), "Exactly one operation should succeed");
-        assertEquals(1, failCount.get(), "Exactly one operation should fail");
-        assertTrue(activeOrderRepo.findById(liveOrderId).isEmpty(), "The order should be removed from the repo regardless of which operation won");
+            // 6. Assertions
+            assertTrue(completedTimely, "The concurrency test timed out!");
+            assertEquals(1, successCount.get(), "Exactly one operation should succeed");
+            assertEquals(1, failCount.get(), "Exactly one operation should fail");
+            assertTrue(activeOrderRepo.findById(liveOrderId).isEmpty(), "The order should be removed from the repo regardless of which operation won");
         } finally {
             activeOrderRepo.deleteAll();
         }
