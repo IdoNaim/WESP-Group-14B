@@ -3,11 +3,14 @@ package com.ticketpurchasingsystem.project.infrastructure;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
@@ -56,12 +59,20 @@ public class PaymentGateway implements IPaymentGateway {
         return response != null && response.trim().equalsIgnoreCase("OK");
     }
 
+//    private String post(Map<String, Object> body) {
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.APPLICATION_JSON);
+//        return restTemplate.postForObject(API_URL, new HttpEntity<>(body, headers), String.class);
+//    }
     private String post(Map<String, Object> body) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.postForObject(API_URL, new HttpEntity<>(body, headers), String.class);
-    }
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        body.forEach((k, v) -> form.add(k, String.valueOf(v)));
+
+        return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
+    }
     private int parseIntResponse(String response) {
         if (response == null) return -1;
         try {
