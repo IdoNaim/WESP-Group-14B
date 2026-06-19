@@ -7,9 +7,6 @@ import { authApi, UserProfileDTO } from '../../api/authApi';
 const FALLBACK_RESERVE_ROUTE = '/reserve';
 const EVENTS_ROUTE = '/events';
 const GET_RESERVE_ROUTE = (eventId: string | number) => `/events/${eventId}/reserve`;
-// Key under which the reserve-ticket page persisted the verified age, reused here
-// to re-validate the purchase policy without prompting the user again.
-const VERIFIED_AGE_STORAGE_KEY = 'verifiedUserAge';
 
 type CheckoutStatus = 'idle' | 'processing' | 'success' | 'expired_canceled';
 
@@ -84,6 +81,10 @@ export default function CheckoutPage() {
   const [hasNoActiveOrder, setHasNoActiveOrder] = useState(false);
   const [processState, setProcessState] = useState<CheckoutStatus>('idle');
   const [successBarcodes, setSuccessBarcodes] = useState<string[]>([]);
+
+  // ─── Age Verification State ────────────────────────────────────────────────
+  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
+  const [ageInput, setAgeInput] = useState<string>('');
 
   // ─── Payment Field State ───────────────────────────────────────────────────
   const [cardholderName, setCardholderName] = useState('');
@@ -250,18 +251,6 @@ export default function CheckoutPage() {
 
   // ─── Main Payment Authorization Execution ─────────────────────────────────
   const handlePayment = async () => {
-    // Clear any previous errors
-    setPaymentError('');
-
-    // 1. Validate fields first — stop here if anything is wrong
-    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
-
-    // 2. All fields valid — proceed with checkout
     try {
       setProcessState('processing');
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
@@ -292,34 +281,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // ─── Pre-Payment Policy Verification ──────────────────────────────────────
-  // The age is collected once on the reserve-ticket page and persisted, so here
-  // we reuse it to re-validate the purchase policy without prompting again.
-  const handleInitiatePayment = async () => {
-    // Validate card details first
-    setPaymentError('');
-    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
 
-    // Age is collected on the reserve page only when the policy requires it.
-    let age = 0;
-    if (policyRequiresAge(purchasePolicy)) {
-      age = parseInt(sessionStorage.getItem(VERIFIED_AGE_STORAGE_KEY) ?? '', 10);
-      if (isNaN(age) || age <= 0) {
-        setPaymentError('Age verification is missing. Please return to ticket selection to verify your age.');
-        return;
-      }
-    }
-
+  const proceedToValidatePolicyAndPay = async (age: number | null) => {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
 
     if (order && order.eventId) {
       try {
-        const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age);
+        const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age ?? 0);
         if (policyViolation) {
           setPaymentError(`Policy Violation: ${policyViolation}`);
           return;
@@ -330,8 +298,38 @@ export default function CheckoutPage() {
       }
     }
 
-    // If the policy passes validation, call the original payment routine
+    // If the policy passes validation, call the payment routine
     await handlePayment();
+  }
+
+  const handleConfirmAge = () => {
+    const age = parseInt(ageInput, 10);
+    if (isNaN(age) || age <= 0) {
+      setPaymentError("Please enter a valid age to proceed.");
+      setIsAgeModalOpen(false);
+      return;
+    }
+    
+    setIsAgeModalOpen(false);
+    proceedToValidatePolicyAndPay(age);
+  }
+
+  // ─── Pre-Payment Policy Verification ──────────────────────────────────────
+  const handleInitiatePayment = async () => {
+    // Validate card details first
+    setPaymentError('');
+    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+
+    if (policyRequiresAge(purchasePolicy)) {
+      setIsAgeModalOpen(true);
+    } else {
+      proceedToValidatePolicyAndPay(null);
+    }
   };
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -482,7 +480,7 @@ export default function CheckoutPage() {
 
   // ─── Main Checkout View ────────────────────────────────────────────────────
   return (
-    <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans">
+    <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans relative">
       {globalStyles}
 
       <main className="flex-grow pt-20 pb-20 max-w-[1120px] mx-auto px-4 md:px-12 w-full">
@@ -717,6 +715,41 @@ export default function CheckoutPage() {
 
         </div>
       </main>
+
+      {/* ── Age Verification Modal ── */}
+      {isAgeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4 border border-gray-200">
+            <h3 className="text-lg font-bold text-[#0A192F]">Age Verification</h3>
+            <p className="text-sm text-gray-600">Please enter your age to verify event policies before checking out.</p>
+            <input
+              type="number"
+              value={ageInput}
+              onChange={(e) => setAgeInput(e.target.value)}
+              placeholder="e.g., 25"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmAge();
+              }}
+            />
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIsAgeModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAge}
+                className="px-4 py-2 text-sm font-bold text-white bg-[#0A192F] hover:bg-[#112a4f] rounded transition"
+              >
+                Verify & Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
