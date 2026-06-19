@@ -215,6 +215,7 @@ public class ActiveOrderService implements IActiveOrderService {
     }
 
     @Override
+    @Transactional(noRollbackFor = RuntimeException.class)
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken, PaymentDetails paymentDetails, String orderId){
         double amount = paymentDetails.getAmount();
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);

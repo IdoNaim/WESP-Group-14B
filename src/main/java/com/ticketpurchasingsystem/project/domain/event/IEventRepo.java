@@ -14,4 +14,6 @@ public interface IEventRepo {
     List<Event> findActiveEvents();
 
     void delete(String eventId);
+
+    void deleteAll();
 }

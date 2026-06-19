@@ -4,23 +4,57 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapKeyColumn;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "history_orders")
 public class HistoryOrderItem {
 
+    @Id
+    @Column(name = "order_id", nullable = false, length = 255)
     private String orderId;
+
+    @Column(name = "user_id", nullable = false, length = 255)
     private String userId;
+
+    @Column(name = "event_id", nullable = false, length = 255)
     private String eventId;
+
+    @Column(name = "company_id", nullable = false)
     private int companyId;
+
+    @Column(name = "purchase_date", nullable = false)
     private Timestamp purchaseDate;
+
+    @Column(name = "price", nullable = false)
     private double price;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "history_order_seats", joinColumns = @JoinColumn(name = "order_id"))
+    @Column(name = "seat_id")
     private List<String> seatIds;
-    private HashMap<String, Integer> StandingAreaQuantities;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "history_order_standing_areas", joinColumns = @JoinColumn(name = "order_id"))
+    @MapKeyColumn(name = "area_id")
+    @Column(name = "quantity")
+    private Map<String, Integer> StandingAreaQuantities;
 
     public HistoryOrderItem() {}
 
-    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
@@ -53,6 +87,7 @@ public class HistoryOrderItem {
 
     public String getEventId() { return eventId; }
     public void setEventId(String eventId) { this.eventId = eventId; }
+    
     public Timestamp getPurchaseDate() { return purchaseDate; }
     public void setPurchaseDate(Timestamp purchaseDate) { this.purchaseDate = purchaseDate; }
 
@@ -62,11 +97,15 @@ public class HistoryOrderItem {
     public List<String> getSeatIds() { return seatIds; }
     public void setSeatIds(List<String> seatIds) { this.seatIds = seatIds; }
 
-    public HashMap<String, Integer> getStandingAreaQuantities() { return StandingAreaQuantities; }
-    public void setStandingAreaQuantities(HashMap<String, Integer> standingAreaQuantities) { this.StandingAreaQuantities = standingAreaQuantities; }
+    public HashMap<String, Integer> getStandingAreaQuantities() {
+        return StandingAreaQuantities != null ? new HashMap<>(StandingAreaQuantities) : new HashMap<>();
+    }
+    public void setStandingAreaQuantities(Map<String, Integer> standingAreaQuantities) {
+        this.StandingAreaQuantities = standingAreaQuantities;
+    }
 
     public HistoryOrderDTO makeDTO() {
-        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, StandingAreaQuantities);
+        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, getStandingAreaQuantities());
     }
 }
 

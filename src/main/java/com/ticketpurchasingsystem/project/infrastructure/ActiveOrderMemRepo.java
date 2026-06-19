@@ -112,6 +112,13 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
     }
 
     @Override
+    public void deleteAll() {
+        activeOrders.clear();
+        orderLocks.clear();
+        userToOrder.clear();
+    }
+
+    @Override
     public boolean markAsProcessing(String orderId){
         ReentrantLock lock = orderLocks.get(orderId);
         if(lock == null){
