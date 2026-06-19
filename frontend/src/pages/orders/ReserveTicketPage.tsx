@@ -44,6 +44,9 @@ interface OrderItem {
 const RESERVATION_MINUTES = 15;
 const RESERVATION_SECONDS = RESERVATION_MINUTES * 60;
 const checkoutWindowURL = "/checkout";
+// Key under which the verified age is persisted so the checkout page can reuse it
+// without prompting the user again.
+const VERIFIED_AGE_STORAGE_KEY = "verifiedUserAge";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -55,6 +58,12 @@ function formatTime(seconds: number): string {
 
 function getZonePrefix(id: string): string {
   return id.split("_")[0] ?? id;
+}
+
+// An event requires age verification only when its policy defines a min and/or
+// max age. Without an age policy, there is nothing to verify.
+function policyRequiresAge(policy: PurchasePolicyDTO | null): boolean {
+  return !!policy && (policy.minAge != null || policy.maxAge != null);
 }
 
 function parseSeatId(id: string): { zone: string; row: number; number: number } | null {
@@ -714,7 +723,12 @@ export default function ReserveTicketsPage() {
   };
 
   const handleInitiateCheckout = () => {
-    setIsAgeModalOpen(true);
+    // Only ask for age when the event's policy actually has an age requirement.
+    if (policyRequiresAge(purchasePolicy)) {
+      setIsAgeModalOpen(true);
+    } else {
+      proceedToCheckout(null);
+    }
   };
 
   const handleConfirmCheckout = async () => {
@@ -725,7 +739,12 @@ export default function ReserveTicketsPage() {
     }
 
     setIsAgeModalOpen(false);
+    proceedToCheckout(age);
+  };
 
+  // Runs the policy validation, reserves the tickets and navigates to checkout.
+  // `age` is null when the event has no age policy and none was collected.
+  const proceedToCheckout = async (age: number | null) => {
     // Corrected check: Validating that they selected 1 or more tickets if there's no custom policy
     if (!purchasePolicy && totalSelected < 1) {
       showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
@@ -733,8 +752,8 @@ export default function ReserveTicketsPage() {
     }
 
     const token = localStorage.getItem("token") ?? "";
-    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, age);
-    
+    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, age ?? 0);
+
     if (policyViolation) {
       showBanner("error", `Policy Violation: ${policyViolation}`);
       return;
@@ -742,6 +761,14 @@ export default function ReserveTicketsPage() {
 
     const isSuccess = await handleReserveTickets();
     if (isSuccess) {
+      // Persist the verified age so the checkout page can re-validate the
+      // purchase policy without prompting the user a second time. When no age
+      // was collected, clear any stale value so checkout knows not to expect one.
+      if (age !== null) {
+        sessionStorage.setItem(VERIFIED_AGE_STORAGE_KEY, String(age));
+      } else {
+        sessionStorage.removeItem(VERIFIED_AGE_STORAGE_KEY);
+      }
       navigate(checkoutWindowURL);
     } else {
       showBanner("error", "Unable to reserve tickets for checkout. Please review your selection and try again.");
