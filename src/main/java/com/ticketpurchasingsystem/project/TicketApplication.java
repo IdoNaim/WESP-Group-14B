@@ -9,7 +9,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class TicketApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TicketApplication.class, args);
+		try {
+			SpringApplication.run(TicketApplication.class, args);
+		}catch (Exception e){
+			System.exit(1);
+		}
 	}
 
 }
