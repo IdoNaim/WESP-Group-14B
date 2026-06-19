@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { activeOrderApi, ActiveOrderDTO, CheckoutRequestDTO } from '../../api/activeOrderApi';
-import { eventApi, EventDTO, SeatingMapDTO } from '../../api/eventsApi';
+import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { authApi, UserProfileDTO } from '../../api/authApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
@@ -11,6 +11,12 @@ const GET_RESERVE_ROUTE = (eventId: string | number) => `/events/${eventId}/rese
 type CheckoutStatus = 'idle' | 'processing' | 'success' | 'expired_canceled';
 
 // ─── Validation Helpers ──────────────────────────────────────────────────────
+
+// An event requires age verification only when its policy defines a min and/or
+// max age. Without an age policy, there is nothing to verify.
+function policyRequiresAge(policy: PurchasePolicyDTO | null): boolean {
+  return !!policy && (policy.minAge != null || policy.maxAge != null);
+}
 
 function isValidCardNumber(value: string): boolean {
   const digits = value.replace(/\s/g, '');
@@ -76,7 +82,7 @@ export default function CheckoutPage() {
   const [processState, setProcessState] = useState<CheckoutStatus>('idle');
   const [successBarcodes, setSuccessBarcodes] = useState<string[]>([]);
 
-  // ─── NEW: Age Modal State ─────────────────────────────────────────────────
+  // ─── Age Verification State ────────────────────────────────────────────────
   const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
   const [ageInput, setAgeInput] = useState<string>('');
 
@@ -93,6 +99,7 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<ActiveOrderDTO | null>(null);
   const [eventDetails, setEventDetails] = useState<EventDTO | null>(null);
   const [seatingMap, setSeatingMap] = useState<SeatingMapDTO | null>(null);
+  const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
 
   // ─── UX/UI Timer State ──────────────────────────────────────────────────────
   const [timeLeft, setTimeLeft] = useState<number>(900);
@@ -147,9 +154,10 @@ export default function CheckoutPage() {
 
         setOrder(activeOrder);
 
-        const [eventMeta, seatConfig] = await Promise.all([
+        const [eventMeta, seatConfig, policy] = await Promise.all([
           eventApi.getEvent(token, activeOrder.eventId),
-          eventApi.getEventSeatingMap(token, activeOrder.eventId)
+          eventApi.getEventSeatingMap(token, activeOrder.eventId),
+          eventApi.getEventPurchasePolicy(token, activeOrder.eventId).catch(() => null)
         ]);
 
         if (!eventMeta) {
@@ -157,6 +165,7 @@ export default function CheckoutPage() {
         }
         setEventDetails(eventMeta);
         setSeatingMap(seatConfig);
+        setPurchasePolicy(policy);
 
         calculateOrderTotals(activeOrder, seatConfig);
 
@@ -242,18 +251,6 @@ export default function CheckoutPage() {
 
   // ─── Main Payment Authorization Execution ─────────────────────────────────
   const handlePayment = async () => {
-    // Clear any previous errors
-    setPaymentError('');
-
-    // 1. Validate fields first — stop here if anything is wrong
-    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
-
-    // 2. All fields valid — proceed with checkout
     try {
       setProcessState('processing');
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
@@ -284,34 +281,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // ─── NEW: Pre-Payment Age Verification ────────────────────────────────────
-  const handleInitiatePayment = () => {
-    // Validate card details BEFORE popping up the age modal
-    setPaymentError('');
-    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
-    setIsAgeModalOpen(true);
-  };
 
-  const handleConfirmPayment = async () => {
-    const age = parseInt(ageInput, 10);
-    if (isNaN(age) || age <= 0) {
-      setPaymentError("Please enter a valid age to proceed.");
-      setIsAgeModalOpen(false);
-      return;
-    }
-
-    setIsAgeModalOpen(false);
-
+  const proceedToValidatePolicyAndPay = async (age: number | null) => {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
 
     if (order && order.eventId) {
       try {
-        const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age);
+        const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age ?? 0);
         if (policyViolation) {
           setPaymentError(`Policy Violation: ${policyViolation}`);
           return;
@@ -322,8 +298,38 @@ export default function CheckoutPage() {
       }
     }
 
-    // If age passes validation, call the original payment routine
+    // If the policy passes validation, call the payment routine
     await handlePayment();
+  }
+
+  const handleConfirmAge = () => {
+    const age = parseInt(ageInput, 10);
+    if (isNaN(age) || age <= 0) {
+      setPaymentError("Please enter a valid age to proceed.");
+      setIsAgeModalOpen(false);
+      return;
+    }
+    
+    setIsAgeModalOpen(false);
+    proceedToValidatePolicyAndPay(age);
+  }
+
+  // ─── Pre-Payment Policy Verification ──────────────────────────────────────
+  const handleInitiatePayment = async () => {
+    // Validate card details first
+    setPaymentError('');
+    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+
+    if (policyRequiresAge(purchasePolicy)) {
+      setIsAgeModalOpen(true);
+    } else {
+      proceedToValidatePolicyAndPay(null);
+    }
   };
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -474,7 +480,7 @@ export default function CheckoutPage() {
 
   // ─── Main Checkout View ────────────────────────────────────────────────────
   return (
-    <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans">
+    <div className="bg-[#f8f9ff] text-[#191c20] min-h-screen flex flex-col font-sans relative">
       {globalStyles}
 
       <main className="flex-grow pt-20 pb-20 max-w-[1120px] mx-auto px-4 md:px-12 w-full">
@@ -714,17 +720,17 @@ export default function CheckoutPage() {
       {isAgeModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4 border border-gray-200">
-            <h3 className="text-lg font-bold text-[#191c20]">Age Verification</h3>
-            <p className="text-sm text-gray-600">Please verify your age against event policies before finalizing your order.</p>
+            <h3 className="text-lg font-bold text-[#0A192F]">Age Verification</h3>
+            <p className="text-sm text-gray-600">Please enter your age to verify event policies before checking out.</p>
             <input
               type="number"
               value={ageInput}
               onChange={(e) => setAgeInput(e.target.value)}
               placeholder="e.g., 25"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#1a1b20]"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleConfirmPayment();
+                if (e.key === "Enter") handleConfirmAge();
               }}
             />
             <div className="flex justify-end gap-3 pt-2">
@@ -735,10 +741,10 @@ export default function CheckoutPage() {
                 Cancel
               </button>
               <button
-                onClick={handleConfirmPayment}
-                className="px-4 py-2 text-sm font-bold text-white bg-[#1a1b20] hover:bg-black rounded transition"
+                onClick={handleConfirmAge}
+                className="px-4 py-2 text-sm font-bold text-white bg-[#0A192F] hover:bg-[#112a4f] rounded transition"
               >
-                Verify & Pay
+                Verify & Checkout
               </button>
             </div>
           </div>

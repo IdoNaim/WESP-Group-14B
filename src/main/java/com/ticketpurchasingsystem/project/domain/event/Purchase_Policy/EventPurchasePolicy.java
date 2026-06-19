@@ -35,15 +35,40 @@ public class EventPurchasePolicy implements IPurchaseRule {
     // Called automatically by Hibernate after fetching from DB to rebuild the composite tree
     @PostLoad
     private void rebuildRulesFromDb() {
-        PurchasePolicyDTO dto = new PurchasePolicyDTO(
-                minTickets, maxTickets,
-                isQuantityOr != null && isQuantityOr,
-                minAge, maxAge,
-                isAgeOr != null && isAgeOr,
-                isAgeAndQuantityOr != null && isAgeAndQuantityOr
-        );
-        // Assuming your Event class has the logic to convert DTO -> rules,
-        // you would apply that logic here to repopulate 'this.rules'.
+        rules.clear();
+
+        IPurchaseRule ageBlock = null;
+        if (minAge != null && maxAge != null) {
+            IPurchaseRule minA = new MinAgeRule(minAge);
+            IPurchaseRule maxA = new MaxAgeRule(maxAge);
+            ageBlock = (isAgeOr != null && isAgeOr) ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
+        } else if (minAge != null) {
+            ageBlock = new MinAgeRule(minAge);
+        } else if (maxAge != null) {
+            ageBlock = new MaxAgeRule(maxAge);
+        }
+
+        IPurchaseRule quantityBlock = null;
+        if (minTickets != null && maxTickets != null) {
+            IPurchaseRule minT = new MinTicketsRule(minTickets);
+            IPurchaseRule maxT = new MaxTicketsRule(maxTickets);
+            quantityBlock = (isQuantityOr != null && isQuantityOr) ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
+        } else if (minTickets != null) {
+            quantityBlock = new MinTicketsRule(minTickets);
+        } else if (maxTickets != null) {
+            quantityBlock = new MaxTicketsRule(maxTickets);
+        }
+
+        if (ageBlock != null && quantityBlock != null) {
+            IPurchaseRule root = (isAgeAndQuantityOr != null && isAgeAndQuantityOr)
+                    ? new OrRule(ageBlock, quantityBlock)
+                    : new AndRule(ageBlock, quantityBlock);
+            rules.add(root);
+        } else if (ageBlock != null) {
+            rules.add(ageBlock);
+        } else if (quantityBlock != null) {
+            rules.add(quantityBlock);
+        }
     }
 
     // Called automatically by Hibernate before saving to extract rules to flat columns
