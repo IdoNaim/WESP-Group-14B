@@ -30,15 +30,6 @@ public class PaymentGateway implements IPaymentGateway {
 
     @Override
     public int pay(PaymentDetails details) {
-        loggerDef.getInstance().info("id: "+ details.getId()+"\n"
-        +"amount: "+ details.getAmount()+'\n'
-                +"currency: "+ details.getCurrency()+'\n'
-                +"card_number: "+ details.getCardNumber()+'\n'
-                +"month: "+ details.getMonth()+'\n'
-                +"year: "+ details.getYear()+'\n'
-                        +"holder: "+ details.getHolder()+'\n'
-                        +"cvv: "+ details.getCvv()+'\n'
-        );
         Map<String, Object> body = new HashMap<>();
         body.put("action_type", "pay");
         body.put("amount", details.getAmount());
