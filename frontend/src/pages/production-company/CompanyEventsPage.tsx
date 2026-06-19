@@ -57,11 +57,11 @@ function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, ch
                         <span className="material-symbols-outlined text-[#00dbe7] text-[20px]">{icon}</span>
                         {title}
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1" noValidate>
                     {children}
                     {error && <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                     <button type="submit" disabled={loading}
@@ -205,7 +205,7 @@ function PolicyBuilder({ onChange, initialDTO }: {
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
         }, hasAndError || hasUnassignedError);
-    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
+    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine, onChange]);
 
     const addGroup = (type: 'AND' | 'OR') => {
         if (groups.some(g => g.type === type)) return;
@@ -665,7 +665,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     const seats = zoneSeats(zone);
                     return (
                         <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
-                            {/* Zone header */}
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
                                 <button type="button" onClick={() => removeZone(i)}
@@ -674,15 +673,13 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </button>
                             </div>
 
-                            {/* Zone name */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Name</label>
                                 <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
                                     value={zone.label}
-                                    onChange={e => updateZone(i, 'label', e.target.value)} />
+                                    onChange={e => updateZone(i, 'label', e.target.value)} required />
                             </div>
 
-                            {/* Zone type toggle */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Type</label>
                                 <div className="flex gap-2">
@@ -709,7 +706,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             </div>
 
-                            {/* Standing fields */}
                             {zone.kind === 'standing' && (
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
@@ -727,7 +723,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             )}
 
-                            {/* Seating fields */}
                             {zone.kind === 'seating' && (
                                 <>
                                     <div className="grid grid-cols-3 gap-3">
@@ -821,6 +816,7 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
+    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice ? String(event.ticketPrice) : '');
 
     // Photo
     const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
@@ -888,12 +884,6 @@ function EditEventModal({ event, onClose, onSaved }: {
         });
     }, [event.eventId]);
 
-    const minDateTime = (() => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })();
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
@@ -953,7 +943,7 @@ function EditEventModal({ event, onClose, onSaved }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
                         <input className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
-                            type="datetime-local" min={minDateTime}
+                            type="datetime-local" 
                             value={dateTime} onChange={e => setDateTime(e.target.value)} required />
                         {dateError && (
                             <p className="text-red-400 text-xs flex items-center gap-1.5 mt-1">
@@ -1068,7 +1058,7 @@ function EditEventModal({ event, onClose, onSaved }: {
                                     <div className="space-y-1">
                                         <label className={labelCls}>Zone Name</label>
                                         <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
-                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} />
+                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} required />
                                     </div>
                                     <div className="space-y-1">
                                         <label className={labelCls}>Zone Type</label>
