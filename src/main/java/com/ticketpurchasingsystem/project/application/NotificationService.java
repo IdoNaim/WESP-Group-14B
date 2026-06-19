@@ -2,7 +2,9 @@ package com.ticketpurchasingsystem.project.application;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
@@ -12,10 +14,12 @@ import com.ticketpurchasingsystem.project.domain.notification.INotificationRepo;
 import com.ticketpurchasingsystem.project.domain.notification.NotificationHandler;
 
 @Service
+@Transactional(readOnly = true)
 public class NotificationService implements INotificationService {
 
     private final NotificationHandler notificationHandler;
 
+    @Autowired
     public NotificationService(INotificationRepo notificationRepo,
                                AuthenticationService authenticationService,
                                IHistoryOrderRepo historyOrderRepo,
@@ -26,16 +30,19 @@ public class NotificationService implements INotificationService {
     }
 
     @Override
+    @Transactional
     public NotificationDTO createNotification(String token, String targetUserId, String message) {
         return notificationHandler.createNotification(token, targetUserId, message);
     }
 
     @Override
+    @Transactional
     public List<NotificationDTO> createNotificationsForEvent(String token, String eventId, String message) {
         return notificationHandler.createNotificationsForEvent(token, eventId, message);
     }
 
     @Override
+    @Transactional
     public List<NotificationDTO> createNotificationsForProduction(String token, int companyId, String message) {
         return notificationHandler.createNotificationsForProduction(token, companyId, message);
     }
@@ -51,11 +58,13 @@ public class NotificationService implements INotificationService {
     }
 
     @Override
+    @Transactional
     public boolean markAsRead(String token, String notificationId) {
         return notificationHandler.markAsRead(token, notificationId);
     }
 
     @Override
+    @Transactional
     public NotificationDTO createSystemNotification(String targetUserId, String message) {
         return notificationHandler.createSystemNotification(targetUserId, message);
     }

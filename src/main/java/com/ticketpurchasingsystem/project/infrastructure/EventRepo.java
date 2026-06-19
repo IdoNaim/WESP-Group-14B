@@ -99,4 +99,8 @@ public class EventRepo implements IEventRepo {
     public void delete(String eventId) {
         storage.remove(eventId);
     }
+
+    public void deleteAll() {
+        storage.clear();
+    }
 }

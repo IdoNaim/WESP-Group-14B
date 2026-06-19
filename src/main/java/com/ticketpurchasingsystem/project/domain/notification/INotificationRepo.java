@@ -8,4 +8,5 @@ public interface INotificationRepo {
     Optional<Notification> findById(String id);
     List<Notification> findByUserId(String userId);
     long countUnreadByUserId(String userId);
+    void deleteAll();
 }
