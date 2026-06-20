@@ -30,6 +30,10 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.CreateEventRequestD
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventCapacityRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventDateRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
+import com.ticketpurchasingsystem.project.application.IProductionService;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
@@ -44,6 +48,12 @@ class EventControllerTest {
     @MockBean
     private IEventService eventService;
 
+    @MockBean
+    private IProductionService productionService;
+
+    @MockBean
+    private IEventRepo eventRepo;
+
     private ObjectMapper objectMapper;
     private static final String VALID_AUTH = "Bearer valid-token";
 
@@ -51,6 +61,21 @@ class EventControllerTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+
+        MemberInfoDTO dummyFounder = new MemberInfoDTO(
+                "FOUNDER",
+                Collections.emptySet(),
+                "Mock Company",
+                "founder-id",
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+        );
+        when(productionService.getMyMemberInfo(any(), any())).thenReturn(dummyFounder);
+
+        Event dummyEvent = mock(Event.class);
+        when(dummyEvent.getCompanyId()).thenReturn(1);
+        when(eventRepo.findById(any())).thenReturn(dummyEvent);
     }
 
     // ================= create event =================
@@ -176,6 +201,83 @@ class EventControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void GivenManagerWithInventoryManagement_WhenEditEventDate_ThenReturn200() throws Exception {
+        MemberInfoDTO managerWithPerm = new MemberInfoDTO(
+                "MANAGER",
+                java.util.Set.of(com.ticketpurchasingsystem.project.domain.Production.ManagerPermission.INVENTORY_MANAGEMENT),
+                "Mock Company",
+                "founder-id",
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+        );
+        when(productionService.getMyMemberInfo(any(), any())).thenReturn(managerWithPerm);
+        when(eventService.editEventDate(any(), any(), any())).thenReturn(true);
+
+        EditEventDateRequestDTO dto = new EditEventDateRequestDTO();
+        dto.setNewDateTime(LocalDateTime.now().plusDays(30));
+
+        mockMvc.perform(put("/api/events/evt-1/date")
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void GivenManagerWithoutInventoryManagement_WhenEditEventDate_ThenThrowIllegalArgumentException() throws Exception {
+        MemberInfoDTO managerWithoutPerm = new MemberInfoDTO(
+                "MANAGER",
+                Collections.emptySet(),
+                "Mock Company",
+                "founder-id",
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+        );
+        when(productionService.getMyMemberInfo(any(), any())).thenReturn(managerWithoutPerm);
+
+        EditEventDateRequestDTO dto = new EditEventDateRequestDTO();
+        dto.setNewDateTime(LocalDateTime.now().plusDays(30));
+
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(put("/api/events/evt-1/date")
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        Exception resolvedException = result.getResolvedException();
+        org.junit.jupiter.api.Assertions.assertNotNull(resolvedException);
+        org.junit.jupiter.api.Assertions.assertTrue(resolvedException instanceof IllegalArgumentException);
+        org.junit.jupiter.api.Assertions.assertTrue(resolvedException.getMessage().contains("Manager lacks the required permission"));
+    }
+
+    @Test
+    void GivenOwnerWithoutExplicitPermission_WhenEditEventDate_ThenReturn200() throws Exception {
+        MemberInfoDTO owner = new MemberInfoDTO(
+                "OWNER",
+                Collections.emptySet(),
+                "Mock Company",
+                "founder-id",
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+        );
+        when(productionService.getMyMemberInfo(any(), any())).thenReturn(owner);
+        when(eventService.editEventDate(any(), any(), any())).thenReturn(true);
+
+        EditEventDateRequestDTO dto = new EditEventDateRequestDTO();
+        dto.setNewDateTime(LocalDateTime.now().plusDays(30));
+
+        mockMvc.perform(put("/api/events/evt-1/date")
+                        .header("Authorization", VALID_AUTH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
     }
 
     // ================= edit event capacity =================

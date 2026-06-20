@@ -110,8 +110,12 @@ public class UserService implements IUserService {
      * {@link #Exit} (e.g. just closes the browser tab). Their JWT eventually
      * expires, but the SessionToken row and the guest UserInfo row have no
      * synchronous trigger to remove them, so this scheduled sweep purges every
-     * expired session together with the guest accounts tied to one. Registered
-     * members keep their account — only their now-dead session row is dropped.
+     * expired session together with the guest accounts tied to one. A registered
+     * member keeps their account, but if their own session expired we also reset
+     * {@code logged_in}/{@code sessionTokenStr} so a stale login can't lock them out
+     * (this is the backstop for the WebSocket disconnect path — see
+     * {@link #handleDisconnect(String, String)} — in case that event was missed,
+     * e.g. a server restart dropped the in-memory presence registry).
      * The interval is configurable via {@code guest.session.cleanup.interval-ms}
      * (default 30 minutes); {@code @Scheduled} ignores the return value, which is
      * returned so the sweep can be invoked and asserted on directly in tests.
@@ -126,13 +130,23 @@ public class UserService implements IUserService {
         }
         Set<String> expiredTokenSet = new HashSet<>(expiredTokens);
 
-        // Remove orphaned guest accounts whose session has expired; members are kept.
         for (UserInfo user : userRepo.getAllUsers()) {
-            if (Boolean.TRUE.equals(user.isGuest())
-                    && user.getSessionTokenStr() != null
-                    && expiredTokenSet.contains(user.getSessionTokenStr())) {
+            if (user.getSessionTokenStr() == null
+                    || !expiredTokenSet.contains(user.getSessionTokenStr())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(user.isGuest())) {
+                // Orphaned guest whose session expired: remove the whole account.
                 userRepo.delete(user.getId());
                 userPublisher.publishGuestExited(user.getId(), user.getSessionTokenStr());
+            } else {
+                // Member with an expired session: keep the account but log them out
+                // so the stale flag can't block their next login.
+                String token = user.getSessionTokenStr();
+                user.setLoggedIn(false);
+                user.setSessionTokenStr(null);
+                userRepo.store(user);
+                userPublisher.publishUserLoggedOut(user.getId(), token);
             }
         }
 
@@ -141,6 +155,53 @@ public class UserService implements IUserService {
         }
         loggerDef.getInstance().info("Session cleanup purged " + expiredTokens.size() + " expired session(s).");
         return expiredTokens.size();
+    }
+
+    /**
+     * Reacts to an irregular exit detected by the presence WebSocket: the user
+     * closed the tab / lost the connection without calling {@link #Exit}. The
+     * WebSocket layer (infrastructure) publishes a {@code UserLeavedPlatformEvent};
+     * a listener routes it here. This keeps WebSocket details out of the domain.
+     *
+     * <p>Idempotent and race-safe: it acts only if {@code token} is still the
+     * user's current session. If the user already logged in again (session
+     * takeover gave them a new token), a late close of the old socket is ignored.
+     *
+     * @param userId the user whose connection dropped
+     * @param token  the session token that was attached to the dropped connection
+     */
+    public void handleDisconnect(String userId, String token) {
+        try {
+            if (userId == null || token == null) {
+                return;
+            }
+            UserInfo userInfo = userRepo.findByID(userId);
+            if (userInfo == null) {
+                return; // already gone (e.g. a guest already purged)
+            }
+            // Only react to the user's CURRENT session; ignore a late close of a
+            // session the user has already replaced by logging in again.
+            if (!token.equals(userInfo.getSessionTokenStr())) {
+                return;
+            }
+
+            if (userInfo.isGuest()) {
+                userRepo.delete(userId);
+                authenticationService.removeSessionManually(token);
+                userPublisher.publishGuestExited(userId, token);
+            } else {
+                userInfo.setLoggedIn(false);
+                userInfo.setSessionTokenStr(null);
+                userRepo.store(userInfo);
+                authenticationService.removeSessionManually(token);
+                userPublisher.publishUserLoggedOut(userId, token);
+            }
+            loggerDef.getInstance().info("Handled irregular disconnect for user: " + userId);
+        } catch (Exception e) {
+            // A disconnect handler must never propagate: swallow and log so a stray
+            // failure can't disrupt the WebSocket close callback / event publisher.
+            loggerDef.getInstance().error("Failed to handle disconnect for user " + userId + ": " + e.getMessage());
+        }
     }
 
     public void registerUser(String userId, String name, String password, String email, UserGroupDiscount userGroupDiscount, String sessionTokenStr) {
@@ -173,16 +234,24 @@ public class UserService implements IUserService {
             UserInfo userInfo = userRepo.findByID(userId);
             userHandler.validateUserFound(userInfo);
             // validate user exists
-            
+
+            // Capture any session left over from a previous (possibly irregular) exit,
+            // so we can drop its stale row once the new login succeeds (session takeover).
+            String staleToken = userInfo.getSessionTokenStr();
+            boolean wasLoggedIn = userInfo.isLoggedIn();
+
             // Generate a fresh session token via auth service
             String newSessionTokenStr = authenticationService.login(userId);
 
             // Let handler update login status and state
             userHandler.loginUser(userInfo, password, newSessionTokenStr);
-            
-            // Delete guest matching the OLD session token before saving the user
 
-            
+            // Take over: remove the member's previous session row so it doesn't linger.
+            if (wasLoggedIn && staleToken != null && !staleToken.equals(newSessionTokenStr)) {
+                authenticationService.removeSessionManually(staleToken);
+            }
+
+            // Delete guest matching the OLD session token before saving the user
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
             authenticationService.logout(sessionTokenStr);
             userPublisher.publishGuestExited(guestId, sessionTokenStr);
@@ -210,8 +279,12 @@ public class UserService implements IUserService {
             userHandler.validateUserFound(userInfo);
             System.out.println("found admin");
             // if we are here, it means that session token is valid
-            // the user is not null and a guest so he can login and become a user 
-            
+            // the user is not null and a guest so he can login and become a user
+
+            // Capture any leftover session for takeover (see loginUser).
+            String staleToken = userInfo.getSessionTokenStr();
+            boolean wasLoggedIn = userInfo.isLoggedIn();
+
             String newSessionTokenStr = null;
             // validate user exists
             if(userId.equals("admin@gmail.com") && password.equals("admin123")){
@@ -220,6 +293,10 @@ public class UserService implements IUserService {
                 throw new RuntimeException("Failed to log in user "+ userId);
             }
             userHandler.loginUser(userInfo, password, newSessionTokenStr);
+            // Take over: remove the admin's previous session row so it doesn't linger.
+            if (wasLoggedIn && staleToken != null && !staleToken.equals(newSessionTokenStr)) {
+                authenticationService.removeSessionManually(staleToken);
+            }
             // Delete guest matching the OLD session token before saving the user
             userRepo.delete(guestId); // if we are here, it means that session token is valid and the user was a guest before login, so we can delete him by the guestId we got from the session token
             authenticationService.logout(sessionTokenStr);

@@ -105,6 +105,10 @@ public class EventHandler {
         event.setImageUrl(eventDTO.imageUrl());
 
         try {
+            //add default seating map if not provided
+            SeatingMap seatingMap = new SeatingMap();
+            seatingMap.addStandingArea(eventDTO.eventCapacity(), 0.0);
+            event.setSeatingMap(seatingMap);
             Event savedEvent = eventRepo.save(event);
             eventPublisher.publishEventCreated(savedEvent);
             logger.info("Event created successfully: " + eventDTO.eventName());

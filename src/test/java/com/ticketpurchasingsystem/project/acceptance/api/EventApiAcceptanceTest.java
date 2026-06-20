@@ -58,7 +58,19 @@ class EventApiAcceptanceTest {
 
         eventService = new EventService(eventRepo, eventPublisher, authService);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService)).build();
+        com.ticketpurchasingsystem.project.application.IProductionService productionService = mock(com.ticketpurchasingsystem.project.application.IProductionService.class);
+        com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO dummyFounder = new com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO(
+                "FOUNDER",
+                Collections.emptySet(),
+                "Mock Company",
+                "founder-id",
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+        );
+        when(productionService.getMyMemberInfo(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(dummyFounder);
+
+        mockMvc = MockMvcBuilders.standaloneSetup(new EventController(eventService, productionService, eventRepo)).build();
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
     }

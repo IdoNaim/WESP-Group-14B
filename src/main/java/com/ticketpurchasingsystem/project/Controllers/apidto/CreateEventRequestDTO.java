@@ -5,6 +5,7 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 
 public class CreateEventRequestDTO {
 

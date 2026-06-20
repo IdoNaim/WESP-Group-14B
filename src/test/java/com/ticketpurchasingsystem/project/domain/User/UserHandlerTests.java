@@ -188,13 +188,18 @@ public class UserHandlerTests {
     }
 
     @Test
-    void GivenAlreadyLoggedInUser_WhenLoginUser_ThenThrowRuntimeException() {
+    void GivenAlreadyLoggedInUser_WhenLoginUserWithCorrectPassword_ThenTakesOverSession() {
+        // A correct password takes over the session (supports recovery after an
+        // irregular exit where logged_in was never reset). The caller drops the
+        // stale session row.
         UserInfo user = buildMemberUser();
         user.setLoggedIn(true);
+        user.setSessionTokenStr("stale-token");
 
-        assertThrows(RuntimeException.class, () ->
-            handler.loginUser(user, PASSWORD, "token")
-        );
+        handler.loginUser(user, PASSWORD, "fresh-token");
+
+        assertTrue(user.isLoggedIn());
+        assertEquals("fresh-token", user.getSessionTokenStr());
     }
 
     @Test
