@@ -172,46 +172,52 @@
         public EventPurchasePolicy getPurchasePolicy() { return purchasePolicy; }
 
         // ---------------- BUSINESS LOGIC ----------------
-
         public void setPurchasePolicy(PurchasePolicyDTO dto) {
-            EventPurchasePolicy policy = new EventPurchasePolicy();
-
-            // Build age block (null-safe: only create if at least one age rule exists)
-            IPurchaseRule ageBlock = null;
-            if (dto.minAge() != null && dto.maxAge() != null) {
-                IPurchaseRule minAge = new MinAgeRule(dto.minAge());
-                IPurchaseRule maxAge = new MaxAgeRule(dto.maxAge());
-                ageBlock = dto.isAgeOr() ? new OrRule(minAge, maxAge) : new AndRule(minAge, maxAge);
-            } else if (dto.minAge() != null) {
-                ageBlock = new MinAgeRule(dto.minAge());
-            } else if (dto.maxAge() != null) {
-                ageBlock = new MaxAgeRule(dto.maxAge());
+            if (this.purchasePolicy == null) {
+                this.purchasePolicy = new EventPurchasePolicy();
             }
-
-            // Build quantity block
-            IPurchaseRule quantityBlock = null;
-            if (dto.minTickets() != null && dto.maxTickets() != null) {
-                IPurchaseRule minTickets = new MinTicketsRule(dto.minTickets());
-                IPurchaseRule maxTickets = new MaxTicketsRule(dto.maxTickets());
-                quantityBlock = dto.isQuantityOr() ? new OrRule(minTickets, maxTickets) : new AndRule(minTickets, maxTickets);
-            } else if (dto.minTickets() != null) {
-                quantityBlock = new MinTicketsRule(dto.minTickets());
-            } else if (dto.maxTickets() != null) {
-                quantityBlock = new MaxTicketsRule(dto.maxTickets());
-            }
-
-            // Combine age block and quantity block into the root rule
-            if (ageBlock != null && quantityBlock != null) {
-                IPurchaseRule root = dto.isAgeAndQuantityOr()
-                        ? new OrRule(ageBlock, quantityBlock)
-                        : new AndRule(ageBlock, quantityBlock);
-                policy.addRule(root);
-            } else if (ageBlock != null) {
-                policy.addRule(ageBlock);
-            } else if (quantityBlock != null) {
-                policy.addRule(quantityBlock);
-            }
-
-            this.purchasePolicy = policy;
+            // Let the policy object handle setting its own fields and rules
+            this.purchasePolicy.updateFromDTO(dto);
         }
+//        public void setPurchasePolicy(PurchasePolicyDTO dto) {
+//            EventPurchasePolicy policy = new EventPurchasePolicy();
+//
+//            // Build age block (null-safe: only create if at least one age rule exists)
+//            IPurchaseRule ageBlock = null;
+//            if (dto.minAge() != null && dto.maxAge() != null) {
+//                IPurchaseRule minAge = new MinAgeRule(dto.minAge());
+//                IPurchaseRule maxAge = new MaxAgeRule(dto.maxAge());
+//                ageBlock = dto.isAgeOr() ? new OrRule(minAge, maxAge) : new AndRule(minAge, maxAge);
+//            } else if (dto.minAge() != null) {
+//                ageBlock = new MinAgeRule(dto.minAge());
+//            } else if (dto.maxAge() != null) {
+//                ageBlock = new MaxAgeRule(dto.maxAge());
+//            }
+//
+//            // Build quantity block
+//            IPurchaseRule quantityBlock = null;
+//            if (dto.minTickets() != null && dto.maxTickets() != null) {
+//                IPurchaseRule minTickets = new MinTicketsRule(dto.minTickets());
+//                IPurchaseRule maxTickets = new MaxTicketsRule(dto.maxTickets());
+//                quantityBlock = dto.isQuantityOr() ? new OrRule(minTickets, maxTickets) : new AndRule(minTickets, maxTickets);
+//            } else if (dto.minTickets() != null) {
+//                quantityBlock = new MinTicketsRule(dto.minTickets());
+//            } else if (dto.maxTickets() != null) {
+//                quantityBlock = new MaxTicketsRule(dto.maxTickets());
+//            }
+//
+//            // Combine age block and quantity block into the root rule
+//            if (ageBlock != null && quantityBlock != null) {
+//                IPurchaseRule root = dto.isAgeAndQuantityOr()
+//                        ? new OrRule(ageBlock, quantityBlock)
+//                        : new AndRule(ageBlock, quantityBlock);
+//                policy.addRule(root);
+//            } else if (ageBlock != null) {
+//                policy.addRule(ageBlock);
+//            } else if (quantityBlock != null) {
+//                policy.addRule(quantityBlock);
+//            }
+//
+//            this.purchasePolicy = policy;
+//        }
     }
