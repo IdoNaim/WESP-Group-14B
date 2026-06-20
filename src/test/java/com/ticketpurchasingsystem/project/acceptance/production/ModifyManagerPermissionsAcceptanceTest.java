@@ -73,6 +73,8 @@ class ModifyManagerPermissionsAcceptanceTest {
 
         registeredUsers.add(CO_OWNER);
         productionService.assignOwner(founderToken, companyId, CO_OWNER);
+        // Appointment now requires consent: the co-owner accepts so they are an active owner.
+        productionService.acceptAppointment(authService.login(CO_OWNER), companyId);
     }
 
     @Test

@@ -299,6 +299,8 @@ public class RemoveManagerTest {
         int companyId = stack.repo().findByName("Remove Co").get().getCompanyId();
         stack.service().appointManager(founderToken, companyId, "same-manager",
                 Set.of(ManagerPermission.INVENTORY_MANAGEMENT));
+        // Appointment now requires consent: accept it so there is an active manager to remove.
+        stack.service().acceptAppointment(stack.auth().login("same-manager"), companyId);
 
         int threadCount = 5;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);

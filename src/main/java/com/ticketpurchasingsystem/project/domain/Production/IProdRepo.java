@@ -12,5 +12,8 @@ public interface IProdRepo {
 
     List<ProductionCompany> findAllByUserId(String userId);
 
+    /** Companies that have a not-yet-answered appointment request for this user. */
+    List<ProductionCompany> findAllWithPendingAppointee(String userId);
+
     void deleteAll();
 }

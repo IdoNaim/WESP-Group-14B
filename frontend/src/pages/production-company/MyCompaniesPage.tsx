@@ -110,21 +110,50 @@ export default function MyCompaniesPage() {
     };
 
     const [companies, setCompanies] = useState<api.CompanySummary[]>([]);
+    const [pending, setPending] = useState<api.PendingAppointment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showCreate, setShowCreate] = useState(false);
+    const [busyCompanyId, setBusyCompanyId] = useState<number | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+
+    const loadData = async () => {
+        const [list, pendingList] = await Promise.all([
+            api.getMyCompanies(),
+            api.getPendingAppointments(),
+        ]);
+        setCompanies(list);
+        setPending(pendingList);
+    };
 
     useEffect(() => {
         (async () => {
             try {
-                const list = await api.getMyCompanies();
-                setCompanies(list);
+                await loadData();
             } catch (e) {
                 setError(e instanceof Error ? e.message : 'Failed to load companies');
             }
             setLoading(false);
         })();
     }, []);
+
+    const respondToAppointment = async (companyId: number, accept: boolean) => {
+        setBusyCompanyId(companyId);
+        setActionError(null);
+        try {
+            if (accept) {
+                await api.acceptAppointment(companyId);
+            } else {
+                await api.denyAppointment(companyId);
+            }
+            // Accepting adds the company to your memberships; denying just clears the
+            // request. Reload both lists so the UI reflects the new state.
+            await loadData();
+        } catch (e) {
+            setActionError(e instanceof Error ? e.message : 'Failed to update the appointment request');
+        }
+        setBusyCompanyId(null);
+    };
 
     const handleCompanyCreated = (companyId: number) => {
         navigate(`/production-company/${companyId}`);
@@ -198,6 +227,68 @@ export default function MyCompaniesPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Appointment requests */}
+            {pending.length > 0 && (
+                <div className="p-4 md:px-8 md:pt-8 max-w-5xl mx-auto">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-amber-400 text-[20px]">how_to_reg</span>
+                        <h2 className="text-sm font-black text-white tracking-wide uppercase">Appointment Requests</h2>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                            {pending.length}
+                        </span>
+                    </div>
+                    {actionError && (
+                        <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{actionError}</p>
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {pending.map(req => (
+                            <div
+                                key={req.companyId}
+                                className="bg-[#171f33] border border-amber-400/20 rounded-2xl p-5"
+                            >
+                                <div className="flex items-start justify-between mb-2">
+                                    <h3 className="text-white font-black text-base tracking-tight">{req.companyName}</h3>
+                                    <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border flex items-center gap-1 ${ROLE_COLOR[req.role]}`}>
+                                        <span className="material-symbols-outlined text-[12px]">{ROLE_ICON[req.role]}</span>
+                                        {req.role}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-2">
+                                    Invited by <strong className="text-gray-300">{req.appointerId}</strong> to join as {req.role === 'OWNER' ? 'an owner' : 'a manager'}.
+                                </p>
+                                {req.role === 'MANAGER' && req.permissions.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-3">
+                                        {req.permissions.map(p => (
+                                            <span key={p} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#2563eb]/10 text-[#60a5fa] border border-[#2563eb]/20">
+                                                {p.replace(/_/g, ' ')}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-3">
+                                    <button
+                                        onClick={() => respondToAppointment(req.companyId, true)}
+                                        disabled={busyCompanyId === req.companyId}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs py-2 rounded-lg transition-colors disabled:opacity-60"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">check</span>
+                                        ACCEPT
+                                    </button>
+                                    <button
+                                        onClick={() => respondToAppointment(req.companyId, false)}
+                                        disabled={busyCompanyId === req.companyId}
+                                        className="flex-1 flex items-center justify-center gap-1.5 border border-gray-600 hover:border-red-400 text-gray-400 hover:text-red-400 font-bold text-xs py-2 rounded-lg transition-colors disabled:opacity-60"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                        DENY
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Company grid */}
             <div className="p-4 md:p-8 max-w-5xl mx-auto">

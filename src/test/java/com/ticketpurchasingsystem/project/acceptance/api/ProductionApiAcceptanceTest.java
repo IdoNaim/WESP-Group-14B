@@ -134,7 +134,7 @@ class ProductionApiAcceptanceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Owner assigned successfully."));
+                .andExpect(jsonPath("$.message").value("Owner appointment request sent."));
     }
 
     @Test
@@ -167,7 +167,7 @@ class ProductionApiAcceptanceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("Manager appointed successfully."));
+                .andExpect(jsonPath("$.message").value("Manager appointment request sent."));
     }
 
     @Test
@@ -196,6 +196,8 @@ class ProductionApiAcceptanceTest {
         registeredUsers.add(coOwner);
         String founderToken = authService.login(FOUNDER);
         productionService.assignOwner(founderToken, companyId, coOwner);
+        // The appointee must accept before they are an active owner.
+        productionService.acceptAppointment(authService.login(coOwner), companyId);
 
         String newToken = authService.login(FOUNDER);
         ModifyPermissionsRequestDTO dto = new ModifyPermissionsRequestDTO();
@@ -232,6 +234,8 @@ class ProductionApiAcceptanceTest {
         String founderToken = authService.login(FOUNDER);
         productionService.appointManager(founderToken, companyId, MANAGER_ID,
                 EnumSet.of(ManagerPermission.INVENTORY_MANAGEMENT));
+        // The appointee must accept before they are an active manager that can be removed.
+        productionService.acceptAppointment(authService.login(MANAGER_ID), companyId);
 
         String newToken = authService.login(FOUNDER);
         mockMvc.perform(delete("/api/production/companies/" + companyId + "/managers/" + MANAGER_ID)
