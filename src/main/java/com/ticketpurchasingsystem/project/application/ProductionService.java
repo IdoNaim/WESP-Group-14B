@@ -200,11 +200,11 @@ public class ProductionService implements IProductionService {
     @Override
     @Transactional
     public boolean modifyManagerPermissions(String sessionToken, Integer companyId,
-            String managerId, Set<ManagerPermission> permissions) {
+            String targetUserId, Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
         }
-        String ownerId = authenticationService.getUser(sessionToken);
+        String requesterId = authenticationService.getUser(sessionToken);
 
         int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++) {
@@ -214,13 +214,21 @@ public class ProductionService implements IProductionService {
                 return false;
             }
 
-            ProductionCompany company = prodRepo.findById(companyId).orElse(null);
-            if (company == null) return false;
-            company.setManagerPermissions(managerId, permissions);
+            ProductionCompany company = productionHandler.modifyManagerPermissions(
+                    requesterId, companyId, targetUserId, permissions, companyOpt.get());
+            
+            if (company == null) {
+                return false; 
+            }
             
             try {
-                prodRepo.save(company);
+                ProductionCompany saved = prodRepo.save(company);
+                
+                productionEventPublisher.publishModifyManagerPermissionsEvent(saved, requesterId, targetUserId, permissions);
+                
                 return true;
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
                 return false;
