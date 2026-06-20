@@ -179,7 +179,7 @@ public class AcceptAppointmentTest {
     }
 
     @Test
-    public void GivenNoPendingAppointment_WhenAcceptAppointment_ThenReturnFalse() {
+    public void GivenNoPendingAppointmentForUser_WhenServiceAcceptAppointment_ThenReturnFalse() {
         ProductionCompany company = companyWithPendingManager();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn("stranger");

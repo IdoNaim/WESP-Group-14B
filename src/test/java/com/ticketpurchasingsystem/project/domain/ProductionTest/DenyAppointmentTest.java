@@ -137,7 +137,7 @@ public class DenyAppointmentTest {
     }
 
     @Test
-    public void GivenNoPendingAppointment_WhenDenyAppointment_ThenReturnFalse() {
+    public void GivenNoPendingAppointmentForUser_WhenServiceDenyAppointment_ThenReturnFalse() {
         ProductionCompany company = companyWithPendingManager();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn("stranger");
