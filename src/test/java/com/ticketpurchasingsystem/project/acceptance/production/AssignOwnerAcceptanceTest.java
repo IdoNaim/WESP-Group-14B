@@ -94,8 +94,9 @@ class AssignOwnerAcceptanceTest {
         registeredUsers.add(NEW_OWNER);
         String founderToken = authService.login(FOUNDER);
 
-        // Act
+        // Act: appointment now requires consent, so the appointee accepts it.
         productionService.assignOwner(founderToken, companyId, NEW_OWNER);
+        productionService.acceptAppointment(authService.login(NEW_OWNER), companyId);
 
         // Assert
         Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
@@ -198,8 +199,13 @@ class AssignOwnerAcceptanceTest {
         startLatch.countDown();
         assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Concurrent assignOwner must complete without deadlock");
 
-        // Optimistic locking with retry ensures both eventually succeed
-        assertEquals(2, successCount.get(), "Both owner assignments must succeed via optimistic-locking retry");
+        // Optimistic locking with retry ensures both requests eventually succeed
+        assertEquals(2, successCount.get(), "Both owner appointment requests must succeed via optimistic-locking retry");
+
+        // Appointment now requires consent: both appointees accept before they are owners.
+        productionService.acceptAppointment(authService.login("itay"), companyId);
+        productionService.acceptAppointment(authService.login("tomer"), companyId);
+
         Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
         assertTrue(company.isPresent());
         assertTrue(company.get().isOwner("itay"), "itay must be an owner");
