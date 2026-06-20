@@ -88,39 +88,7 @@ public class EventHandler {
         }
 
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
-
-        IPurchaseRule ageRule = null;
-        if (purchasePolicyDTO.minAge() != null && purchasePolicyDTO.maxAge() != null) {
-            IPurchaseRule minA = new MinAgeRule(purchasePolicyDTO.minAge());
-            IPurchaseRule maxA = new MaxAgeRule(purchasePolicyDTO.maxAge());
-            ageRule = purchasePolicyDTO.isAgeOr() ? new OrRule(minA, maxA) : new AndRule(minA, maxA);
-        } else if (purchasePolicyDTO.minAge() != null) {
-            ageRule = new MinAgeRule(purchasePolicyDTO.minAge());
-        } else if (purchasePolicyDTO.maxAge() != null) {
-            ageRule = new MaxAgeRule(purchasePolicyDTO.maxAge());
-        }
-
-        IPurchaseRule quantityRule = null;
-        if (purchasePolicyDTO.minTickets() != null && purchasePolicyDTO.maxTickets() != null) {
-            IPurchaseRule minT = new MinTicketsRule(purchasePolicyDTO.minTickets());
-            IPurchaseRule maxT = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
-            quantityRule = purchasePolicyDTO.isQuantityOr() ? new OrRule(minT, maxT) : new AndRule(minT, maxT);
-        } else if (purchasePolicyDTO.minTickets() != null) {
-            quantityRule = new MinTicketsRule(purchasePolicyDTO.minTickets());
-        } else if (purchasePolicyDTO.maxTickets() != null) {
-            quantityRule = new MaxTicketsRule(purchasePolicyDTO.maxTickets());
-        }
-
-        if (ageRule != null && quantityRule != null) {
-            IPurchaseRule combined = purchasePolicyDTO.isAgeAndQuantityOr()
-                    ? new OrRule(ageRule, quantityRule)
-                    : new AndRule(ageRule, quantityRule);
-            purchasePolicy.addRule(combined);
-        } else if (ageRule != null) {
-            purchasePolicy.addRule(ageRule);
-        } else if (quantityRule != null) {
-            purchasePolicy.addRule(quantityRule);
-        }
+        purchasePolicy.updateFromDTO(purchasePolicyDTO);
 
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(discountPolicyDTO);
 

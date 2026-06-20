@@ -72,18 +72,18 @@ public class EventPurchasePolicy implements IPurchaseRule {
     }
 
     // Called automatically by Hibernate before saving to extract rules to flat columns
-    @PrePersist
-    @PreUpdate
-    private void extractRulesForDb() {
-        PurchasePolicyDTO dto = getDTO();
-        this.maxTickets = dto.maxTickets();
-        this.minTickets = dto.minTickets();
-        this.maxAge = dto.maxAge();
-        this.minAge = dto.minAge();
-        this.isQuantityOr = dto.isQuantityOr();
-        this.isAgeOr = dto.isAgeOr();
-        this.isAgeAndQuantityOr = dto.isAgeAndQuantityOr();
-    }
+//    @PrePersist
+//    @PreUpdate
+//    private void extractRulesForDb() {
+//        PurchasePolicyDTO dto = getDTO();
+//        this.maxTickets = dto.maxTickets();
+//        this.minTickets = dto.minTickets();
+//        this.maxAge = dto.maxAge();
+//        this.minAge = dto.minAge();
+//        this.isQuantityOr = dto.isQuantityOr();
+//        this.isAgeOr = dto.isAgeOr();
+//        this.isAgeAndQuantityOr = dto.isAgeAndQuantityOr();
+//    }
 
     public void addRule(IPurchaseRule rule) {
         if (rule != null) { rules.add(rule); }
@@ -100,13 +100,32 @@ public class EventPurchasePolicy implements IPurchaseRule {
         }
         return true;
     }
+    public void updateFromDTO(PurchasePolicyDTO dto) {
+        this.minTickets = dto.minTickets();
+        this.maxTickets = dto.maxTickets();
+        this.minAge = dto.minAge();
+        this.maxAge = dto.maxAge();
+        this.isQuantityOr = dto.isQuantityOr();
+        this.isAgeOr = dto.isAgeOr();
+        this.isAgeAndQuantityOr = dto.isAgeAndQuantityOr();
 
+        rebuildRulesFromDb();
+    }
+//    public PurchasePolicyDTO getDTO() {
+//        if (rules.isEmpty()) {
+//            return new PurchasePolicyDTO(null, null, false, null, null, false, false);
+//        }
+//        RuleExtractor extractor = new RuleExtractor();
+//        extractor.extract(rules.get(0), false);
+//        return extractor.toDTO();
+//    }
     public PurchasePolicyDTO getDTO() {
-        if (rules.isEmpty()) {
-            return new PurchasePolicyDTO(null, null, false, null, null, false, false);
-        }
-        RuleExtractor extractor = new RuleExtractor();
-        extractor.extract(rules.get(0), false);
-        return extractor.toDTO();
+        return new PurchasePolicyDTO(
+                minTickets, maxTickets,
+                isQuantityOr != null && isQuantityOr,
+                minAge, maxAge,
+                isAgeOr != null && isAgeOr,
+                isAgeAndQuantityOr != null && isAgeAndQuantityOr
+        );
     }
 }
