@@ -281,6 +281,112 @@ class UserAcceptanceTests {
                 "A guest with a valid (unexpired) session must not be purged");
     }
 
+    // ─── Irregular exit (logged-in member) ───────────────────────────────────
+
+    @Test
+    void GivenMemberExitedIrregularly_WhenReLoginWithCorrectPassword_ThenSucceedsAndStaleSessionRemoved() {
+        // Member logs in, then closes the browser (X) — nothing resets logged_in.
+        registerAndLogin();
+        // Model the leftover from the irregular exit as a distinct stale session
+        // (a real re-login seconds later yields a different JWT; we pin a known
+        // value so the assertion doesn't depend on the token clock's resolution).
+        String staleToken = "stale-session-token";
+        UserInfo member = userRepo.findByID(USER_ID);
+        member.setLoggedIn(true);
+        member.setSessionTokenStr(staleToken);
+        userRepo.store(member);
+        sessionRepo.save(new SessionToken(staleToken, System.currentTimeMillis() + 3_600_000));
+
+        // They reopen the app (fresh guest) and log in again — takeover.
+        String guestToken = enterAsGuest();
+        String secondSession = userService.loginUser(USER_ID, USER_PASS, guestToken);
+
+        assertNotNull(secondSession);
+        assertTrue(authService.validate(secondSession));
+
+        UserInfo after = userRepo.findByID(USER_ID);
+        assertTrue(after.isLoggedIn());
+        assertEquals(secondSession, after.getSessionTokenStr());
+        assertTrue(sessionRepo.findByToken(staleToken).isEmpty(),
+                "the stale session from the irregular exit must be taken over (removed)");
+    }
+
+    @Test
+    void GivenMemberExitedIrregularly_WhenReLoginWithWrongPassword_ThenThrowsAndStaleSessionKept() {
+        String firstSession = registerAndLogin();
+        String guestToken = enterAsGuest();
+
+        assertThrows(RuntimeException.class, () ->
+                userService.loginUser(USER_ID, "wrong-password", guestToken));
+
+        // A failed re-login must not take over: the existing session stays intact.
+        UserInfo member = userRepo.findByID(USER_ID);
+        assertTrue(member.isLoggedIn());
+        assertEquals(firstSession, member.getSessionTokenStr());
+        assertTrue(sessionRepo.findByToken(firstSession).isPresent(),
+                "a wrong-password re-login must not drop the existing session");
+    }
+
+    @Test
+    void GivenLoggedInMember_WhenHandleDisconnect_ThenLoggedOutAndSessionRemoved() {
+        // Simulates the WebSocket disconnect callback (browser closed without Exit).
+        String session = registerAndLogin();
+
+        userService.handleDisconnect(USER_ID, session);
+
+        UserInfo member = userRepo.findByID(USER_ID);
+        assertFalse(member.isLoggedIn(), "an irregular disconnect must log the member out");
+        assertNull(member.getSessionTokenStr());
+        assertTrue(sessionRepo.findByToken(session).isEmpty(),
+                "the dropped connection's session must be removed");
+    }
+
+    @Test
+    void GivenMemberReLoggedInUnderNewToken_WhenStaleDisconnectArrives_ThenIgnored() {
+        // Race: the user re-logged-in (takeover) before the OLD socket's close event
+        // was processed. A late disconnect for a token that is no longer current must
+        // no-op, leaving the live session intact.
+        String currentSession = registerAndLogin();
+        String oldToken = "old-stale-token"; // a token the member no longer holds
+
+        userService.handleDisconnect(USER_ID, oldToken);
+
+        UserInfo member = userRepo.findByID(USER_ID);
+        assertTrue(member.isLoggedIn(),
+                "a disconnect for a non-current token must not log the member out");
+        assertEquals(currentSession, member.getSessionTokenStr());
+        assertTrue(sessionRepo.findByToken(currentSession).isPresent(),
+                "the current session must survive a stale disconnect");
+    }
+
+    @Test
+    void GivenMemberAbandonsWithoutExit_WhenSessionExpires_ThenSweepLogsOutMemberButKeepsLiveOne() {
+        // Backstop for a missed disconnect (e.g. server restart): the sweep must
+        // log out a member whose session expired, keeping the account.
+        String expiredToken = "expired-member-token";
+        UserInfo expiredMember = new UserInfo("carol", "Carol", "carol@test.com", "password123", UserGroupDiscount.NONE);
+        expiredMember.setLoggedIn(true);
+        expiredMember.setSessionTokenStr(expiredToken);
+        userRepo.store(expiredMember);
+        sessionRepo.save(new SessionToken(expiredToken, System.currentTimeMillis() - 1_000));
+
+        // A live member who must stay logged in.
+        String liveSession = registerAndLogin();
+
+        userService.purgeExpiredSessions();
+
+        UserInfo swept = userRepo.findByID("carol");
+        assertNotNull(swept, "the member account must be kept — only the dead session goes");
+        assertFalse(swept.isLoggedIn(), "an expired member must be logged out by the sweep");
+        assertNull(swept.getSessionTokenStr());
+        assertTrue(sessionRepo.findByToken(expiredToken).isEmpty(),
+                "the expired member session must be purged");
+
+        UserInfo live = userRepo.findByID(USER_ID);
+        assertTrue(live.isLoggedIn(), "a member with a valid session must stay logged in");
+        assertTrue(sessionRepo.findByToken(liveSession).isPresent());
+    }
+
     // ─── getAllUsers ──────────────────────────────────────────────────────────
 
     @Test

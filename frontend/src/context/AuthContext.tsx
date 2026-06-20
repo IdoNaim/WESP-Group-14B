@@ -7,6 +7,7 @@ import {
     useState,
 } from 'react';
 import { authApi, type UserPermissionsDTO } from '../api/authApi';
+import { connectPresence, disconnectPresence } from '../api/presenceSocket';
 
 const TOKEN_KEY = "token";
 const USER_ID_KEY = "userId";
@@ -48,6 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(TOKEN_KEY, response.token);
         localStorage.removeItem(USER_ID_KEY); // Clear any existing userId since we're now a guest
 
+        // Becoming a guest: no presence channel (guests are handled by the sweep).
+        disconnectPresence();
         setToken(response.token);
         return response.token;
     }, []);
@@ -64,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                     if (currentPermissions.userId) {
                         localStorage.setItem(USER_ID_KEY, currentPermissions.userId);
+                    }
+                    // Reopen the presence channel after a reload if still a member.
+                    if (currentPermissions.state?.toUpperCase() !== 'GUEST') {
+                        connectPresence(existingToken);
                     }
                     return;
                 } catch {
@@ -91,6 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setToken(newToken);
+
+        // Open the presence channel so an irregular exit (browser X) is detected.
+        connectPresence(newToken);
 
         const permissionsResponse = await authApi.getPermissions(newToken);
         setPermissions(permissionsResponse);
