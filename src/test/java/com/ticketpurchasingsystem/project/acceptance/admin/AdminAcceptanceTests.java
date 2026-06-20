@@ -2,16 +2,24 @@ package com.ticketpurchasingsystem.project.acceptance.admin;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional; // Added for automatic database rollback
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.SystemAdminService;
@@ -24,15 +32,10 @@ import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional // <-- This ensures the database is completely wiped clean after every test run
 class AdminAcceptanceTests {
 
     private static final String ADMIN_ID = "sysadmin";
@@ -56,9 +59,12 @@ class AdminAcceptanceTests {
 
     @BeforeEach
     void setUp() {
+        userRepo.deleteAll();
+
         UserInfo adminUser = new UserInfo(ADMIN_ID, ADMIN_ID, "admin@system.com", "admin", UserGroupDiscount.NONE);
         adminUser.setAdmin(true);
         userRepo.store(adminUser);
+
         adminToken = authService.login(ADMIN_ID, "admin");
     }
 
@@ -66,6 +72,7 @@ class AdminAcceptanceTests {
     void tearDown() {
         activeOrderRepo.findAll().forEach(o -> activeOrderRepo.delete(o.getOrderId()));
         historyOrderRepo.deleteAll();
+        // No manual User table cleanup needed here anymore thanks to @Transactional!
     }
 
     // ─── getAllActiveOrders ───────────────────────────────────────────────────
