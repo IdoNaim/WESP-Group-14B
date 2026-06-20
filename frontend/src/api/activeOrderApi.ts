@@ -31,6 +31,7 @@ export interface CheckoutRequestDTO {
     cardHolderName: string;
     expirationDate: string;
     cvv: string;
+    id: string;
 }
 
 export interface CheckoutResponseDTO {
@@ -202,7 +203,7 @@ export const activeOrderApi = {
             year: year || '',
             holder: data.cardHolderName,
             cvv: data.cvv,
-            id: '' // Base placeholder matching the DTO requirements
+            id: data.id
         };
 
         const response = await fetch(`${BASE_URL}/${orderId}/checkout`, {

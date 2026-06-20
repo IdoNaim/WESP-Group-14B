@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { activeOrderApi, ActiveOrderDTO, CheckoutRequestDTO } from '../../api/activeOrderApi';
 import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { authApi, UserProfileDTO } from '../../api/authApi';
@@ -45,8 +45,30 @@ function isValidCardholderName(value: string): boolean {
     return trimmedValue.length >= 2 && /^[A-Za-z\s]+$/.test(trimmedValue);
 }
 
+function isValidId(value: string): boolean {
+  const trimmed = value.trim();
+  return /^\d{9}$/.test(trimmed);
+}
+
+/*
+// Luhn Algorithm validation for future use:
+function isValidIsraeliIdLuhn(id: string): boolean {
+  const trimmed = id.trim();
+  if (!/^\d{9}$/.test(trimmed)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    let digit = parseInt(trimmed.charAt(i), 10);
+    let step = digit * ((i % 2) + 1);
+    if (step > 9) step -= 9;
+    sum += step;
+  }
+  return sum % 10 === 0;
+}
+*/
+
 interface ValidationErrors {
   cardholderName?: string;
+  cardholderId?: string;
   cardNumber?: string;
   expiryDate?: string;
   cvv?: string;
@@ -54,6 +76,7 @@ interface ValidationErrors {
 
 function validatePaymentFields(fields: {
   cardholderName: string;
+  cardholderId: string;
   cardNumber: string;
   expiryDate: string;
   cvv: string;
@@ -61,6 +84,9 @@ function validatePaymentFields(fields: {
   const errors: ValidationErrors = {};
   if (!isValidCardholderName(fields.cardholderName)) {
     errors.cardholderName = 'Please enter the cardholder name.';
+  }
+  if (!isValidId(fields.cardholderId)) {
+    errors.cardholderId = 'Please enter a valid 9-digit Cardholder ID.';
   }
   if (!isValidCardNumber(fields.cardNumber)) {
     errors.cardNumber = 'Please enter a valid card number (13–19 digits).';
@@ -88,6 +114,7 @@ export default function CheckoutPage() {
 
   // ─── Payment Field State ───────────────────────────────────────────────────
   const [cardholderName, setCardholderName] = useState('');
+  const [cardholderId, setCardholderId] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -263,6 +290,7 @@ export default function CheckoutPage() {
         cardHolderName: cardholderName.trim(),
         expirationDate: expiryDate.replace(/\s/g, ''),
         cvv: cvv.trim(),
+        id: cardholderId.trim(),
       };
 
       const checkoutResult = await activeOrderApi.checkout(token, order.orderId, checkoutPayload);
@@ -318,7 +346,7 @@ export default function CheckoutPage() {
   const handleInitiatePayment = async () => {
     // Validate card details first
     setPaymentError('');
-    const errors = validatePaymentFields({ cardholderName, cardNumber, expiryDate, cvv });
+    const errors = validatePaymentFields({ cardholderName, cardholderId, cardNumber, expiryDate, cvv });
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
@@ -588,6 +616,24 @@ export default function CheckoutPage() {
                     <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">error</span>
                       {validationErrors.cardholderName}
+                    </p>
+                  )}
+                </div>
+
+                {/* Cardholder ID */}
+                <div>
+                  <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">Cardholder ID</label>
+                  <input
+                    type="text"
+                    placeholder="123456789"
+                    value={cardholderId}
+                    onChange={(e) => { setCardholderId(e.target.value); setValidationErrors(prev => ({ ...prev, cardholderId: undefined })); }}
+                    className={`w-full bg-white border p-4 focus:outline-none transition-all rounded ${validationErrors.cardholderId ? 'border-red-400 focus:border-red-500' : 'border-[#c7c6cb] focus:border-[#1a1b20]'}`}
+                  />
+                  {validationErrors.cardholderId && (
+                    <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">error</span>
+                      {validationErrors.cardholderId}
                     </p>
                   )}
                 </div>
