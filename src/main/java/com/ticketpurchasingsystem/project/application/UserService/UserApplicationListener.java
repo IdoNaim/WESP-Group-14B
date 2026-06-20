@@ -9,6 +9,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.New
 
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
+import com.ticketpurchasingsystem.project.domain.User.Events.UserEvents.UserLeavedPlatformEvent;
 import com.ticketpurchasingsystem.project.domain.systemAdmin.SystemAdminEvents.GetAllUsersEvent;
 
 @Component
@@ -44,5 +45,13 @@ public class UserApplicationListener {
     @EventListener
     public void onGetAllUsers(GetAllUsersEvent event) {
         event.setResult(userService.getAllUsers());
+    }
+
+    // Irregular exit: the presence WebSocket (infrastructure) detected a dropped
+    // connection and published this event. React here in the application layer so
+    // the WebSocket detail never leaks into the domain.
+    @EventListener
+    public void onUserLeftPlatform(UserLeavedPlatformEvent event) {
+        userService.handleDisconnect(event.getUserId(), event.getSessionToken());
     }
 }

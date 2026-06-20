@@ -43,9 +43,9 @@ public class UserHandler {
         if (userInfo == null || !PasswordEncoderUtil.matches(password, userInfo.getPassword())) {
             throw new RuntimeException("Invalid user ID or password.");
         }
-        if (userInfo.isLoggedIn()) {
-            throw new RuntimeException("User is already logged in.");
-        }
+        // No "already logged in" guard: a correct password takes over the session.
+        // This lets a user who exited irregularly (browser X, flag never reset) log
+        // straight back in. The caller (UserService) drops the stale session row.
         userInfo.setSessionTokenStr(newSessionTokenStr);
         userInfo.setLoggedIn(true);
     }
