@@ -129,8 +129,7 @@ public class ProductionService implements IProductionService {
 
     @Override
     @Transactional
-    public boolean appointManager(String sessionToken, Integer companyId, String managerId,
-            Set<ManagerPermission> permissions) {
+    public boolean appointManager(String sessionToken, Integer companyId, String managerId, Set<ManagerPermission> permissions) {
         if (!authenticationService.validate(sessionToken)) {
             return false;
         }
@@ -150,6 +149,7 @@ public class ProductionService implements IProductionService {
 
             ProductionCompany company = productionHandler.appointManager(
                     appointerId, companyId, managerId, permissions, companyOpt.get());
+            
             if (company == null) {
                 return false;
             }
@@ -161,6 +161,7 @@ public class ProductionService implements IProductionService {
                         "appointManager: " + managerId + " appointed as manager of company "
                                 + companyId + " by " + appointerId);
                 return true;
+                
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
@@ -213,21 +214,13 @@ public class ProductionService implements IProductionService {
                 return false;
             }
 
-            ProductionCompany company = productionHandler.modifyManagerPermissions(
-                    ownerId, companyId, managerId, permissions, companyOpt.get());
-            if (company == null) {
-                return false;
-            }
-
+            ProductionCompany company = prodRepo.findById(companyId).orElse(null);
+            if (company == null) return false;
+            company.setManagerPermissions(managerId, permissions);
+            
             try {
-                ProductionCompany saved = prodRepo.save(company);
-                productionEventPublisher.publishModifyManagerPermissionsEvent(saved, ownerId, managerId, permissions);
-                loggerDef.getInstance().info(
-                        "modifyManagerPermissions: permissions updated for manager " + managerId
-                                + " in company " + companyId + " by " + ownerId);
+                prodRepo.save(company);
                 return true;
-            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
                 return false;

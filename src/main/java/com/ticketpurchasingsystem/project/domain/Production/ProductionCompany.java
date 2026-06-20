@@ -215,11 +215,28 @@ public class ProductionCompany {
         }
         return true;
     }
+    // public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
+    //     if (isManager(managerId)) return false;
+
+    //     if (permissions == null || permissions.isEmpty()) {
+    //         members.add(new UserProductionCompany(
+    //                 managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, null, this));
+    //     } 
+    //     else {
+    //         for (ManagerPermission perm : permissions) {
+    //             members.add(new UserProductionCompany(
+    //                     managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, perm, this));
+    //         }
+    //     }
+    //     return true;
+    // }
 
     public boolean isManager(String userId) {
-        return members.stream().anyMatch(m -> m.getUserId().equals(userId)
-                && m.getRole() == UserProductionCompany.MemberRole.MANAGER
-                && m.getPermission() == null);
+        if (userId == null || members == null) return false;
+        
+        return members.stream()
+                .anyMatch(m -> userId.equals(m.getUserId()) && 
+                            m.getRole() == UserProductionCompany.MemberRole.MANAGER);
     }
 
     public boolean isOwnerOrManager(String userId) {
@@ -227,21 +244,31 @@ public class ProductionCompany {
     }
 
     public Optional<ManagerDTO> getManagerDTO(String userId) {
-        return members.stream()
-                .filter(m -> m.getUserId().equals(userId)
-                        && m.getRole() == UserProductionCompany.MemberRole.MANAGER
-                        && m.getPermission() == null)
-                .map(m -> new ManagerDTO(m.getUserId(), m.getAppointerId(), getManagerPermissions(userId)))
-                .findFirst();
+        if (!isManager(userId)) return Optional.empty();
+                String appointerId = members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER)
+                .map(UserProductionCompany::getAppointerId)
+                .findFirst()
+                .orElse(null);
+                
+        return Optional.of(new ManagerDTO(userId, appointerId, getManagerPermissions(userId)));
     }
 
     public Map<String, ManagerDTO> getManagerTree() {
         Map<String, ManagerDTO> tree = new LinkedHashMap<>();
-        for (UserProductionCompany m : members) {
-            if (m.getRole() == UserProductionCompany.MemberRole.MANAGER && m.getPermission() == null) {
-                tree.put(m.getUserId(),
-                        new ManagerDTO(m.getUserId(), m.getAppointerId(), getManagerPermissions(m.getUserId())));
-            }
+        
+        Set<String> managerIds = members.stream()
+                .filter(m -> m.getRole() == UserProductionCompany.MemberRole.MANAGER)
+                .map(UserProductionCompany::getUserId)
+                .collect(Collectors.toSet());
+                
+        for (String managerId : managerIds) {
+            String appointerId = members.stream()
+                    .filter(m -> m.getUserId().equals(managerId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER)
+                    .map(UserProductionCompany::getAppointerId)
+                    .findFirst()
+                    .orElse(null);
+            tree.put(managerId, new ManagerDTO(managerId, appointerId, getManagerPermissions(managerId)));
         }
         return Collections.unmodifiableMap(tree);
     }
@@ -249,8 +276,7 @@ public class ProductionCompany {
     public boolean isManagerAppointedByOwner(String managerId, String ownerId) {
         return members.stream().anyMatch(m -> m.getUserId().equals(managerId)
                 && m.getRole() == UserProductionCompany.MemberRole.MANAGER
-                && ownerId.equals(m.getAppointerId())
-                && m.getPermission() == null);
+                && ownerId.equals(m.getAppointerId()));
     }
 
     public boolean removeManager(String appointerId, String managerId) {
@@ -264,19 +290,26 @@ public class ProductionCompany {
     // ── Permissions ──────────────────────────────────────────────────────────
 
     public void setManagerPermissions(String userId, Set<ManagerPermission> permissions) {
-        // Find the user's base row to copy role + appointer
-        Optional<UserProductionCompany> baseRow = members.stream()
-                .filter(m -> m.getUserId().equals(userId) && m.getPermission() == null)
+        Optional<UserProductionCompany> existingManagerRow = members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER)
                 .findFirst();
-        if (baseRow.isEmpty()) return;
+                
+        if (existingManagerRow.isEmpty()) return;
+        
+        String appointerId = existingManagerRow.get().getAppointerId();
 
-        // Remove existing permission rows for this user, keep the base row
-        members.removeIf(m -> m.getUserId().equals(userId) && m.getPermission() != null);
+        members.removeIf(m -> m.getUserId().equals(userId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER);
 
-        for (ManagerPermission perm : permissions) {
+        if (permissions == null || permissions.isEmpty()) {
             members.add(new UserProductionCompany(
-                    userId, baseRow.get().getRole(), baseRow.get().getAppointerId(), perm, this));
+                    userId, UserProductionCompany.MemberRole.MANAGER, appointerId, null, this));
+        } else {
+            for (ManagerPermission perm : permissions) {
+                members.add(new UserProductionCompany(
+                        userId, UserProductionCompany.MemberRole.MANAGER, appointerId, perm, this));
+            }
         }
+        
     }
 
     public Set<ManagerPermission> getManagerPermissions(String userId) {

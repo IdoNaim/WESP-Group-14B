@@ -1,5 +1,7 @@
 package com.ticketpurchasingsystem.project.domain.Production;
 
+import java.util.Set;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
