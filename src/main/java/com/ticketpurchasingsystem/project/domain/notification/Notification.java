@@ -1,17 +1,35 @@
 package com.ticketpurchasingsystem.project.domain.notification;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.atomic.AtomicBoolean;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 import com.ticketpurchasingsystem.project.domain.Utils.NotificationDTO;
 import com.ticketpurchasingsystem.project.domain.exceptions.ForbiddenException;
 
+@Entity
+@Table(name = "notifications")
 public class Notification {
-    private final String id;
-    private final String userId;
-    private final String message;
-    private final AtomicBoolean read = new AtomicBoolean(false);
-    private final LocalDateTime createdAt;
+
+    @Id
+    @Column(name = "id", nullable = false, length = 255)
+    private String id;
+
+    @Column(name = "user_id", nullable = false, length = 255)
+    private String userId;
+
+    @Column(name = "message", nullable = false, length = 1000)
+    private String message;
+
+    @Column(name = "is_read", nullable = false)
+    private boolean read = false;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    protected Notification() {}
 
     public Notification(String id, String userId, String message) {
         if (userId == null || userId.isBlank()) throw new IllegalArgumentException("Target user ID must not be empty");
@@ -20,15 +38,22 @@ public class Notification {
         this.userId = userId;
         this.message = message;
         this.createdAt = LocalDateTime.now();
+        this.read = false;
     }
 
     public String getId() { return id; }
     public String getUserId() { return userId; }
     public String getMessage() { return message; }
-    public boolean isRead() { return read.get(); }
+    public boolean isRead() { return read; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
-    public boolean markAsRead() { return read.compareAndSet(false, true); }
+    public synchronized boolean markAsRead() {
+        if (!read) {
+            read = true;
+            return true;
+        }
+        return false;
+    }
 
     public void requireOwnedBy(String userId) {
         if (!this.userId.equals(userId)) {
@@ -37,6 +62,6 @@ public class Notification {
     }
 
     public NotificationDTO toDTO() {
-        return new NotificationDTO(id, userId, message, read.get(), createdAt);
+        return new NotificationDTO(id, userId, message, read, createdAt);
     }
 }

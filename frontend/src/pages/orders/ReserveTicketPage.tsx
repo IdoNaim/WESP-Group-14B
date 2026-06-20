@@ -465,9 +465,6 @@ export default function ReserveTicketsPage() {
 
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
-  const [ageInput, setAgeInput] = useState<string>("");
-
   const [event, setEvent] = useState<EventDTO | null>(null);
   const [eventLoading, setEventLoading] = useState(true);
   const [eventError, setEventError] = useState(false);
@@ -714,29 +711,14 @@ export default function ReserveTicketsPage() {
   };
 
   const handleInitiateCheckout = () => {
-    setIsAgeModalOpen(true);
+    proceedToCheckout();
   };
 
-  const handleConfirmCheckout = async () => {
-    const age = parseInt(ageInput, 10);
-    if (isNaN(age) || age <= 0) {
-      showBanner("error", "Please enter a valid age to proceed.");
-      return;
-    }
 
-    setIsAgeModalOpen(false);
-
-    // Corrected check: Validating that they selected 1 or more tickets if there's no custom policy
+  // Reserves the tickets and navigates to checkout.
+  const proceedToCheckout = async () => {
     if (!purchasePolicy && totalSelected < 1) {
       showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
-      return;
-    }
-
-    const token = localStorage.getItem("token") ?? "";
-    const policyViolation = await eventApi.validatePurchasePolicy(token, currentOrder!.eventId, totalSelected, age);
-    
-    if (policyViolation) {
-      showBanner("error", `Policy Violation: ${policyViolation}`);
       return;
     }
 
@@ -947,41 +929,6 @@ export default function ReserveTicketsPage() {
           </aside>
         </div>
       </main>
-
-      {/* ── Age Verification Modal ── */}
-      {isAgeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4 border border-gray-200">
-            <h3 className="text-lg font-bold text-[#0A192F]">Age Verification</h3>
-            <p className="text-sm text-gray-600">Please enter your age to verify event policies before checking out.</p>
-            <input
-              type="number"
-              value={ageInput}
-              onChange={(e) => setAgeInput(e.target.value)}
-              placeholder="e.g., 25"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleConfirmCheckout();
-              }}
-            />
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setIsAgeModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmCheckout}
-                className="px-4 py-2 text-sm font-bold text-white bg-[#0A192F] hover:bg-[#112a4f] rounded transition"
-              >
-                Verify & Checkout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

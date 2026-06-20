@@ -70,7 +70,7 @@ public class InitFileLoader implements ApplicationRunner {
                 loggerDef.getInstance().info("Init [" + (i + 1) + "/" + commands.size() + "] OK: " + cmd.name());
             } catch (Exception e) {
                 printInitError(initFilePath, cmd.name(), i + 1, commands.size(), rootMessage(e));
-                System.exit(1);
+                throw new RuntimeException("Init failed at command [" + (i+1) + "/" + commands.size() + "]: " + cmd.name(), e);
             }
         }
 

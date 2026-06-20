@@ -4,8 +4,10 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
@@ -24,6 +26,7 @@ public class HistoryOrderService implements IHistoryOrderService {
     private final AuthenticationService authenticationService;
     private final ProductionService productionService;
 
+    @Autowired
     public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler,
                                AuthenticationService authenticationService,
                                ProductionService productionService) {
@@ -33,6 +36,8 @@ public class HistoryOrderService implements IHistoryOrderService {
         this.productionService = productionService;
     }
 
+    @Override
+    @Transactional
     public boolean createHistoryOrder(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
         HistoryOrderDTO historyOrderDTO = new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities);
         HistoryOrderItem newHistoryOrder = historyOrderHandler.saveHistoryOrder(historyOrderDTO);
@@ -44,6 +49,7 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
+    @Transactional
     public HistoryOrderDTO getHistoryOrder(SessionToken st, String orderId) {
         HistoryOrderDTO historyOrder = null;
         if (isSessionTokenValid(st)){
@@ -61,6 +67,7 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
+    @Transactional
     public List<HistoryOrderDTO> getAllHistoryOrdersByUser(SessionToken st, String userASk) {
         List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
         if (!isSessionTokenValid(st)) return historyOrders;
@@ -75,6 +82,7 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
 
     @Override
+    @Transactional
     public List<HistoryOrderDTO> getAllHistoryOrdersByCompany(SessionToken sessionToken, int companyId) {
         List<HistoryOrderDTO> historyOrders = new java.util.ArrayList<>();
         if(isSessionTokenValid(sessionToken)){
@@ -86,6 +94,7 @@ public class HistoryOrderService implements IHistoryOrderService {
     }
     
     @Override
+    @Transactional
     // This method is intended for system administrators to retrieve all historical orders in the system. It should only be accessible to users with admin privileges, and it will return a list of HistoryOrderDTO objects representing all historical orders.
     public List<HistoryOrderDTO> getAllHistoryOrders(SessionToken st) {
         if (!isSessionTokenValid(st)) {

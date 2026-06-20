@@ -1,14 +1,18 @@
 package com.ticketpurchasingsystem.project.infrastructure.persistence;
 
-import com.ticketpurchasingsystem.project.domain.event.Event;
-import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
-import java.util.List;
+
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 
 @Repository
 @Primary
+@Profile("!test")
 public class DBEventRepo implements IEventRepo {
 
     private final EventJpaRepository eventJpaRepository;
@@ -44,7 +48,11 @@ public class DBEventRepo implements IEventRepo {
 
     @Override
     public void delete(String eventId) {
-        // Deletes the record from the database by its primary key string
         eventJpaRepository.deleteById(eventId);
+    }
+
+    @Override
+    public void deleteAll() {
+        eventJpaRepository.deleteAll();
     }
 }
