@@ -76,31 +76,55 @@ public class ProductionHandler {
         return true;
     }
 
-    public ProductionCompany modifyManagerPermissions(String ownerId, Integer companyId,
-            String managerId, Set<ManagerPermission> permissions, ProductionCompany company) {
-        if (isInvalid(ownerId) || companyId == null || isInvalid(managerId)
+    public ProductionCompany modifyManagerPermissions(String requesterId, Integer companyId,
+            String targetUserId, Set<ManagerPermission> permissions, ProductionCompany company) {
+            
+        if (isInvalid(requesterId) || companyId == null || isInvalid(targetUserId)
                 || permissions == null || company == null) {
             loggerDef.getInstance().error("modifyManagerPermissions called with null/blank arguments");
             return null;
         }
-        if (!company.isOwner(ownerId)) {
-            loggerDef.getInstance().error(
-                    "modifyManagerPermissions: caller " + ownerId + " is not an owner of company " + companyId);
+        if (requesterId.equals(targetUserId)) {
+            loggerDef.getInstance().error("modifyManagerPermissions: caller cannot modify their own permissions");
             return null;
         }
-        if (!company.isOwner(managerId)) {
+        boolean isFounder = company.isFounder(requesterId);
+        boolean isOwner = company.isOwner(requesterId);
+        
+        if (!isFounder && !isOwner) {
             loggerDef.getInstance().error(
-                    "modifyManagerPermissions: " + managerId + " is not a manager of company " + companyId);
+                    "modifyManagerPermissions: caller " + requesterId + " is not an owner or founder of company " + companyId);
             return null;
         }
-        if (!company.isAppointedBy(managerId, ownerId)) {
+        boolean targetIsOwner = company.isOwner(targetUserId);
+        boolean targetIsManager = company.isManager(targetUserId);
+        
+        if (!targetIsOwner && !targetIsManager) {
             loggerDef.getInstance().error(
-                    "modifyManagerPermissions: " + managerId + " was not appointed by " + ownerId);
+                    "modifyManagerPermissions: " + targetUserId + " is not a manager or owner of company " + companyId);
             return null;
         }
-        company.setManagerPermissions(managerId, permissions);
+        if (!isFounder) {
+            boolean hasHierarchy = false;
+            if (targetIsOwner) {
+                hasHierarchy = company.isAppointedBy(targetUserId, requesterId);
+            } else if (targetIsManager) {
+                hasHierarchy = company.isManagerAppointedByOwner(targetUserId, requesterId);
+            }
+            
+            if (!hasHierarchy) {
+                loggerDef.getInstance().error(
+                        "modifyManagerPermissions: " + targetUserId + " was not appointed by " + requesterId);
+                return null;
+            }
+        }
+        boolean success = company.setManagerPermissions(targetUserId, permissions);
+        if (!success) {
+            return null;
+        }
+        
         return company;
-  }
+    }
     public ProductionCompany appointManager(String appointerId, Integer companyId,
             String managerId, Set<ManagerPermission> permissions, ProductionCompany company) {
         if (isInvalid(appointerId) || companyId == null || isInvalid(managerId)

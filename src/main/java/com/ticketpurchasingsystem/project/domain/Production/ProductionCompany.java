@@ -291,21 +291,33 @@ public class ProductionCompany {
 
     // ── Permissions ──────────────────────────────────────────────────────────
 
+    // ── Permissions ──────────────────────────────────────────────────────────
+
     public boolean setManagerPermissions(String userId, Set<ManagerPermission> permissions) {
-        Optional<UserProductionCompany> baseRowOpt = members.stream()
-                .filter(m -> m.getUserId().equals(userId) && m.getPermission() == null)
+        Optional<UserProductionCompany> referenceRowOpt = members.stream()
+                .filter(m -> m.getUserId().equals(userId))
                 .findFirst();
                 
-        if (baseRowOpt.isEmpty()) return false; 
+        if (referenceRowOpt.isEmpty()) {
+            return false; 
+        }
         
-        UserProductionCompany baseRow = baseRowOpt.get();
+        UserProductionCompany referenceRow = referenceRowOpt.get();
 
         members.removeIf(m -> m.getUserId().equals(userId) && m.getPermission() != null);
+
+        boolean hasBaseRow = members.stream()
+                .anyMatch(m -> m.getUserId().equals(userId) && m.getPermission() == null);
+                
+        if (!hasBaseRow) {
+            members.add(new UserProductionCompany(
+                    userId, referenceRow.getRole(), referenceRow.getAppointerId(), null, this));
+        }
 
         if (permissions != null && !permissions.isEmpty()) {
             for (ManagerPermission perm : permissions) {
                 members.add(new UserProductionCompany(
-                        userId, baseRow.getRole(), baseRow.getAppointerId(), perm, this));
+                        userId, referenceRow.getRole(), referenceRow.getAppointerId(), perm, this));
             }
         }
         return true;
