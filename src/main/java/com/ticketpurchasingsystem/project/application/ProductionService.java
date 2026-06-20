@@ -18,9 +18,11 @@ import com.ticketpurchasingsystem.project.domain.Production.OptimisticLockingFai
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
+import com.ticketpurchasingsystem.project.domain.Production.UserProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionPolicy.PurchasePolicy.IPurchaseRule;
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PendingAppointmentDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
@@ -111,10 +113,11 @@ public class ProductionService implements IProductionService {
 
             try {
                 ProductionCompany saved = prodRepo.save(company);
-                productionEventPublisher.publishAssignOwnerEvent(saved, appointerId, appointeeUserId);
+                productionEventPublisher.publishAppointmentRequestedEvent(
+                        saved.getCompanyId(), saved.getCompanyName(), appointeeUserId, appointerId, "OWNER");
                 loggerDef.getInstance().info(
-                        "assignOwner: " + appointeeUserId + " appointed as owner of company "
-                                + companyId + " by " + appointerId);
+                        "assignOwner: owner appointment request sent to " + appointeeUserId
+                                + " for company " + companyId + " by " + appointerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
@@ -156,10 +159,11 @@ public class ProductionService implements IProductionService {
 
             try {
                 ProductionCompany saved = prodRepo.save(company);
-                productionEventPublisher.publishAppointManagerEvent(saved, appointerId, managerId, permissions);
+                productionEventPublisher.publishAppointmentRequestedEvent(
+                        saved.getCompanyId(), saved.getCompanyName(), managerId, appointerId, "MANAGER");
                 loggerDef.getInstance().info(
-                        "appointManager: " + managerId + " appointed as manager of company "
-                                + companyId + " by " + appointerId);
+                        "appointManager: manager appointment request sent to " + managerId
+                                + " for company " + companyId + " by " + appointerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
                 loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
@@ -169,6 +173,112 @@ public class ProductionService implements IProductionService {
             }
         }
         loggerDef.getInstance().error("appointManager failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingAppointmentDTO> getMyPendingAppointments(String sessionToken) {
+        if (!authenticationService.validate(sessionToken)) {
+            return null;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+        List<ProductionCompany> companies = prodRepo.findAllWithPendingAppointee(userId);
+        List<PendingAppointmentDTO> result = new ArrayList<>();
+        for (ProductionCompany c : companies) {
+            c.getPendingRole(userId).ifPresent(role -> result.add(new PendingAppointmentDTO(
+                    c.getCompanyId(),
+                    c.getCompanyName(),
+                    role.name(),
+                    c.getPendingAppointerId(userId).orElse(null),
+                    c.getPendingPermissions(userId))));
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public boolean acceptAppointment(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("acceptAppointment: company not found, id=" + companyId);
+                return false;
+            }
+            ProductionCompany loaded = companyOpt.get();
+
+            // Capture the pending request details before flipping it to ACTIVE so we can
+            // fire the right role event (assigns the User-aggregate role only on acceptance).
+            Optional<UserProductionCompany.MemberRole> pendingRole = loaded.getPendingRole(userId);
+            String appointerId = loaded.getPendingAppointerId(userId).orElse(null);
+            Set<ManagerPermission> permissions = loaded.getPendingPermissions(userId);
+
+            ProductionCompany company = productionHandler.acceptAppointment(userId, loaded);
+            if (company == null) {
+                return false;
+            }
+
+            try {
+                ProductionCompany saved = prodRepo.save(company);
+                if (pendingRole.orElse(null) == UserProductionCompany.MemberRole.OWNER) {
+                    productionEventPublisher.publishAssignOwnerEvent(saved, appointerId, userId);
+                } else {
+                    productionEventPublisher.publishAppointManagerEvent(saved, appointerId, userId, permissions);
+                }
+                loggerDef.getInstance().info(
+                        "acceptAppointment: " + userId + " accepted appointment in company " + companyId);
+                return true;
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("acceptAppointment: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("acceptAppointment failed: " + e.getMessage());
+                return false;
+            }
+        }
+        loggerDef.getInstance().error("acceptAppointment failed after " + maxRetries + " retries due to concurrent modifications");
+        return false;
+    }
+
+    @Override
+    @Transactional
+    public boolean denyAppointment(String sessionToken, Integer companyId) {
+        if (!authenticationService.validate(sessionToken)) {
+            return false;
+        }
+        String userId = authenticationService.getUser(sessionToken);
+
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
+            if (companyOpt.isEmpty()) {
+                loggerDef.getInstance().error("denyAppointment: company not found, id=" + companyId);
+                return false;
+            }
+
+            ProductionCompany company = productionHandler.denyAppointment(userId, companyOpt.get());
+            if (company == null) {
+                return false;
+            }
+
+            try {
+                prodRepo.save(company);
+                loggerDef.getInstance().info(
+                        "denyAppointment: " + userId + " denied appointment in company " + companyId);
+                return true;
+            } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
+                loggerDef.getInstance().info("denyAppointment: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+            } catch (Exception e) {
+                loggerDef.getInstance().error("denyAppointment failed: " + e.getMessage());
+                return false;
+            }
+        }
+        loggerDef.getInstance().error("denyAppointment failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointManagerEvent;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointmentRequestedEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AssignOwnerEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.GetCompanyHistoryEvent;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
@@ -49,5 +50,11 @@ public class ProductionEventPublisher {
     public void publishAppointManagerEvent(ProductionCompany company, String appointerId,
             String managerId, Set<ManagerPermission> permissions) {
         eventPublisher.publishEvent(new AppointManagerEvent(company, appointerId, managerId, permissions));
+    }
+
+    public void publishAppointmentRequestedEvent(Integer companyId, String companyName,
+            String appointeeId, String appointerId, String role) {
+        eventPublisher.publishEvent(
+                new AppointmentRequestedEvent(companyId, companyName, appointeeId, appointerId, role));
     }
 }

@@ -93,6 +93,17 @@ public class ProdRepo implements IProdRepo {
     }
 
     @Override
+    public List<ProductionCompany> findAllWithPendingAppointee(String userId) {
+        List<ProductionCompany> result = new ArrayList<>();
+        for (ProductionCompany company : storage.values()) {
+            if (company.hasPendingAppointment(userId)) {
+                result.add(new ProductionCompany(company));
+            }
+        }
+        return result;
+    }
+
+    @Override
     public void deleteAll() {
         storage.clear();
         nameToId.clear();

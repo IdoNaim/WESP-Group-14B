@@ -16,6 +16,7 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import java.util.Objects;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointmentRequestedEvent;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -94,6 +95,15 @@ public class NotificationEventListener {
                 "Your refund of %.2f for order %s has been processed.",
                 event.getAmount(), event.getOrderId());
         notificationService.createSystemNotification(event.getUserId(), message);
+    }
+
+    @EventListener
+    public void onAppointmentRequested(AppointmentRequestedEvent event) {
+        String roleLabel = "OWNER".equals(event.getRole()) ? "an owner" : "a manager";
+        String message = String.format(
+                "%s invited you to join \"%s\" as %s. Accept or deny it in My Companies.",
+                event.getAppointerId(), event.getCompanyName(), roleLabel);
+        notificationService.createSystemNotification(event.getAppointeeId(), message);
     }
 
     private String resolveUserId(String sessionToken) {

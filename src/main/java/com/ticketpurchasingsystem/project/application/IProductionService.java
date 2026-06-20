@@ -10,6 +10,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PendingAppointmentDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 
 public interface IProductionService {
@@ -56,4 +57,10 @@ public interface IProductionService {
         public List<CompanySummaryDTO> getMyCompanies(String sessionToken);
 
         public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId);
+
+        public List<PendingAppointmentDTO> getMyPendingAppointments(String sessionToken);
+
+        public boolean acceptAppointment(String sessionToken, Integer companyId);
+
+        public boolean denyAppointment(String sessionToken, Integer companyId);
 }

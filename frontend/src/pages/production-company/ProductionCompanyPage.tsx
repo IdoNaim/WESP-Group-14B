@@ -554,7 +554,7 @@ export default function ProductionCompanyPage() {
         setFormLoading(true); setFormError(null);
         try {
             await api.assignOwner(numericId, formUserId);
-            showToast('Owner assigned successfully!');
+            showToast('Owner appointment request sent. It takes effect once they accept.');
             closeModal();
             await fetchRoles();
         } catch (e) {
@@ -568,7 +568,7 @@ export default function ProductionCompanyPage() {
         setFormLoading(true); setFormError(null);
         try {
             await api.appointManager(numericId, formUserId, [...formPerms]);
-            showToast('Manager appointed successfully!');
+            showToast('Manager appointment request sent. It takes effect once they accept.');
             closeModal();
             await fetchRoles();
         } catch (e) {

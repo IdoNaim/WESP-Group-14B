@@ -83,7 +83,7 @@ class AppointManagerAcceptanceTest {
     }
 
     @Test
-    void GivenOwnerAppoints_WhenAppointManager_ThenManagerAppearsInCompany() {
+    void GivenOwnerAppoints_WhenAppointManager_ThenPendingRequestAppearsButNotActiveManager() {
         registeredUsers.add(MANAGER_ID);
         String founderToken = authService.login(FOUNDER);
 
@@ -91,7 +91,40 @@ class AppointManagerAcceptanceTest {
 
         Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
         assertTrue(company.isPresent());
+        assertFalse(company.get().isManager(MANAGER_ID),
+                "Appointee must not be an active manager until they accept");
+        assertTrue(company.get().hasPendingAppointment(MANAGER_ID),
+                "A pending appointment request must be recorded");
+    }
+
+    @Test
+    void GivenPendingRequest_WhenManagerAccepts_ThenBecomesActiveManager() {
+        registeredUsers.add(MANAGER_ID);
+        productionService.appointManager(authService.login(FOUNDER), companyId, MANAGER_ID, PERMISSIONS);
+
+        String managerToken = authService.login(MANAGER_ID);
+        boolean accepted = productionService.acceptAppointment(managerToken, companyId);
+
+        assertTrue(accepted);
+        Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
+        assertTrue(company.isPresent());
         assertTrue(company.get().isManager(MANAGER_ID));
+        assertFalse(company.get().hasPendingAppointment(MANAGER_ID));
+    }
+
+    @Test
+    void GivenPendingRequest_WhenManagerDenies_ThenRequestRemovedAndNotAManager() {
+        registeredUsers.add(MANAGER_ID);
+        productionService.appointManager(authService.login(FOUNDER), companyId, MANAGER_ID, PERMISSIONS);
+
+        String managerToken = authService.login(MANAGER_ID);
+        boolean denied = productionService.denyAppointment(managerToken, companyId);
+
+        assertTrue(denied);
+        Optional<ProductionCompany> company = prodRepo.findByName("Events Co");
+        assertTrue(company.isPresent());
+        assertFalse(company.get().isManager(MANAGER_ID));
+        assertFalse(company.get().hasPendingAppointment(MANAGER_ID));
     }
 
     @Test

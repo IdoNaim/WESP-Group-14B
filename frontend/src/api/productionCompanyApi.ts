@@ -140,3 +140,20 @@ export interface MemberInfo {
 
 export const getMyMemberInfo = (companyId: number): Promise<MemberInfo> =>
     apiRequest('GET', `/companies/${companyId}/my-role`);
+
+export interface PendingAppointment {
+    companyId: number;
+    companyName: string;
+    role: 'OWNER' | 'MANAGER';
+    appointerId: string;
+    permissions: ManagerPermission[];
+}
+
+export const getPendingAppointments = (): Promise<PendingAppointment[]> =>
+    apiRequest('GET', '/appointments/pending');
+
+export const acceptAppointment = (companyId: number): Promise<{ message: string }> =>
+    apiRequest('POST', `/appointments/${companyId}/accept`);
+
+export const denyAppointment = (companyId: number): Promise<{ message: string }> =>
+    apiRequest('POST', `/appointments/${companyId}/deny`);

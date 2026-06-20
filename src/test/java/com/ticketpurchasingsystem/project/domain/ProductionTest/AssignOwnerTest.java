@@ -35,7 +35,6 @@ import com.ticketpurchasingsystem.project.domain.Production.IProdRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
-import com.ticketpurchasingsystem.project.domain.Utils.OwnerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
@@ -173,8 +172,10 @@ public class AssignOwnerTest {
         // Assert
         assertTrue(result);
         verify(prodRepo, times(1)).save(any());
-        assertTrue(captor.getValue().isOwner(APPOINTEE_ID),
-                "Repo must receive the company with the new owner already added");
+        assertFalse(captor.getValue().isOwner(APPOINTEE_ID),
+                "Appointee must NOT be an active owner yet — only a pending request");
+        assertTrue(captor.getValue().hasPendingAppointment(APPOINTEE_ID),
+                "Repo must receive the company with the pending appointment request added");
     }
 
     @Test
@@ -260,7 +261,7 @@ public class AssignOwnerTest {
     }
 
     @Test
-    public void GivenFounderAppoints_WhenAssignOwner_ThenAppointeeHasFounderAsAppointer() {
+    public void GivenFounderAppoints_WhenAssignOwner_ThenPendingRequestHasFounderAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -268,12 +269,11 @@ public class AssignOwnerTest {
         productionHandler.assignOwner(FOUNDER_ID, COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
-        OwnerDTO node = company.getOwnerDTO(APPOINTEE_ID).orElseThrow();
-        assertEquals(FOUNDER_ID, node.getAppointerId());
+        assertEquals(FOUNDER_ID, company.getPendingAppointerId(APPOINTEE_ID).orElseThrow());
     }
 
     @Test
-    public void GivenOwnerAppoints_WhenAssignOwner_ThenAppointeeHasOwnerAsAppointer() {
+    public void GivenOwnerAppoints_WhenAssignOwner_ThenPendingRequestHasOwnerAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -281,12 +281,11 @@ public class AssignOwnerTest {
         productionHandler.assignOwner(OWNER_ID, COMPANY_ID, APPOINTEE_ID, company);
 
         // Assert
-        OwnerDTO node = company.getOwnerDTO(APPOINTEE_ID).orElseThrow();
-        assertEquals(OWNER_ID, node.getAppointerId());
+        assertEquals(OWNER_ID, company.getPendingAppointerId(APPOINTEE_ID).orElseThrow());
     }
 
     @Test
-    public void GivenSuccessfulAssignment_WhenAssignOwner_ThenReturnedCompanyContainsNewOwner() {
+    public void GivenSuccessfulAssignment_WhenAssignOwner_ThenReturnedCompanyHasPendingRequest() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -296,8 +295,10 @@ public class AssignOwnerTest {
 
         // Assert
         assertNotNull(result);
-        assertTrue(result.isOwner(APPOINTEE_ID),
-                "Returned company must contain the newly appointed owner");
+        assertFalse(result.isOwner(APPOINTEE_ID),
+                "Appointee must not be an active owner until they accept");
+        assertTrue(result.hasPendingAppointment(APPOINTEE_ID),
+                "Returned company must contain the pending appointment request");
     }
 
     @Test

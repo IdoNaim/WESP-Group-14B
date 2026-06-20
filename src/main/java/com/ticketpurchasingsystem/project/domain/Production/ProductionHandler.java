@@ -41,7 +41,7 @@ public class ProductionHandler {
                     "assignOwner: " + appointeeUserId + " is already an owner of company " + companyId);
             return null;
         }
-        boolean appointed = company.appointOwner(appointerId, appointeeUserId);
+        boolean appointed = company.requestOwner(appointerId, appointeeUserId);
         if (!appointed) {
             return null;
         }
@@ -118,12 +118,46 @@ public class ProductionHandler {
                     "appointManager: " + managerId + " is already a manager of company " + companyId);
             return null;
         }
-        boolean appointed = company.appointManager(appointerId, managerId, permissions);
+        boolean appointed = company.requestManager(appointerId, managerId, permissions);
         if (!appointed) {
             return null;
         }
         return company;
     }
+    public ProductionCompany acceptAppointment(String userId, ProductionCompany company) {
+        if (isInvalid(userId) || company == null) {
+            loggerDef.getInstance().error("acceptAppointment called with null/blank arguments");
+            return null;
+        }
+        if (!company.hasPendingAppointment(userId)) {
+            loggerDef.getInstance().error(
+                    "acceptAppointment: no pending appointment for " + userId + " in company "
+                            + company.getCompanyId());
+            return null;
+        }
+        if (!company.acceptAppointment(userId)) {
+            return null;
+        }
+        return company;
+    }
+
+    public ProductionCompany denyAppointment(String userId, ProductionCompany company) {
+        if (isInvalid(userId) || company == null) {
+            loggerDef.getInstance().error("denyAppointment called with null/blank arguments");
+            return null;
+        }
+        if (!company.hasPendingAppointment(userId)) {
+            loggerDef.getInstance().error(
+                    "denyAppointment: no pending appointment for " + userId + " in company "
+                            + company.getCompanyId());
+            return null;
+        }
+        if (!company.denyAppointment(userId)) {
+            return null;
+        }
+        return company;
+    }
+
     public RolesTreeDTO getRolesTree(String userId, ProductionCompany company) {
         if (isInvalid(userId) || company == null) {
             loggerDef.getInstance().error("getRolesTree: null or blank arguments");

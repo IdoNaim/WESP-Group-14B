@@ -22,6 +22,7 @@ import com.ticketpurchasingsystem.project.application.IProductionService;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.Utils.CompanySummaryDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.PendingAppointmentDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.RolesTreeDTO;
@@ -77,7 +78,7 @@ public class ProductionController {
                 String token = extractToken(authHeader);
                 boolean success = productionService.assignOwner(token, companyId, body.getAppointeeUserId());
                 if (success) {
-                        return ResponseEntity.ok(Map.of("message", "Owner assigned successfully."));
+                        return ResponseEntity.ok(Map.of("message", "Owner appointment request sent."));
                 }
                 return ResponseEntity.badRequest()
                                 .body(Map.of("error",
@@ -96,7 +97,7 @@ public class ProductionController {
                                 token, companyId, body.getManagerId(), body.getPermissions());
                 if (success) {
                         return ResponseEntity.status(HttpStatus.CREATED)
-                                        .body(Map.of("message", "Manager appointed successfully."));
+                                        .body(Map.of("message", "Manager appointment request sent."));
                 }
                 return ResponseEntity.badRequest()
                                 .body(Map.of("error",
@@ -154,6 +155,48 @@ public class ProductionController {
                 return ResponseEntity.badRequest()
                                 .body(Map.of("error",
                                                 "Failed to remove manager. You may not have permission or the manager does not exist."));
+        }
+
+        // GET /api/production/appointments/pending
+        @GetMapping("/appointments/pending")
+        public ResponseEntity<List<PendingAppointmentDTO>> getMyPendingAppointments(
+                        @RequestHeader("Authorization") String authHeader) {
+                String token = extractToken(authHeader);
+                List<PendingAppointmentDTO> pending = productionService.getMyPendingAppointments(token);
+                if (pending == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                return ResponseEntity.ok(pending);
+        }
+
+        // POST /api/production/appointments/{companyId}/accept
+        @PostMapping("/appointments/{companyId}/accept")
+        public ResponseEntity<Map<String, String>> acceptAppointment(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId) {
+                String token = extractToken(authHeader);
+                boolean success = productionService.acceptAppointment(token, companyId);
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Appointment accepted."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to accept appointment. It may no longer be pending."));
+        }
+
+        // POST /api/production/appointments/{companyId}/deny
+        @PostMapping("/appointments/{companyId}/deny")
+        public ResponseEntity<Map<String, String>> denyAppointment(
+                        @RequestHeader("Authorization") String authHeader,
+                        @PathVariable Integer companyId) {
+                String token = extractToken(authHeader);
+                boolean success = productionService.denyAppointment(token, companyId);
+                if (success) {
+                        return ResponseEntity.ok(Map.of("message", "Appointment denied."));
+                }
+                return ResponseEntity.badRequest()
+                                .body(Map.of("error",
+                                                "Failed to deny appointment. It may no longer be pending."));
         }
 
         // GET /api/production/companies/{companyId}/my-role
