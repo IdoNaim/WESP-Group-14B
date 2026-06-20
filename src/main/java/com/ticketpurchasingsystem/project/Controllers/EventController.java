@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,12 @@ import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventLocationRe
 import com.ticketpurchasingsystem.project.Controllers.apidto.EditEventPriceRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.ValidatePolicyRequestDTO;
 import com.ticketpurchasingsystem.project.application.IEventService;
+import com.ticketpurchasingsystem.project.application.IProductionService;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
+import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.SeatingMapDTO;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -39,9 +45,46 @@ import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 public class EventController {
 
         private final IEventService eventService;
+        private final IProductionService productionService;
+        private final IEventRepo eventRepo;
 
-        public EventController(IEventService eventService) {
+        public EventController(IEventService eventService, IProductionService productionService, IEventRepo eventRepo) {
                 this.eventService = eventService;
+                this.productionService = productionService;
+                this.eventRepo = eventRepo;
+        }
+
+        private String extractToken(String authHeader) {
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                        return authHeader.substring(7);
+                }
+                return authHeader;
+        }
+
+        private void checkPermission(String authHeader, Integer companyId, ManagerPermission requiredPerm) {
+                String token = extractToken(authHeader);
+                MemberInfoDTO memberInfo = productionService.getMyMemberInfo(token, companyId);
+                if (memberInfo == null) {
+                        throw new IllegalArgumentException("User is not a member of the production company or unauthorized.");
+                }
+                String role = memberInfo.getRole();
+                if ("FOUNDER".equals(role) || "OWNER".equals(role)) {
+                        return; // Fully authorized
+                }
+                if ("MANAGER".equals(role)) {
+                        if (memberInfo.getPermissions() != null && memberInfo.getPermissions().contains(requiredPerm)) {
+                                return; // Authorized manager
+                        }
+                }
+                throw new IllegalArgumentException("Manager lacks the required permission: " + requiredPerm);
+        }
+
+        private void checkPermissionForEvent(String authHeader, String eventId, ManagerPermission requiredPerm) {
+                Event event = eventRepo.findById(eventId);
+                if (event == null) {
+                        throw new IllegalArgumentException("Event not found with ID: " + eventId);
+                }
+                checkPermission(authHeader, event.getCompanyId(), requiredPerm);
         }
 
         // POST /api/events
@@ -49,6 +92,12 @@ public class EventController {
         public ResponseEntity<String> createEvent(
                 @RequestHeader("Authorization") String authHeader,
                 @RequestBody CreateEventRequestDTO body) {
+
+                if (body.getEvent() != null && body.getEvent().companyId() != null) {
+                        checkPermission(authHeader, body.getEvent().companyId(), ManagerPermission.INVENTORY_MANAGEMENT);
+                } else {
+                        throw new IllegalArgumentException("Company ID is required to create an event.");
+                }
 
                 List<com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO> discounts = body
                         .getDiscounts() != null ? body.getDiscounts() : Collections.emptyList();
@@ -100,6 +149,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventDateRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
                 boolean success = eventService.editEventDate(authHeader, eventId, body.getNewDateTime());
                 return success
                         ? ResponseEntity.ok().build()
@@ -112,6 +162,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventCapacityRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
                 boolean success = eventService.editEventInventory(authHeader, eventId, body.getNewCapacity());
                 return success
                         ? ResponseEntity.ok().build()
@@ -123,6 +174,7 @@ public class EventController {
         public ResponseEntity<Void> removeEvent(
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
 
                 boolean success = eventService.removeEvent(authHeader, eventId);
                 return success
@@ -136,6 +188,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventLocationRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
                 
                 boolean success = eventService.editEventLocation(authHeader, eventId, body.getNewLocation());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
@@ -147,6 +200,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventPriceRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
 
                 boolean success = eventService.editEventPrice(authHeader, eventId, body.getNewPrice());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
@@ -158,6 +212,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody EditEventImageRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.INVENTORY_MANAGEMENT);
 
                 boolean success = eventService.editEventImage(authHeader, eventId, body.getNewImageUrl());
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
@@ -169,6 +224,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody PurchasePolicyDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.PURCHASING_AND_DISCOUNT_POLICY_MANAGEMENT);
                 loggerDef.getInstance().info("Received request to edit purchase policy for event " + eventId);
                 boolean success = eventService.editEventPurchasePolicy(authHeader, eventId, body);
                 
@@ -183,6 +239,7 @@ public class EventController {
                 @RequestHeader("Authorization") String authHeader,
                 @PathVariable String eventId,
                 @RequestBody ConfigureSeatingMapRequestDTO body) {
+                checkPermissionForEvent(authHeader, eventId, ManagerPermission.VENUE_CONFIGURATION_AND_EVENT_MAPPING);
 
                 List<SeatingAreaConfig> seatingAreas = body.getSeatingAreas() == null
                         ? Collections.emptyList()
@@ -239,7 +296,9 @@ public class EventController {
                         return ResponseEntity.ok().build();
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(violation);
         }
-        
 
-
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<java.util.Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
+        }
 }
