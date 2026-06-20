@@ -290,26 +290,26 @@ public class ProductionCompany {
     // ── Permissions ──────────────────────────────────────────────────────────
 
     public void setManagerPermissions(String userId, Set<ManagerPermission> permissions) {
-        Optional<UserProductionCompany> existingManagerRow = members.stream()
-                .filter(m -> m.getUserId().equals(userId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER)
+        Optional<UserProductionCompany> baseRowOpt = members.stream()
+                .filter(m -> m.getUserId().equals(userId) 
+                          && m.getRole() == UserProductionCompany.MemberRole.MANAGER 
+                          && m.getPermission() == null)
                 .findFirst();
                 
-        if (existingManagerRow.isEmpty()) return;
+        if (baseRowOpt.isEmpty()) return; 
         
-        String appointerId = existingManagerRow.get().getAppointerId();
+        String appointerId = baseRowOpt.get().getAppointerId();
 
-        members.removeIf(m -> m.getUserId().equals(userId) && m.getRole() == UserProductionCompany.MemberRole.MANAGER);
+        members.removeIf(m -> m.getUserId().equals(userId) 
+                           && m.getRole() == UserProductionCompany.MemberRole.MANAGER 
+                           && m.getPermission() != null);
 
-        if (permissions == null || permissions.isEmpty()) {
-            members.add(new UserProductionCompany(
-                    userId, UserProductionCompany.MemberRole.MANAGER, appointerId, null, this));
-        } else {
+        if (permissions != null && !permissions.isEmpty()) {
             for (ManagerPermission perm : permissions) {
                 members.add(new UserProductionCompany(
                         userId, UserProductionCompany.MemberRole.MANAGER, appointerId, perm, this));
             }
         }
-        
     }
 
     public Set<ManagerPermission> getManagerPermissions(String userId) {
