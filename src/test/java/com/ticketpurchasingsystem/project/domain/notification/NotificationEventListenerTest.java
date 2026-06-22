@@ -25,7 +25,10 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.StandingAreaReleaseEvent;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationEventListenerTest {
@@ -33,6 +36,7 @@ class NotificationEventListenerTest {
     @Mock private INotificationService notificationService;
     @Mock private AuthenticationService authenticationService;
     @Mock private IHistoryOrderRepo historyOrderRepo;
+    @Mock private IEventRepo eventRepo;
 
     private NotificationEventListener listener;
 
@@ -45,7 +49,7 @@ class NotificationEventListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new NotificationEventListener(notificationService, authenticationService, historyOrderRepo);
+        listener = new NotificationEventListener(notificationService, authenticationService, historyOrderRepo, eventRepo);
     }
 
     // ── CompletedOrderEvent ─────────────────────────────────────────────────
@@ -56,20 +60,28 @@ class NotificationEventListenerTest {
                 new Timestamp(System.currentTimeMillis()), List.of(), new HashMap<>());
         CompletedOrderEvent event = new CompletedOrderEvent(this, order, AMOUNT, 42);
 
+        Event mockEvent = mock(Event.class);
+        when(mockEvent.getEventName()).thenReturn("Pool party");
+        when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
+
         listener.onOrderCompleted(event);
 
         verify(notificationService).createSystemNotification(eq(USER_ID), contains(ORDER_ID));
     }
 
     @Test
-    void GivenCompletedOrder_WhenOnOrderCompleted_ThenMessageContainsEventId() {
+    void GivenCompletedOrder_WhenOnOrderCompleted_ThenMessageContainsEventName() {
         ActiveOrderDTO order = new ActiveOrderDTO(ORDER_ID, USER_ID, EVENT_ID,
                 new Timestamp(System.currentTimeMillis()), List.of(), new HashMap<>());
         CompletedOrderEvent event = new CompletedOrderEvent(this, order, AMOUNT, 42);
 
+        Event mockEvent = mock(Event.class);
+        when(mockEvent.getEventName()).thenReturn("Pool party");
+        when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
+
         listener.onOrderCompleted(event);
 
-        verify(notificationService).createSystemNotification(eq(USER_ID), contains(EVENT_ID));
+        verify(notificationService).createSystemNotification(eq(USER_ID), contains("Pool party"));
     }
 
     @Test
@@ -77,6 +89,10 @@ class NotificationEventListenerTest {
         ActiveOrderDTO order = new ActiveOrderDTO(ORDER_ID, USER_ID, EVENT_ID,
                 new Timestamp(System.currentTimeMillis()), List.of(), new HashMap<>());
         CompletedOrderEvent event = new CompletedOrderEvent(this, order, AMOUNT, 42);
+
+        Event mockEvent = mock(Event.class);
+        when(mockEvent.getEventName()).thenReturn("Pool party");
+        when(eventRepo.findById(EVENT_ID)).thenReturn(mockEvent);
 
         listener.onOrderCompleted(event);
 

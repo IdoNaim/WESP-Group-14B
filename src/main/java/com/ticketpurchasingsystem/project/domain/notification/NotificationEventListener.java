@@ -17,6 +17,8 @@ import java.util.Objects;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointmentRequestedEvent;
+import com.ticketpurchasingsystem.project.domain.event.Event;
+import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
@@ -26,14 +28,17 @@ public class NotificationEventListener {
     private final INotificationService notificationService;
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
+    private final IEventRepo eventRepo;
     private final loggerDef logger = loggerDef.getInstance();
 
     public NotificationEventListener(INotificationService notificationService,
                                      AuthenticationService authenticationService,
-                                     IHistoryOrderRepo historyOrderRepo) {
+                                     IHistoryOrderRepo historyOrderRepo,
+                                     IEventRepo eventRepo) {
         this.notificationService = notificationService;
         this.authenticationService = authenticationService;
         this.historyOrderRepo = Objects.requireNonNull(historyOrderRepo, "historyOrderRepo must not be null");
+        this.eventRepo = Objects.requireNonNull(eventRepo, "eventRepo must not be null");
     }
 
     @EventListener
@@ -41,9 +46,13 @@ public class NotificationEventListener {
         String userId = event.getOrder().getUserId();
         String orderId = event.getOrder().getOrderId();
         String eventId = event.getOrder().getEventId();
+        
+        Event eventObj = eventRepo.findById(eventId);
+        String eventName = eventObj != null ? eventObj.getEventName() : eventId;
+
         String message = String.format(
                 "Your order %s for event %s has been placed successfully. Total paid: %.2f",
-                orderId, eventId, event.getAmountPaid());
+                orderId, eventName, event.getAmountPaid());
         notificationService.createSystemNotification(userId, message);
     }
 
