@@ -327,19 +327,22 @@ class UserAcceptanceTests {
                 "a wrong-password re-login must not drop the existing session");
     }
 
-    @Test
-    void GivenLoggedInMember_WhenHandleDisconnect_ThenLoggedOutAndSessionRemoved() {
-        // Simulates the WebSocket disconnect callback (browser closed without Exit).
-        String session = registerAndLogin();
 
-        userService.handleDisconnect(USER_ID, session);
-
-        UserInfo member = userRepo.findByID(USER_ID);
-        assertFalse(member.isLoggedIn(), "an irregular disconnect must log the member out");
-        assertNull(member.getSessionTokenStr());
-        assertTrue(sessionRepo.findByToken(session).isEmpty(),
-                "the dropped connection's session must be removed");
-    }
+    ///in this branch i the immediate logout was a problem, we changed it so that the logout is not immediate,
+    /// but its when the session is expired and purgeExpiredSessions runs, so this test becomes irrelevant
+//    @Test
+//    void GivenLoggedInMember_WhenHandleDisconnect_ThenLoggedOutAndSessionRemoved() {
+//        // Simulates the WebSocket disconnect callback (browser closed without Exit).
+//        String session = registerAndLogin();
+//
+//        userService.handleDisconnect(USER_ID, session);
+//
+//        UserInfo member = userRepo.findByID(USER_ID);
+//        assertFalse(member.isLoggedIn(), "an irregular disconnect must log the member out");
+//        assertNull(member.getSessionTokenStr());
+//        assertTrue(sessionRepo.findByToken(session).isEmpty(),
+//                "the dropped connection's session must be removed");
+//    }
 
     @Test
     void GivenMemberReLoggedInUnderNewToken_WhenStaleDisconnectArrives_ThenIgnored() {

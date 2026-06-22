@@ -189,11 +189,11 @@ public class UserService implements IUserService {
                 authenticationService.removeSessionManually(token);
                 userPublisher.publishGuestExited(userId, token);
             } else {
-                userInfo.setLoggedIn(false);
-                userInfo.setSessionTokenStr(null);
-                userRepo.store(userInfo);
-                authenticationService.removeSessionManually(token);
-                userPublisher.publishUserLoggedOut(userId, token);
+//                userInfo.setLoggedIn(false);
+//                userInfo.setSessionTokenStr(null);
+//                userRepo.store(userInfo);
+//                authenticationService.removeSessionManually(token);
+//                userPublisher.publishUserLoggedOut(userId, token);
             }
             loggerDef.getInstance().info("Handled irregular disconnect for user: " + userId);
         } catch (Exception e) {
