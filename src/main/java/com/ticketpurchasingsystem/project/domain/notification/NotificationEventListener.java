@@ -20,6 +20,7 @@ import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.App
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
+import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventUpdatedEvent;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 
 @Component
@@ -91,6 +92,18 @@ public class NotificationEventListener {
                 .forEach(order -> buyers.add(order.getUserId()));
         String message = String.format(
                 "Event \"%s\" has been cancelled.", event.getEventName());
+        for (String userId : buyers) {
+            notificationService.createSystemNotification(userId, message);
+        }
+    }
+
+    @EventListener
+    public void onEventUpdated(EventUpdatedEvent event) {
+        Set<String> buyers = new LinkedHashSet<>();
+        historyOrderRepo.findAllByEventId(event.getEventId())
+                .forEach(order -> buyers.add(order.getUserId()));
+        String message = String.format(
+                "Update to event \"%s\": %s", event.getEventName(), event.getChangeDescription());
         for (String userId : buyers) {
             notificationService.createSystemNotification(userId, message);
         }
