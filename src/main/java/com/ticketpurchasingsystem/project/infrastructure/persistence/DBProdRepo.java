@@ -25,7 +25,15 @@ public interface DBProdRepo extends JpaRepository<ProductionCompany, Integer>, I
 
     @Override
     @Query("SELECT DISTINCT p FROM ProductionCompany p LEFT JOIN p.members m " +
-           "WHERE p.founderId = :userId OR (m.userId = :userId AND m.permission IS NULL)")
+           "WHERE p.founderId = :userId OR (m.userId = :userId AND m.permission IS NULL " +
+           "AND (m.status IS NULL OR m.status = " +
+           "com.ticketpurchasingsystem.project.domain.Production.UserProductionCompany.MemberStatus.ACTIVE))")
     List<ProductionCompany> findAllByUserId(@Param("userId") String userId);
+
+    @Override
+    @Query("SELECT DISTINCT p FROM ProductionCompany p JOIN p.members m " +
+           "WHERE m.userId = :userId AND m.permission IS NULL " +
+           "AND m.status = com.ticketpurchasingsystem.project.domain.Production.UserProductionCompany.MemberStatus.PENDING")
+    List<ProductionCompany> findAllWithPendingAppointee(@Param("userId") String userId);
 
 }

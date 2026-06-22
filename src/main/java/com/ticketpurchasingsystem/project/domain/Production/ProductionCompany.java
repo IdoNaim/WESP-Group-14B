@@ -109,7 +109,8 @@ public class ProductionCompany {
         this.members = new ArrayList<>();
         for (UserProductionCompany m : other.members) {
             this.members.add(new UserProductionCompany(
-                    m.getId(), m.getUserId(), m.getRole(), m.getAppointerId(), m.getPermission(), this));
+                    m.getId(), m.getUserId(), m.getRole(), m.getAppointerId(), m.getPermission(),
+                    m.getStatus(), this));
         }
         this.purchaseRules = new ArrayList<>(other.purchaseRules);
         this.purchasePolicy = other.purchasePolicy;
@@ -130,6 +131,7 @@ public class ProductionCompany {
         }
     }
 
+    /** Add an active owner directly (used on appointment acceptance and by fixtures). */
     public boolean appointOwner(String appointerId, String appointeeId) {
         if (isOwner(appointeeId)) return false;
         members.add(new UserProductionCompany(
@@ -137,10 +139,20 @@ public class ProductionCompany {
         return true;
     }
 
+    /** Create a pending owner appointment request the appointee must accept. */
+    public boolean requestOwner(String appointerId, String appointeeId) {
+        if (isOwner(appointeeId) || hasPendingAppointment(appointeeId)) return false;
+        members.add(new UserProductionCompany(
+                appointeeId, UserProductionCompany.MemberRole.OWNER, appointerId, null,
+                UserProductionCompany.MemberStatus.PENDING, this));
+        return true;
+    }
+
     public boolean isOwner(String userId) {
         return members.stream().anyMatch(m -> m.getUserId().equals(userId)
                 && m.getRole() == UserProductionCompany.MemberRole.OWNER
-                && m.getPermission() == null);
+                && m.getPermission() == null
+                && m.isActive());
     }
 
     public boolean isFounder(String userId) {
@@ -151,7 +163,8 @@ public class ProductionCompany {
         return members.stream()
                 .filter(m -> m.getUserId().equals(userId)
                         && m.getRole() == UserProductionCompany.MemberRole.OWNER
-                        && m.getPermission() == null)
+                        && m.getPermission() == null
+                        && m.isActive())
                 .map(m -> new OwnerDTO(m.getUserId(), m.getAppointerId()))
                 .findFirst();
     }
@@ -159,7 +172,8 @@ public class ProductionCompany {
     public Map<String, OwnerDTO> getOwnershipTree() {
         Map<String, OwnerDTO> tree = new LinkedHashMap<>();
         for (UserProductionCompany m : members) {
-            if (m.getRole() == UserProductionCompany.MemberRole.OWNER && m.getPermission() == null) {
+            if (m.getRole() == UserProductionCompany.MemberRole.OWNER && m.getPermission() == null
+                    && m.isActive()) {
                 tree.put(m.getUserId(), new OwnerDTO(m.getUserId(), m.getAppointerId()));
             }
         }
@@ -169,7 +183,8 @@ public class ProductionCompany {
     public List<String> getOwnerIds() {
         return members.stream()
                 .filter(m -> m.getRole() == UserProductionCompany.MemberRole.OWNER
-                        && m.getPermission() == null)
+                        && m.getPermission() == null
+                        && m.isActive())
                 .map(UserProductionCompany::getUserId)
                 .collect(Collectors.toList());
     }
@@ -198,11 +213,13 @@ public class ProductionCompany {
         return members.stream().anyMatch(m -> m.getUserId().equals(memberId)
                 && m.getRole() == UserProductionCompany.MemberRole.OWNER
                 && appointerId.equals(m.getAppointerId())
-                && m.getPermission() == null);
+                && m.getPermission() == null
+                && m.isActive());
     }
 
     // ── Manager ──────────────────────────────────────────────────────────────
 
+    /** Add an active manager directly (used on appointment acceptance and by fixtures). */
     public boolean appointManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
         if (isManager(managerId)) return false;
         // Base membership row
@@ -231,9 +248,24 @@ public class ProductionCompany {
     //     return true;
     // }
 
+    /** Create a pending manager appointment request the appointee must accept. */
+    public boolean requestManager(String appointerId, String managerId, Set<ManagerPermission> permissions) {
+        if (isManager(managerId) || hasPendingAppointment(managerId)) return false;
+        // Base membership row (PENDING until the appointee accepts)
+        members.add(new UserProductionCompany(
+                managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, null,
+                UserProductionCompany.MemberStatus.PENDING, this));
+        // One PENDING permission row per requested permission
+        for (ManagerPermission perm : permissions) {
+            members.add(new UserProductionCompany(
+                    managerId, UserProductionCompany.MemberRole.MANAGER, appointerId, perm,
+                    UserProductionCompany.MemberStatus.PENDING, this));
+        }
+        return true;
+    }
+
     public boolean isManager(String userId) {
-        if (userId == null || members == null) return false;
-        
+      if (userId == null || members == null) return false;
         return members.stream()
                 .anyMatch(m -> userId.equals(m.getUserId()) && 
                             m.getRole() == UserProductionCompany.MemberRole.MANAGER);
@@ -287,6 +319,64 @@ public class ProductionCompany {
         return true;
     }
 
+    // ── Appointment consent ────────────────────────────────────────────────────
+
+    /** True if the user has a not-yet-answered appointment request for this company. */
+    public boolean hasPendingAppointment(String userId) {
+        return members.stream().anyMatch(m -> m.getUserId().equals(userId)
+                && m.getPermission() == null
+                && m.isPending());
+    }
+
+    /** The role the user was invited to, or empty if there is no pending request. */
+    public Optional<UserProductionCompany.MemberRole> getPendingRole(String userId) {
+        return members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() == null && m.isPending())
+                .map(UserProductionCompany::getRole)
+                .findFirst();
+    }
+
+    /** The appointer of the user's pending request, or empty if there is none. */
+    public Optional<String> getPendingAppointerId(String userId) {
+        return members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() == null && m.isPending())
+                .map(UserProductionCompany::getAppointerId)
+                .findFirst();
+    }
+
+    /** The permissions attached to the user's pending manager request (empty for owners). */
+    public Set<ManagerPermission> getPendingPermissions(String userId) {
+        return members.stream()
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() != null && m.isPending())
+                .map(UserProductionCompany::getPermission)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    /**
+     * Accept a pending appointment: drop the pending rows and add the user as an
+     * active member, reusing the same role, appointer, and permissions that were
+     * requested.
+     */
+    public boolean acceptAppointment(String userId) {
+        Optional<UserProductionCompany.MemberRole> role = getPendingRole(userId);
+        if (role.isEmpty()) return false;
+        String appointerId = getPendingAppointerId(userId).orElse(null);
+        Set<ManagerPermission> permissions = getPendingPermissions(userId);
+
+        denyAppointment(userId); // remove the pending rows first
+        if (role.get() == UserProductionCompany.MemberRole.OWNER) {
+            return appointOwner(appointerId, userId);
+        }
+        return appointManager(appointerId, userId, permissions);
+    }
+
+    /** Deny a pending appointment: remove every pending row for the user. */
+    public boolean denyAppointment(String userId) {
+        if (!hasPendingAppointment(userId)) return false;
+        members.removeIf(m -> m.getUserId().equals(userId) && m.isPending());
+        return true;
+    }
+
     // ── Permissions ──────────────────────────────────────────────────────────
 
     // ── Permissions ──────────────────────────────────────────────────────────
@@ -325,7 +415,7 @@ public class ProductionCompany {
 
     public Set<ManagerPermission> getManagerPermissions(String userId) {
         Set<ManagerPermission> perms = members.stream()
-                .filter(m -> m.getUserId().equals(userId) && m.getPermission() != null)
+                .filter(m -> m.getUserId().equals(userId) && m.getPermission() != null && m.isActive())
                 .map(UserProductionCompany::getPermission)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         return perms.isEmpty()

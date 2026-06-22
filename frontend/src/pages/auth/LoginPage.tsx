@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/Logo.png';
 
 // Central configuration for landing/dashboard path
 const DEFAULT_REDIRECT_PATH = '/dashboard';
@@ -96,7 +97,7 @@ export default function LoginPage() {
                         >
                             <span className="material-symbols-outlined text-[22px]">home</span>
                         </Link>
-                        <div className="text-3xl font-black tracking-tighter text-[#0b1326] mb-1">IDODO TICKETS</div>
+                        <img src={logo} alt="Idodo Tickets" className="h-80 w-auto max-w-full mb-2" />
                         <p className="text-[11px] font-mono text-[#2563eb] tracking-widest uppercase font-bold">Premium Access Gate</p>
                     </div>
 

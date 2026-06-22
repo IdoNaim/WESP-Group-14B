@@ -32,6 +32,13 @@ public class UserProductionCompany {
 
     public enum MemberRole { OWNER, MANAGER }
 
+    /**
+     * PENDING rows represent an appointment the appointee has not yet accepted;
+     * ACTIVE rows are real memberships. All "active state" queries on
+     * {@link ProductionCompany} ignore PENDING rows.
+     */
+    public enum MemberStatus { PENDING, ACTIVE }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -55,24 +62,35 @@ public class UserProductionCompany {
     @Column(name = "permission", length = 100)
     private ManagerPermission permission;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private MemberStatus status = MemberStatus.ACTIVE;
+
     protected UserProductionCompany() {}
 
     public UserProductionCompany(String userId, MemberRole role, String appointerId,
             ManagerPermission permission, ProductionCompany company) {
+        this(userId, role, appointerId, permission, MemberStatus.ACTIVE, company);
+    }
+
+    public UserProductionCompany(String userId, MemberRole role, String appointerId,
+            ManagerPermission permission, MemberStatus status, ProductionCompany company) {
         this.userId = userId;
         this.role = role;
         this.appointerId = appointerId;
         this.permission = permission;
+        this.status = status;
         this.company = company;
     }
 
     public UserProductionCompany(Long id, String userId, MemberRole role, String appointerId,
-            ManagerPermission permission, ProductionCompany company) {
+            ManagerPermission permission, MemberStatus status, ProductionCompany company) {
         this.id = id;
         this.userId = userId;
         this.role = role;
         this.appointerId = appointerId;
         this.permission = permission;
+        this.status = status;
         this.company = company;
     }
 
@@ -81,6 +99,12 @@ public class UserProductionCompany {
     public MemberRole getRole() { return role; }
     public String getAppointerId() { return appointerId; }
     public ManagerPermission getPermission() { return permission; }
+    public MemberStatus getStatus() { return status; }
+    public void setStatus(MemberStatus status) { this.status = status; }
+    // Only an explicit PENDING is pending; legacy rows with a null status (created
+    // before this column existed) are treated as ACTIVE so they keep working.
+    public boolean isActive() { return status != MemberStatus.PENDING; }
+    public boolean isPending() { return status == MemberStatus.PENDING; }
     public ProductionCompany getCompany() { return company; }
     public void setCompany(ProductionCompany company) { this.company = company; }
 }

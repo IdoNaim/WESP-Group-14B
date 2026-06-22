@@ -364,7 +364,7 @@ function ActionsTab({
 }) {
     const isManager = myRole === 'MANAGER';
 
-    type ActionDef = { icon: string; label: string; desc: string; color: string; bg: string; onClick?: () => void; to?: string; requiredPerm?: api.ManagerPermission; ownerOnly?: boolean };
+    type ActionDef = { icon: string; label: string; desc: string; color: string; bg: string; onClick?: () => void; to?: string; requiredPerm?: api.ManagerPermission | api.ManagerPermission[]; ownerOnly?: boolean };
     const allActions: ActionDef[] = [
         {
             icon: 'event',
@@ -373,7 +373,7 @@ function ActionsTab({
             color: 'text-[#00dbe7]',
             bg: 'bg-[#00dbe7]/10 border-[#00dbe7]/20 hover:border-[#00dbe7]/50',
             to: `/company/${companyId}/events`,
-            requiredPerm: 'INVENTORY_MANAGEMENT',
+            requiredPerm: ['INVENTORY_MANAGEMENT', 'VENUE_CONFIGURATION_AND_EVENT_MAPPING', 'PURCHASING_AND_DISCOUNT_POLICY_MANAGEMENT'],
         },
         {
             icon: 'person_add',
@@ -416,7 +416,10 @@ function ActionsTab({
     const actions = allActions.filter(a => {
         if (!isManager) return true;               // founders/owners see everything
         if (a.ownerOnly) return false;             // managers never see owner-only actions
-        if (a.requiredPerm) return myPerms.has(a.requiredPerm);
+        if (a.requiredPerm) {
+            const perms = Array.isArray(a.requiredPerm) ? a.requiredPerm : [a.requiredPerm];
+            if (!perms.some(perm => myPerms.has(perm))) return false;
+        }
         return true;
     });
 
@@ -554,7 +557,7 @@ export default function ProductionCompanyPage() {
         setFormLoading(true); setFormError(null);
         try {
             await api.assignOwner(numericId, formUserId);
-            showToast('Owner assigned successfully!');
+            showToast('Owner appointment request sent. It takes effect once they accept.');
             closeModal();
             await fetchRoles();
         } catch (e) {
@@ -568,7 +571,7 @@ export default function ProductionCompanyPage() {
         setFormLoading(true); setFormError(null);
         try {
             await api.appointManager(numericId, formUserId, [...formPerms]);
-            showToast('Manager appointed successfully!');
+            showToast('Manager appointment request sent. It takes effect once they accept.');
             closeModal();
             await fetchRoles();
         } catch (e) {

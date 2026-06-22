@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useState } from 'react';
+import logo from '../../../assets/Logo.png';
 import "./TopNavbar.scss";
 
 export default function TopNavbar() {
@@ -46,7 +47,7 @@ export default function TopNavbar() {
     return (
         <header className="top-navbar">
             <Link to="/dashboard" className="top-navbar__brand">
-                IDODO TICKETS
+                <img src={logo} alt="Idodo Tickets" className="top-navbar__logo" />
             </Link>
 
             <div className="top-navbar__actions">

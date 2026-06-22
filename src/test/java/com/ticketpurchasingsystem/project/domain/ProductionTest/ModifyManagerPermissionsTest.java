@@ -308,6 +308,8 @@ public class ModifyManagerPermissionsTest {
         int threadCount = 3;
         for (int i = 0; i < threadCount; i++) {
             stack.service().assignOwner(founderToken, companyId, "target-owner-" + i);
+            // Appointment now requires consent: accept so the target is an active owner.
+            stack.service().acceptAppointment(stack.auth().login("target-owner-" + i), companyId);
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);

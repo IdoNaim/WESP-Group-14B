@@ -1,8 +1,28 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { eventApi, EventDTO, PurchasePolicyDTO } from '../../api/eventsApi';
-import { getRolesTree, getPurchaseHistory, HistoryOrderItem } from '../../api/productionCompanyApi';
+import {
+    getRolesTree,
+    getPurchaseHistory,
+    HistoryOrderItem,
+    getMyMemberInfo,
+    RolesTreeDTO,
+    MemberInfo,
+    ManagerPermission
+} from '../../api/productionCompanyApi';
 import { getCompanyPolicyDTO } from '../../api/purchasePoliciesApi';
+
+type UserRole = 'FOUNDER' | 'OWNER' | 'MANAGER';
+
+function resolveRole(userId: string, rolesTree: RolesTreeDTO): UserRole {
+    if (rolesTree.founderId === userId) return 'FOUNDER';
+    if (rolesTree.ownershipTree[userId]) return 'OWNER';
+    return 'MANAGER';
+}
+
+function myPermissions(userId: string, rolesTree: RolesTreeDTO): Set<ManagerPermission> {
+    return new Set((rolesTree.managerPermissions[userId] ?? []) as ManagerPermission[]);
+}
 
 function formatDate(iso: string) {
     try {
@@ -43,11 +63,11 @@ const sectionHdr = 'flex items-center gap-1.5 text-[10px] font-mono font-bold up
 
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
-function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, children }: {
+function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, disableSubmit, children }: {
     title: string; icon: string; onClose: () => void;
     onSubmit: (e: React.FormEvent) => void;
     submitLabel?: string;
-    loading: boolean; error: string | null; children: React.ReactNode;
+    loading: boolean; error: string | null; disableSubmit?: boolean; children: React.ReactNode;
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -57,18 +77,20 @@ function Modal({ title, icon, onClose, onSubmit, submitLabel, loading, error, ch
                         <span className="material-symbols-outlined text-[#00dbe7] text-[20px]">{icon}</span>
                         {title}
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+                <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto flex-1" noValidate>
                     {children}
                     {error && <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
-                    <button type="submit" disabled={loading}
-                        className="w-full py-3 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
-                        {loading && <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>}
-                        {submitLabel ?? 'CONFIRM'}
-                    </button>
+                    {!disableSubmit && (
+                        <button type="submit" disabled={loading}
+                            className="w-full py-3 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                            {loading && <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>}
+                            {submitLabel ?? 'CONFIRM'}
+                        </button>
+                    )}
                 </form>
             </div>
         </div>
@@ -205,7 +227,7 @@ function PolicyBuilder({ onChange, initialDTO }: {
             isAgeOr: orKeys.has('minAge') || orKeys.has('maxAge'),
             isAgeAndQuantityOr: hasTickets && hasAge && groups.length === 2 && groupCombine === 'OR',
         }, hasAndError || hasUnassignedError);
-    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine]);
+    }, [minTickets, maxTickets, minAge, maxAge, groups, groupCombine, onChange]);
 
     const addGroup = (type: 'AND' | 'OR') => {
         if (groups.some(g => g.type === type)) return;
@@ -665,7 +687,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     const seats = zoneSeats(zone);
                     return (
                         <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
-                            {/* Zone header */}
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
                                 <button type="button" onClick={() => removeZone(i)}
@@ -674,15 +695,13 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </button>
                             </div>
 
-                            {/* Zone name */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Name</label>
                                 <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
                                     value={zone.label}
-                                    onChange={e => updateZone(i, 'label', e.target.value)} />
+                                    onChange={e => updateZone(i, 'label', e.target.value)} required />
                             </div>
 
-                            {/* Zone type toggle */}
                             <div className="space-y-1">
                                 <label className={labelCls}>Zone Type</label>
                                 <div className="flex gap-2">
@@ -709,7 +728,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             </div>
 
-                            {/* Standing fields */}
                             {zone.kind === 'standing' && (
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
@@ -727,7 +745,6 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                                 </div>
                             )}
 
-                            {/* Seating fields */}
                             {zone.kind === 'seating' && (
                                 <>
                                     <div className="grid grid-cols-3 gap-3">
@@ -812,8 +829,13 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
 
 // ─── Edit modal ───────────────────────────────────────────────────────────────
 
-function EditEventModal({ event, onClose, onSaved }: {
-    event: EventDTO; onClose: () => void; onSaved: () => void;
+function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfigureVenue, canManagePolicies }: {
+    event: EventDTO;
+    onClose: () => void;
+    onSaved: () => void;
+    canManageInventory: boolean;
+    canConfigureVenue: boolean;
+    canManagePolicies: boolean;
 }) {
     const token = localStorage.getItem('token') || '';
 
@@ -821,6 +843,7 @@ function EditEventModal({ event, onClose, onSaved }: {
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
+    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice ? String(event.ticketPrice) : '');
 
     // Photo
     const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
@@ -888,12 +911,6 @@ function EditEventModal({ event, onClose, onSaved }: {
         });
     }, [event.eventId]);
 
-    const minDateTime = (() => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })();
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;
@@ -934,9 +951,12 @@ function EditEventModal({ event, onClose, onSaved }: {
         setLoading(false);
     };
 
+    const hasAnyEditPermission = canManageInventory || canConfigureVenue || canManagePolicies;
+
     return (
         <Modal title={`EDIT — ${event.eventName}`} icon="edit_calendar"
-            onClose={onClose} onSubmit={handleSubmit} submitLabel="SAVE CHANGES" loading={loading} error={error}>
+            onClose={onClose} onSubmit={handleSubmit} submitLabel="SAVE CHANGES" loading={loading} error={error}
+            disableSubmit={!hasAnyEditPermission}>
 
             {/* Basic info */}
             <div>
@@ -948,13 +968,15 @@ function EditEventModal({ event, onClose, onSaved }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Location</label>
                         <input className={inputCls} placeholder="e.g. Tel Aviv, Yarkon Park"
-                            value={location} onChange={e => setLocation(e.target.value)} />
+                            value={location} onChange={e => setLocation(e.target.value)}
+                            disabled={!canManageInventory} />
                     </div>
                     <div className="space-y-1">
                         <label className={labelCls}>Date & Time</label>
                         <input className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
                             type="datetime-local" min={minDateTime}
-                            value={dateTime} onChange={e => setDateTime(e.target.value)} required />
+                            value={dateTime} onChange={e => setDateTime(e.target.value)} required
+                            disabled={!canManageInventory} />
                         {dateError && (
                             <p className="text-red-400 text-xs flex items-center gap-1.5 mt-1">
                                 <span className="material-symbols-outlined text-[13px]">schedule</span>
@@ -965,27 +987,37 @@ function EditEventModal({ event, onClose, onSaved }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1}
-                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                            value={capacity} onChange={e => setCapacity(e.target.value)} required
+                            disabled={!canManageInventory} />
                     </div>
 
                     {/* Photo */}
                     <div className="space-y-2">
                         <label className={labelCls}>Event Photo <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <div className="flex items-center gap-2 bg-[#0b1326] border border-gray-600 hover:border-[#00dbe7] rounded-lg px-3 py-2.5 transition-colors text-sm text-gray-400 group-hover:text-[#00dbe7]">
-                                <span className="material-symbols-outlined text-[18px]">upload</span>
-                                {imagePreview ? 'Change photo' : 'Upload photo'}
+                        {canManageInventory ? (
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="flex items-center gap-2 bg-[#0b1326] border border-gray-600 hover:border-[#00dbe7] rounded-lg px-3 py-2.5 transition-colors text-sm text-gray-400 group-hover:text-[#00dbe7]">
+                                    <span className="material-symbols-outlined text-[18px]">upload</span>
+                                    {imagePreview ? 'Change photo' : 'Upload photo'}
+                                </div>
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                            </label>
+                        ) : (
+                            <div className="flex items-center gap-2 bg-[#0b1326]/50 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-500 select-none">
+                                <span className="material-symbols-outlined text-[18px]">lock</span>
+                                Upload disabled (requires Inventory Management)
                             </div>
-                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                        </label>
+                        )}
                         {imagePreview && (
                             <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-700">
                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                <button type="button"
-                                    onClick={() => { setImageUrl(null); setImagePreview(null); setImageChanged(true); }}
-                                    className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[16px]">close</span>
-                                </button>
+                                {canManageInventory && (
+                                    <button type="button"
+                                        onClick={() => { setImageUrl(null); setImagePreview(null); setImageChanged(true); }}
+                                        className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors">
+                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -993,176 +1025,181 @@ function EditEventModal({ event, onClose, onSaved }: {
             </div>
 
             {/* Purchase policy toggle */}
-            <div className="border-t border-gray-800 pt-4">
-                <button type="button" onClick={() => setUpdatePolicy(v => !v)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updatePolicy ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
-                    <span className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">policy</span>
-                        Update Purchase Policy
-                    </span>
-                    <span className="material-symbols-outlined text-[18px]">{updatePolicy ? 'expand_less' : 'expand_more'}</span>
-                </button>
-                {updatePolicy && (
-                    <div className="mt-3 space-y-3">
-                        {loadingInitial
-                            ? <div className="flex justify-center py-4">
-                                <span className="material-symbols-outlined animate-spin text-[20px] text-[#00dbe7]">refresh</span>
-                              </div>
-                            : <PolicyBuilder
-                                key={event.eventId}
-                                initialDTO={currentEventPolicy}
-                                onChange={(dto, hasError) => { setPolicyDTO(dto); setPolicyHasError(hasError); }}
-                              />
-                        }
-                        {!loadingInitial && companyPolicy && (
-                            <div className="border-t border-gray-800 pt-3">
-                                <p className={sectionHdr}>
-                                    <span className="material-symbols-outlined text-[14px]">domain</span>
-                                    Company Policy (applies to all events)
-                                </p>
-                                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
-                                    <div className="flex flex-wrap items-center gap-y-1">
-                                        <CompanyPolicyDisplay dto={companyPolicy} />
+            {canManagePolicies && (
+                <div className="border-t border-gray-800 pt-4">
+                    <button type="button" onClick={() => setUpdatePolicy(v => !v)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updatePolicy ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                        <span className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">policy</span>
+                            Update Purchase Policy
+                        </span>
+                        <span className="material-symbols-outlined text-[18px]">{updatePolicy ? 'expand_less' : 'expand_more'}</span>
+                    </button>
+                    {updatePolicy && (
+                        <div className="mt-3 space-y-3">
+                            {loadingInitial
+                                ? <div className="flex justify-center py-4">
+                                    <span className="material-symbols-outlined animate-spin text-[20px] text-[#00dbe7]">refresh</span>
+                                  </div>
+                                : <PolicyBuilder
+                                    key={event.eventId}
+                                    initialDTO={currentEventPolicy}
+                                    onChange={(dto, hasError) => { setPolicyDTO(dto); setPolicyHasError(hasError); }}
+                                  />
+                            }
+                            {!loadingInitial && companyPolicy && (
+                                <div className="border-t border-gray-800 pt-3">
+                                    <p className={sectionHdr}>
+                                        <span className="material-symbols-outlined text-[14px]">domain</span>
+                                        Company Policy (applies to all events)
+                                    </p>
+                                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                                        <div className="flex flex-wrap items-center gap-y-1">
+                                            <CompanyPolicyDisplay dto={companyPolicy} />
+                                        </div>
+                                        <p className="text-[10px] text-gray-600 mt-1">Event policy is applied on top of this.</p>
                                     </div>
-                                    <p className="text-[10px] text-gray-600 mt-1">Event policy is applied on top of this.</p>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Seating map toggle */}
-            <div className="border-t border-gray-800 pt-4">
-                <button type="button" onClick={() => setUpdateSeatingMap(v => !v)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updateSeatingMap ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
-                    <span className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">map</span>
-                        Replace Seating Map
-                    </span>
-                    <span className="material-symbols-outlined text-[18px]">{updateSeatingMap ? 'expand_less' : 'expand_more'}</span>
-                </button>
+            {canConfigureVenue && (
+                <div className="border-t border-gray-800 pt-4">
+                    <button type="button" onClick={() => setUpdateSeatingMap(v => !v)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updateSeatingMap ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                        <span className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">map</span>
+                            Replace Seating Map
+                        </span>
+                        <span className="material-symbols-outlined text-[18px]">{updateSeatingMap ? 'expand_less' : 'expand_more'}</span>
+                    </button>
 
-                {updateSeatingMap && (
-                    <div className="mt-3 space-y-3">
-                        <p className="text-[10px] text-gray-600 font-mono">Defining zones here replaces the existing seating map entirely.</p>
+                    {updateSeatingMap && (
+                        <div className="mt-3 space-y-3">
+                            <p className="text-[10px] text-gray-600 font-mono">Defining zones here replaces the existing seating map entirely.</p>
 
-                        <div className="flex justify-end">
-                            <button type="button" onClick={addZone}
-                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00dbe7]/10 border border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20 transition-colors">
-                                <span className="material-symbols-outlined text-[15px]">add</span>
-                                Add Zone
-                            </button>
-                        </div>
+                            <div className="flex justify-end">
+                                <button type="button" onClick={addZone}
+                                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00dbe7]/10 border border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20 transition-colors">
+                                    <span className="material-symbols-outlined text-[15px]">add</span>
+                                    Add Zone
+                                </button>
+                            </div>
 
-                        {zones.map((zone, i) => {
-                            const seats = zoneSeats(zone);
-                            return (
-                                <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
-                                        <button type="button" onClick={() => removeZone(i)} className="text-gray-600 hover:text-red-400 transition-colors">
-                                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                                        </button>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className={labelCls}>Zone Name</label>
-                                        <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
-                                            value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className={labelCls}>Zone Type</label>
-                                        <div className="flex gap-2">
-                                            <button type="button" onClick={() => updateZone(i, 'kind', 'standing')}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'standing' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
-                                                <span className="material-symbols-outlined text-[15px]">people</span>Standing
-                                            </button>
-                                            <button type="button" onClick={() => updateZone(i, 'kind', 'seating')}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'seating' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
-                                                <span className="material-symbols-outlined text-[15px]">event_seat</span>Seating
+                            {zones.map((zone, i) => {
+                                const seats = zoneSeats(zone);
+                                return (
+                                    <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
+                                            <button type="button" onClick={() => removeZone(i)} className="text-gray-600 hover:text-red-400 transition-colors">
+                                                <span className="material-symbols-outlined text-[18px]">delete</span>
                                             </button>
                                         </div>
-                                    </div>
-                                    {zone.kind === 'standing' && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1">
-                                                <label className={labelCls}>Capacity</label>
-                                                <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
-                                                    value={zone.capacity} onChange={e => updateZone(i, 'capacity', e.target.value)} required />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className={labelCls}>Price per Ticket ($)</label>
-                                                <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 29.99"
-                                                    value={zone.price} onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Zone Name</label>
+                                            <input className={inputCls} placeholder="e.g. Floor, VIP, Block A"
+                                                value={zone.label} onChange={e => updateZone(i, 'label', e.target.value)} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Zone Type</label>
+                                            <div className="flex gap-2">
+                                                <button type="button" onClick={() => updateZone(i, 'kind', 'standing')}
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'standing' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                                                    <span className="material-symbols-outlined text-[15px]">people</span>Standing
+                                                </button>
+                                                <button type="button" onClick={() => updateZone(i, 'kind', 'seating')}
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg border transition-colors ${zone.kind === 'seating' ? 'bg-[#00dbe7]/15 border-[#00dbe7]/40 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                                                    <span className="material-symbols-outlined text-[15px]">event_seat</span>Seating
+                                                </button>
                                             </div>
                                         </div>
-                                    )}
-                                    {zone.kind === 'seating' && (
-                                        <>
-                                            <div className="grid grid-cols-3 gap-3">
+                                        {zone.kind === 'standing' && (
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <div className="space-y-1">
-                                                    <label className={labelCls}>Rows</label>
-                                                    <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
-                                                        value={zone.rows} onChange={e => updateZone(i, 'rows', e.target.value)} required />
+                                                    <label className={labelCls}>Capacity</label>
+                                                    <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
+                                                        value={zone.capacity} onChange={e => updateZone(i, 'capacity', e.target.value)} required />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <label className={labelCls}>Seats / Row</label>
-                                                    <input className={inputCls} type="number" min={1} placeholder="e.g. 20"
-                                                        value={zone.seatsPerRow} onChange={e => updateZone(i, 'seatsPerRow', e.target.value)} required />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className={labelCls}>Price ($)</label>
-                                                    <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
+                                                    <label className={labelCls}>Price per Ticket ($)</label>
+                                                    <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 29.99"
                                                         value={zone.price} onChange={e => updateZone(i, 'price', e.target.value)} required />
                                                 </div>
                                             </div>
-                                            {seats > 0 && (
-                                                <p className="text-[10px] font-mono text-gray-500">
-                                                    {zone.rows} × {zone.seatsPerRow} = <span className="text-white font-bold">{seats} seats</span>
-                                                </p>
-                                            )}
-                                        </>
+                                        )}
+                                        {zone.kind === 'seating' && (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="space-y-1">
+                                                        <label className={labelCls}>Rows</label>
+                                                        <input className={inputCls} type="number" min={1} placeholder="e.g. 10"
+                                                            value={zone.rows} onChange={e => updateZone(i, 'rows', e.target.value)} required />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className={labelCls}>Seats / Row</label>
+                                                        <input className={inputCls} type="number" min={1} placeholder="e.g. 20"
+                                                            value={zone.seatsPerRow} onChange={e => updateZone(i, 'seatsPerRow', e.target.value)} required />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className={labelCls}>Price ($)</label>
+                                                        <input className={inputCls} type="number" min={0} step="0.01" placeholder="e.g. 49.99"
+                                                            value={zone.price} onChange={e => updateZone(i, 'price', e.target.value)} required />
+                                                    </div>
+                                                </div>
+                                                {seats > 0 && (
+                                                    <p className="text-[10px] font-mono text-gray-500">
+                                                        {zone.rows} × {zone.seatsPerRow} = <span className="text-white font-bold">{seats} seats</span>
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {zones.length > 0 && (
+                                <div className={`space-y-2 p-3 rounded-lg border text-[11px] font-mono ${zoneCapacityError ? 'bg-red-500/10 border-red-500/30' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#00dbe7]/5 border-[#00dbe7]/15'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <span className={zoneCapacityError ? 'text-red-400' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'text-emerald-400' : 'text-gray-400'}>
+                                            {zoneCapacityError ?? (totalZoneCapacity === eventCapNum && eventCapNum > 0
+                                                ? `All ${eventCapNum} seats assigned`
+                                                : `Assigned: ${totalZoneCapacity} / ${eventCapNum || '?'}`)}
+                                        </span>
+                                        {zoneCapacityError
+                                            ? <span className="material-symbols-outlined text-[14px] text-red-400">warning</span>
+                                            : totalZoneCapacity === eventCapNum && eventCapNum > 0
+                                                ? <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
+                                                : null}
+                                    </div>
+                                    {eventCapNum > 0 && (
+                                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full transition-all ${totalZoneCapacity > eventCapNum ? 'bg-red-500' : totalZoneCapacity === eventCapNum ? 'bg-emerald-500' : 'bg-[#00dbe7]'}`}
+                                                style={{ width: `${Math.min(100, (totalZoneCapacity / eventCapNum) * 100)}%` }} />
+                                        </div>
                                     )}
                                 </div>
-                            );
-                        })}
-
-                        {zones.length > 0 && (
-                            <div className={`space-y-2 p-3 rounded-lg border text-[11px] font-mono ${zoneCapacityError ? 'bg-red-500/10 border-red-500/30' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#00dbe7]/5 border-[#00dbe7]/15'}`}>
-                                <div className="flex items-center justify-between">
-                                    <span className={zoneCapacityError ? 'text-red-400' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'text-emerald-400' : 'text-gray-400'}>
-                                        {zoneCapacityError ?? (totalZoneCapacity === eventCapNum && eventCapNum > 0
-                                            ? `All ${eventCapNum} seats assigned`
-                                            : `Assigned: ${totalZoneCapacity} / ${eventCapNum || '?'}`)}
-                                    </span>
-                                    {zoneCapacityError
-                                        ? <span className="material-symbols-outlined text-[14px] text-red-400">warning</span>
-                                        : totalZoneCapacity === eventCapNum && eventCapNum > 0
-                                            ? <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
-                                            : null}
-                                </div>
-                                {eventCapNum > 0 && (
-                                    <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full transition-all ${totalZoneCapacity > eventCapNum ? 'bg-red-500' : totalZoneCapacity === eventCapNum ? 'bg-emerald-500' : 'bg-[#00dbe7]'}`}
-                                            style={{ width: `${Math.min(100, (totalZoneCapacity / eventCapNum) * 100)}%` }} />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
         </Modal>
     );
 }
 
 // ─── Event card ───────────────────────────────────────────────────────────────
 
-function EventCard({ event, stats, onEdit, onDelete }: {
+function EventCard({ event, stats, onEdit, onDelete, canManageInventory }: {
     event: EventDTO;
     stats?: EventStats;
     onEdit: () => void;
     onDelete: () => void;
+    canManageInventory: boolean;
 }) {
     const ticketsSold = stats?.ticketsSold ?? 0;
     const revenue = event.ticketPrice != null
@@ -1245,11 +1282,13 @@ function EventCard({ event, stats, onEdit, onDelete }: {
                     <span className="material-symbols-outlined text-[15px]">edit</span>
                     EDIT
                 </button>
-                <button onClick={onDelete}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-lg transition-colors border border-red-500/20">
-                    <span className="material-symbols-outlined text-[15px]">delete</span>
-                    DELETE
-                </button>
+                {canManageInventory && (
+                    <button onClick={onDelete}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-lg transition-colors border border-red-500/20">
+                        <span className="material-symbols-outlined text-[15px]">delete</span>
+                        DELETE
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -1271,16 +1310,23 @@ export default function CompanyEventsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [editingEvent, setEditingEvent] = useState<EventDTO | null>(null);
 
+    const [rolesTree, setRolesTree] = useState<RolesTreeDTO | null>(null);
+    const [memberInfo, setMemberInfo] = useState<MemberInfo | null>(null);
+
     const fetchEvents = useCallback(async () => {
         setLoading(true);
         try {
-            const [list, rolesTree, history] = await Promise.all([
+            const [list, tree, info, history] = await Promise.all([
                 eventApi.getEventsByCompany(token, numericId),
                 getRolesTree(numericId).catch(() => null),
+                getMyMemberInfo(numericId).catch(() => null),
                 getPurchaseHistory(numericId).catch(() => [] as HistoryOrderItem[]),
             ]);
             setEvents(list);
-            if (rolesTree?.companyName) setCompanyName(rolesTree.companyName);
+            setRolesTree(tree);
+            setMemberInfo(info);
+            const displayCompanyName = tree?.companyName || info?.companyName || '';
+            if (displayCompanyName) setCompanyName(displayCompanyName);
             setStatsMap(buildStatsMap(history));
             setError(null);
         } catch (e) {
@@ -1290,6 +1336,29 @@ export default function CompanyEventsPage() {
     }, [token, numericId]);
 
     useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
+    const currentUserId = localStorage.getItem('userId') ?? '';
+
+    // Build an effective roles-tree from memberInfo when the manager-restricted endpoint is unavailable
+    const effectiveRolesTree: RolesTreeDTO | null = rolesTree ?? (memberInfo ? {
+        companyId: numericId,
+        companyName: memberInfo.companyName,
+        founderId: memberInfo.founderId,
+        ownershipTree: memberInfo.ownershipTree,
+        managerTree: memberInfo.managerTree,
+        managerPermissions: memberInfo.managerPermissions,
+    } : null);
+
+    const myRole: UserRole = effectiveRolesTree
+        ? resolveRole(currentUserId, effectiveRolesTree)
+        : (memberInfo?.role ?? 'MANAGER');
+    const myPerms: Set<ManagerPermission> = effectiveRolesTree
+        ? myPermissions(currentUserId, effectiveRolesTree)
+        : new Set((memberInfo?.permissions ?? []) as ManagerPermission[]);
+
+    const canManageInventory = myRole !== 'MANAGER' || myPerms.has('INVENTORY_MANAGEMENT');
+    const canConfigureVenue = myRole !== 'MANAGER' || myPerms.has('VENUE_CONFIGURATION_AND_EVENT_MAPPING');
+    const canManagePolicies = myRole !== 'MANAGER' || myPerms.has('PURCHASING_AND_DISCOUNT_POLICY_MANAGEMENT');
 
     const handleDelete = async (event: EventDTO) => {
         if (!window.confirm(`Delete event "${event.eventName}"?`)) return;
@@ -1339,11 +1408,13 @@ export default function CompanyEventsPage() {
                             </div>
                         </div>
                     )}
-                    <button onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        NEW EVENT
-                    </button>
+                    {canManageInventory && (
+                        <button onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider transition-colors">
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                            NEW EVENT
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -1363,11 +1434,13 @@ export default function CompanyEventsPage() {
                         <span className="material-symbols-outlined text-7xl text-gray-700 mb-4">event_busy</span>
                         <h2 className="text-xl font-black text-gray-400 mb-2">No events yet</h2>
                         <p className="text-sm text-gray-600 font-mono mb-8">Create your first event for this company.</p>
-                        <button onClick={() => setShowCreate(true)}
-                            className="flex items-center gap-2 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] px-6 py-3 rounded-xl font-bold text-sm tracking-wider transition-colors">
-                            <span className="material-symbols-outlined text-[18px]">add</span>
-                            CREATE EVENT
-                        </button>
+                        {canManageInventory && (
+                            <button onClick={() => setShowCreate(true)}
+                                className="flex items-center gap-2 bg-[#00dbe7] hover:bg-[#00bfc9] text-[#0b1326] px-6 py-3 rounded-xl font-bold text-sm tracking-wider transition-colors">
+                                <span className="material-symbols-outlined text-[18px]">add</span>
+                                CREATE EVENT
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1378,6 +1451,7 @@ export default function CompanyEventsPage() {
                                 stats={event.eventId ? statsMap[event.eventId] : undefined}
                                 onEdit={() => setEditingEvent(event)}
                                 onDelete={() => handleDelete(event)}
+                                canManageInventory={canManageInventory}
                             />
                         ))}
                     </div>
@@ -1397,6 +1471,9 @@ export default function CompanyEventsPage() {
                     event={editingEvent}
                     onClose={() => setEditingEvent(null)}
                     onSaved={() => { setEditingEvent(null); fetchEvents(); }}
+                    canManageInventory={canManageInventory}
+                    canConfigureVenue={canConfigureVenue}
+                    canManagePolicies={canManagePolicies}
                 />
             )}
         </div>

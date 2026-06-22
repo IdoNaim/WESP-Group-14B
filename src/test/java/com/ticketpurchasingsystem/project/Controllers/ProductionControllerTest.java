@@ -84,7 +84,7 @@ class ProductionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Owner assigned successfully."));
+                .andExpect(jsonPath("$.message").value("Owner appointment request sent."));
     }
 
     @Test
@@ -115,7 +115,7 @@ class ProductionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("Manager appointed successfully."));
+                .andExpect(jsonPath("$.message").value("Manager appointment request sent."));
     }
 
     @Test

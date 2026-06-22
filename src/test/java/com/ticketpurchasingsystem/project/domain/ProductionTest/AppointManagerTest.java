@@ -39,7 +39,6 @@ import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionCompany;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEventPublisher;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionHandler;
-import com.ticketpurchasingsystem.project.domain.Utils.ManagerDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.ProductionCompanyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
@@ -182,12 +181,14 @@ public class AppointManagerTest {
         // Assert
         assertTrue(result);
         verify(prodRepo, times(1)).save(any());
-        assertTrue(captor.getValue().isManager(MANAGER_ID),
-                "Repo must receive the company with the new manager already added");
+        assertFalse(captor.getValue().isManager(MANAGER_ID),
+                "Appointee must NOT be an active manager yet — only a pending request");
+        assertTrue(captor.getValue().hasPendingAppointment(MANAGER_ID),
+                "Repo must receive the company with the pending appointment request added");
     }
 
     @Test
-    public void GivenValidInput_WhenAppointManager_ThenAppointManagerEventIsPublished() {
+    public void GivenValidInput_WhenAppointManager_ThenAppointmentRequestedEventIsPublished() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
@@ -199,9 +200,10 @@ public class AppointManagerTest {
         // Act
         productionService.appointManager(VALID_TOKEN, COMPANY_ID, MANAGER_ID, PERMISSIONS);
 
-        // Assert
-        verify(productionEventPublisher).publishAppointManagerEvent(any(), eq(FOUNDER_ID), eq(MANAGER_ID),
-                eq(PERMISSIONS));
+        // Assert: a request notification event is published, NOT the role-assigning event
+        verify(productionEventPublisher).publishAppointmentRequestedEvent(
+                eq(COMPANY_ID), any(), eq(MANAGER_ID), eq(FOUNDER_ID), eq("MANAGER"));
+        verify(productionEventPublisher, never()).publishAppointManagerEvent(any(), any(), any(), any());
     }
 
     // --- Handler-level tests ---
@@ -288,7 +290,7 @@ public class AppointManagerTest {
     }
 
     @Test
-    public void GivenSuccessfulAppointment_WhenAppointManager_ThenReturnedCompanyContainsNewManager() {
+    public void GivenSuccessfulAppointment_WhenAppointManager_ThenReturnedCompanyHasPendingRequest() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -298,12 +300,14 @@ public class AppointManagerTest {
 
         // Assert
         assertNotNull(result);
-        assertTrue(result.isManager(MANAGER_ID),
-                "Returned company must contain the newly appointed manager");
+        assertFalse(result.isManager(MANAGER_ID),
+                "Appointee must not be an active manager until they accept");
+        assertTrue(result.hasPendingAppointment(MANAGER_ID),
+                "Returned company must contain the pending appointment request");
     }
 
     @Test
-    public void GivenFounderAppoints_WhenAppointManager_ThenManagerHasFounderAsAppointer() {
+    public void GivenFounderAppoints_WhenAppointManager_ThenPendingRequestHasFounderAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -311,12 +315,11 @@ public class AppointManagerTest {
         productionHandler.appointManager(FOUNDER_ID, COMPANY_ID, MANAGER_ID, PERMISSIONS, company);
 
         // Assert
-        ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
-        assertEquals(FOUNDER_ID, node.getAppointerId());
+        assertEquals(FOUNDER_ID, company.getPendingAppointerId(MANAGER_ID).orElseThrow());
     }
 
     @Test
-    public void GivenOwnerAppoints_WhenAppointManager_ThenManagerHasOwnerAsAppointer() {
+    public void GivenOwnerAppoints_WhenAppointManager_ThenPendingRequestHasOwnerAsAppointer() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
 
@@ -324,12 +327,11 @@ public class AppointManagerTest {
         productionHandler.appointManager(OWNER_ID, COMPANY_ID, MANAGER_ID, PERMISSIONS, company);
 
         // Assert
-        ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
-        assertEquals(OWNER_ID, node.getAppointerId());
+        assertEquals(OWNER_ID, company.getPendingAppointerId(MANAGER_ID).orElseThrow());
     }
 
     @Test
-    public void GivenPermissionsSelected_WhenAppointManager_ThenManagerHasExactPermissions() {
+    public void GivenPermissionsSelected_WhenAppointManager_ThenPendingRequestHasExactPermissions() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
         Set<ManagerPermission> expected = EnumSet.of(
@@ -340,12 +342,11 @@ public class AppointManagerTest {
         productionHandler.appointManager(FOUNDER_ID, COMPANY_ID, MANAGER_ID, expected, company);
 
         // Assert
-        ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
-        assertEquals(expected, node.getPermissions());
+        assertEquals(expected, company.getPendingPermissions(MANAGER_ID));
     }
 
     @Test
-    public void GivenEmptyPermissions_WhenAppointManager_ThenManagerHasNoPermissions() {
+    public void GivenEmptyPermissions_WhenAppointManager_ThenPendingRequestHasNoPermissions() {
         // Arrange
         ProductionCompany company = companyWithFounderAndOwner();
         Set<ManagerPermission> empty = EnumSet.noneOf(ManagerPermission.class);
@@ -354,8 +355,7 @@ public class AppointManagerTest {
         productionHandler.appointManager(FOUNDER_ID, COMPANY_ID, MANAGER_ID, empty, company);
 
         // Assert
-        ManagerDTO node = company.getManagerDTO(MANAGER_ID).orElseThrow();
-        assertTrue(node.getPermissions().isEmpty());
+        assertTrue(company.getPendingPermissions(MANAGER_ID).isEmpty());
     }
 
     // Concurrency tests
