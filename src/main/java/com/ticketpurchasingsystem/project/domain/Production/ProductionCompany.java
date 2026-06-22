@@ -268,7 +268,8 @@ public class ProductionCompany {
       if (userId == null || members == null) return false;
         return members.stream()
                 .anyMatch(m -> userId.equals(m.getUserId()) && 
-                            m.getRole() == UserProductionCompany.MemberRole.MANAGER);
+                            m.getRole() == UserProductionCompany.MemberRole.MANAGER &&
+                            m.isActive());
     }
 
     public boolean isOwnerOrManager(String userId) {
