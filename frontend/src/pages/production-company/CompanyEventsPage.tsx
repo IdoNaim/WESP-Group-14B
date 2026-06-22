@@ -529,8 +529,44 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         capacity: '', rows: '', seatsPerRow: '', price: '',
     }]);
     const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
-    const updateZone = (i: number, field: keyof EventZone, value: string) =>
-        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+    const updateZone = (i: number, field: keyof EventZone, value: string) => {
+        setZones(prev => prev.map((z, idx) => {
+            if (idx === i) {
+                if (field === 'kind') {
+                    if (value === 'standing') {
+                        const currentSeats = (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
+                        return {
+                            ...z,
+                            kind: 'standing',
+                            capacity: currentSeats > 0 ? String(currentSeats) : z.capacity,
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    } else if (value === 'seating') {
+                        return {
+                            ...z,
+                            kind: 'seating',
+                            capacity: '',
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    }
+                }
+                return { ...z, [field]: value };
+            }
+            return z;
+        }));
+    };
+
+    const handleCapacityChange = (newVal: string) => {
+        setCapacity(newVal);
+        setZones(prev => {
+            if (prev.length === 1 && prev[0].kind === 'standing') {
+                return [{ ...prev[0], capacity: newVal }];
+            }
+            return prev;
+        });
+    };
 
     const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
     const eventCapNum = Number(capacity) || 0;
@@ -633,7 +669,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
-                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                            value={capacity} onChange={e => handleCapacityChange(e.target.value)} required />
                     </div>
 
                     {/* Image upload */}
@@ -843,7 +879,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
-    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice ? String(event.ticketPrice) : '');
 
     // Photo
     const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
@@ -873,8 +908,44 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const [zones, setZones] = useState<EventZone[]>([]);
     const addZone = () => setZones(prev => [...prev, { label: `Zone ${prev.length + 1}`, kind: 'standing', capacity: '', rows: '', seatsPerRow: '', price: '' }]);
     const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
-    const updateZone = (i: number, field: keyof EventZone, value: string) =>
-        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+    const updateZone = (i: number, field: keyof EventZone, value: string) => {
+        setZones(prev => prev.map((z, idx) => {
+            if (idx === i) {
+                if (field === 'kind') {
+                    if (value === 'standing') {
+                        const currentSeats = (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
+                        return {
+                            ...z,
+                            kind: 'standing',
+                            capacity: currentSeats > 0 ? String(currentSeats) : z.capacity,
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    } else if (value === 'seating') {
+                        return {
+                            ...z,
+                            kind: 'seating',
+                            capacity: '',
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    }
+                }
+                return { ...z, [field]: value };
+            }
+            return z;
+        }));
+    };
+
+    const handleCapacityChange = (newVal: string) => {
+        setCapacity(newVal);
+        setZones(prev => {
+            if (prev.length === 1 && prev[0].kind === 'standing') {
+                return [{ ...prev[0], capacity: newVal }];
+            }
+            return prev;
+        });
+    };
     const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
     const eventCapNum = Number(capacity) || 0;
     const zoneCapacityError = updateSeatingMap && zones.length > 0 && capacity !== '' && totalZoneCapacity !== eventCapNum
@@ -883,6 +954,13 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const minDateTime = (() => {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
 
     useEffect(() => {
         Promise.all([
@@ -987,7 +1065,7 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                     <div className="space-y-1">
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1}
-                            value={capacity} onChange={e => setCapacity(e.target.value)} required
+                            value={capacity} onChange={e => handleCapacityChange(e.target.value)} required
                             disabled={!canManageInventory} />
                     </div>
 

@@ -23,7 +23,7 @@ import CompanyPurchasePolicyPage from "../pages/production-company/CompanyPurcha
 import PurchasePolicyPage from "../pages/policies/PurchasePolicyPage";
 
 import AdminPage from "../pages/admin/AdminPage";
-import AccountPage from "../pages/user/AccountPage";
+// no AccountPage import
 import ProductionCompanyPage from "../pages/production-company/ProductionCompanyPage";
 
 import RequireMember from "../components/auth/RequireMember";
