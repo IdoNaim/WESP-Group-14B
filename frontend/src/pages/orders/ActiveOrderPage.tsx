@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { authApi, UserProfileDTO } from '../../api/authApi';
 import { activeOrderApi, ActiveOrderDTO } from '../../api/activeOrderApi';
 import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';

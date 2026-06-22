@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+// no useNavigate import
 import { historyOrderApi, HistoryOrderDTO } from './../../api/historyOrderApi';
 import { authApi, UserPermissionsDTO } from '../../api/authApi';
 
@@ -21,13 +21,13 @@ interface EnrichedHistoryOrderDTO extends HistoryOrderDTO {
 type ViewMode = 'PERSONAL' | 'COMPANY' | 'ALL';
 
 export default function OrderHistory() {
-    const navigate = useNavigate();
+    // no navigate
 
     const [orders, setOrders] = useState<EnrichedHistoryOrderDTO[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<{ status: number; message: string } | null>(null);
     
-    const [username, setUsername] = useState<string | null>(null);
+    // no username state
     const [userId, setUserId] = useState<string | null>(null);
     const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
 
@@ -46,7 +46,6 @@ export default function OrderHistory() {
                     authApi.getPermissions(token)
                 ]);
 
-                setUsername(profile.name);
                 setUserId(profile.userId);
                 setPermissions(perms);
 
