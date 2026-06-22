@@ -189,6 +189,7 @@ public class EventHandler {
             if (event == null) return false;
             event.setImageUrl(newImageUrl);
             eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(), "The event image has been updated.");
             return true;
         } catch (Exception e) {
             logger.error("Failed to edit event image for ID: " + eventId + " | Error: " + e.getMessage());
@@ -213,6 +214,8 @@ public class EventHandler {
             }
             event.setEventDate(newDateTime);
             eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(),
+                    "The date of this event has been updated to " + newDateTime + ".");
             logger.info("Successfully updated date for event ID: " + eventId);
             return true;
         } catch (Exception e) {
@@ -257,6 +260,8 @@ public class EventHandler {
             event.setEventCapacity(newCapacity);
             eventRepo.save(event);
             eventPublisher.publishCapacityChanged(eventId, newCapacity);
+            publishUpdateNotification(eventId, event.getEventName(),
+                    "The capacity of this event has been updated to " + newCapacity + " tickets.");
             logger.info("Successfully updated capacity for event ID: " + eventId);
             return true;
         } catch (Exception e) {
@@ -278,6 +283,8 @@ public class EventHandler {
             }
             event.setSeatingMap(seatingMap);
             eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(),
+                    "The seating map of this event has been updated.");
             logger.info("Successfully updated seating map for event ID: " + eventId);
             return true;
         } catch (Exception e) {
@@ -403,6 +410,9 @@ public class EventHandler {
             if (event == null) return false;
             event.setLocation(newLocation);
             eventRepo.save(event);
+            String locationDesc = newLocation != null ? "to \"" + newLocation + "\"" : "to unspecified";
+            publishUpdateNotification(eventId, event.getEventName(),
+                    "The location of this event has been updated " + locationDesc + ".");
             return true;
         } catch (Exception e) {
             logger.error("Failed to edit event location for ID: " + eventId + " | Error: " + e.getMessage());
@@ -418,6 +428,8 @@ public class EventHandler {
             Event event = eventRepo.findById(eventId);
             if (event == null) return false;
             eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(),
+                    "The ticket price of this event has been updated.");
             return true;
         } catch (Exception e) {
             logger.error("Failed to edit event price for ID: " + eventId + " | Error: " + e.getMessage());
@@ -445,12 +457,53 @@ public class EventHandler {
         event.setPurchasePolicy(purchasePolicyDTO);
         try {
             eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(),
+                    buildPolicyDescription(purchasePolicyDTO));
             logger.info("changed purchase policy of event with id: " + eventId);
             return true;
         }catch (Exception e){
             logger.error("Failed to edit event purchase policy for ID: " + eventId + " | Error: " + e.getMessage());
             return false;
         }
+    }
+
+    private void publishUpdateNotification(String eventId, String eventName, String description) {
+        try {
+            eventPublisher.publishEventUpdated(eventId, eventName, description);
+        } catch (Exception e) {
+            logger.warn("Failed to send update notification for event " + eventId + ": " + e.getMessage());
+        }
+    }
+
+    private String buildPolicyDescription(PurchasePolicyDTO dto) {
+        List<String> parts = new ArrayList<>();
+
+        // Ticket quantity constraints
+        if (dto.minTickets() != null && dto.maxTickets() != null) {
+            String connector = dto.isQuantityOr() ? " or " : " and ";
+            parts.add("you can buy between " + dto.minTickets() + connector + dto.maxTickets() + " tickets");
+        } else if (dto.minTickets() != null) {
+            parts.add("you must buy at least " + dto.minTickets() + " ticket(s)");
+        } else if (dto.maxTickets() != null) {
+            parts.add("you can buy up to " + dto.maxTickets() + " ticket(s)");
+        }
+
+        // Age constraints
+        if (dto.minAge() != null && dto.maxAge() != null) {
+            String connector = dto.isAgeOr() ? " or " : " - ";
+            parts.add("the allowed age range is " + dto.minAge() + connector + dto.maxAge());
+        } else if (dto.minAge() != null) {
+            parts.add("you must be at least " + dto.minAge() + " years old");
+        } else if (dto.maxAge() != null) {
+            parts.add("you must be at most " + dto.maxAge() + " years old");
+        }
+
+        if (parts.isEmpty()) {
+            return "The purchase policy of this event has been updated (no restrictions).";
+        }
+
+        String combined = String.join(", and ", parts);
+        return "The purchase policy of this event has been updated: " + combined + ".";
     }
 
     public boolean checkSeatAvailability(String eventId, List<String> seatIds) {
