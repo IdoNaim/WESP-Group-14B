@@ -7,10 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
-
-import jakarta.transaction.Transactional;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
@@ -20,6 +17,8 @@ import com.ticketpurchasingsystem.project.domain.User.UserHandler;
 import com.ticketpurchasingsystem.project.domain.User.UserInfo;
 import com.ticketpurchasingsystem.project.domain.User.UserProduction;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
+
+import jakarta.transaction.Transactional;
 @Service
 @Transactional
 public class UserService implements IUserService {
