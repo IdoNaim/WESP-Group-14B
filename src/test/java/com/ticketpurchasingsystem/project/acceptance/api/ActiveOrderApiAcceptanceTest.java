@@ -104,7 +104,6 @@ class ActiveOrderApiAcceptanceTest {
         IEventRepo eventRepo = new EventRepo();
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(e -> {});
         eventService = new EventService(eventRepo, eventPublisher, authService);
-        EventAggregateListener eventListener = new EventAggregateListener(eventRepo, eventService);
 
         IHistoryOrderRepo historyRepo = new HistoryOrderRepo();
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
@@ -112,6 +111,8 @@ class ActiveOrderApiAcceptanceTest {
         HistoryOrderService historyOrderService = new HistoryOrderService(
                 historyRepo, historyOrderHandler, authService, productionServiceStub);
         HistoryOrderListener historyOrderListener = new HistoryOrderListener(historyRepo, historyOrderService);
+
+        EventAggregateListener eventListener = new EventAggregateListener(eventRepo, eventService, historyRepo);
 
         activeOrderRepo = new ActiveOrderMemRepo();
         ActiveOrderHandler activeOrderHandler = new ActiveOrderHandler();

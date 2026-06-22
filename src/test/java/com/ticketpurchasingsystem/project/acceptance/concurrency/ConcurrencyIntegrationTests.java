@@ -113,10 +113,10 @@ public class ConcurrencyIntegrationTests {
         eventRepo = new EventRepo();
         eventPublisher = new EventAggregatePublisher(event -> {});
         eventService = new EventService(eventRepo, eventPublisher, authenticationService);
-        eventListener = new EventAggregateListener(eventRepo, eventService);
 
         // History Setup
         historyOrderRepo = new HistoryOrderRepo();
+        eventListener = new EventAggregateListener(eventRepo, eventService, historyOrderRepo);
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
         ProductionService productionService = new ProductionService(authenticationService, null, null, null);
         historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService);

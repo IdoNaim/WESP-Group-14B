@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO, PurchasePolicyDTO } from "../../api/eventsApi";
 import { authApi } from "../../api/authApi";
 import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
+import { historyOrderApi } from "../../api/historyOrderApi";
 import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -473,16 +474,18 @@ export default function ReserveTicketsPage() {
   const [mapError, setMapError] = useState(false);
 
   const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
+  const [alreadyPurchased, setAlreadyPurchased] = useState(0);
   const effectiveMaxTickets = purchasePolicy?.maxTickets ?? null;
+  const remainingAllowed = effectiveMaxTickets !== null ? Math.max(0, effectiveMaxTickets - alreadyPurchased) : null;
 
   useEffect(() => {
     const token = localStorage.getItem("token") ?? "";
 
     authApi.getCurrentUser(token)
       .then((user) => {
-        return activeOrderApi.getActiveOrderByUserId(token, user.userId);
+        return activeOrderApi.getActiveOrderByUserId(token, user.userId).then((activeOrder) => ({ user, activeOrder }));
       })
-      .then((activeOrder) => {
+      .then(({ user, activeOrder }) => {
         if (!activeOrder) {
           setEventLoading(false);
           setMapLoading(false);
@@ -497,6 +500,19 @@ export default function ReserveTicketsPage() {
         setTimeLeft(Math.max(0, remainingSeconds));
 
         const { eventId } = activeOrder;
+
+        historyOrderApi.getUserOrders(token, user.userId)
+          .then((pastOrders) => {
+            const count = pastOrders
+              .filter((o) => o.eventId === eventId)
+              .reduce((sum, o) => {
+                const seats = o.seatIds?.length ?? 0;
+                const standing = Object.values(o.standingAreaQuantities ?? {}).reduce((a, b) => a + b, 0);
+                return sum + seats + standing;
+              }, 0);
+            setAlreadyPurchased(count);
+          })
+          .catch(() => {});
 
         eventApi.getEvent(token, eventId)
           .then((data) => {
@@ -590,8 +606,11 @@ export default function ReserveTicketsPage() {
         return;
       }
 
-      if (effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets) {
-        showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
+      if (remainingAllowed !== null && totalSelected >= remainingAllowed) {
+        const msg = alreadyPurchased > 0
+          ? `You have already purchased ${alreadyPurchased} ticket(s) for this event. Only ${remainingAllowed} more allowed (limit is ${effectiveMaxTickets}).`
+          : `Maximum ${effectiveMaxTickets} ticket(s) allowed per person for this event.`;
+        showBanner("error", msg);
         return;
       }
 
@@ -613,13 +632,16 @@ export default function ReserveTicketsPage() {
         },
       ]);
     },
-    [totalSelected, timeLeft, showBanner, effectiveMaxTickets]
+    [totalSelected, timeLeft, showBanner, effectiveMaxTickets, remainingAllowed, alreadyPurchased]
   );
 
   const handleStandingAdd = useCallback(
     (zoneId: string) => {
-      if (effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets) {
-        showBanner("error", `Max ${effectiveMaxTickets} tickets per order as per purchase policy.`);
+      if (remainingAllowed !== null && totalSelected >= remainingAllowed) {
+        const msg = alreadyPurchased > 0
+          ? `You have already purchased ${alreadyPurchased} ticket(s) for this event. Only ${remainingAllowed} more allowed (limit is ${effectiveMaxTickets}).`
+          : `Maximum ${effectiveMaxTickets} ticket(s) allowed per person for this event.`;
+        showBanner("error", msg);
         return;
       }
       const zone = standingZones.find((z) => z.id === zoneId);
@@ -645,7 +667,7 @@ export default function ReserveTicketsPage() {
         ];
       });
     },
-    [totalSelected, showBanner, standingZones, effectiveMaxTickets]
+    [totalSelected, showBanner, standingZones, effectiveMaxTickets, remainingAllowed, alreadyPurchased]
   );
 
   const handleStandingRemove = useCallback((zoneId: string) => {
@@ -704,8 +726,9 @@ export default function ReserveTicketsPage() {
         showBanner("error", "Failed to reserve tickets. They might no longer be available.");
         return false;
       }
-    } catch {
-      showBanner("error", "An error occurred while reserving tickets. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred while reserving tickets. Please try again.";
+      showBanner("error", message);
       return false;
     }
   };
@@ -885,7 +908,7 @@ export default function ReserveTicketsPage() {
                             onAdd={handleStandingAdd}
                             onRemove={handleStandingRemove}
                             totalSelected={totalSelected}
-                            maxTickets={effectiveMaxTickets}
+                            maxTickets={remainingAllowed}
                           />
                         ))}
                       </div>
@@ -897,9 +920,19 @@ export default function ReserveTicketsPage() {
 
             <PurchaseRules policy={purchasePolicy} />
 
-            {effectiveMaxTickets !== null && totalSelected >= effectiveMaxTickets && (
+            {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded">
+                You have already purchased the maximum of <strong>{effectiveMaxTickets} ticket(s)</strong> allowed for this event. No further purchases are permitted.
+              </p>
+            )}
+            {effectiveMaxTickets !== null && alreadyPurchased > 0 && alreadyPurchased < effectiveMaxTickets && (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
-                You've reached the maximum of <strong>{effectiveMaxTickets} tickets</strong> per order as per purchase policy.
+                You have already purchased <strong>{alreadyPurchased}</strong> ticket(s) for this event. You may add up to <strong>{remainingAllowed}</strong> more (limit is {effectiveMaxTickets}).
+              </p>
+            )}
+            {effectiveMaxTickets !== null && alreadyPurchased === 0 && totalSelected >= effectiveMaxTickets && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
+                You've reached the maximum of <strong>{effectiveMaxTickets} ticket(s)</strong> allowed per person for this event.
               </p>
             )}
           </section>

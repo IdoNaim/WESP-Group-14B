@@ -68,6 +68,17 @@ public class HistoryOrderRepo implements IHistoryOrderRepo {
     }
 
     @Override
+    public List<HistoryOrderItem> findAllByUserIdAndEventId(String userId, String eventId) {
+        List<HistoryOrderItem> result = new ArrayList<>();
+        for (HistoryOrderItem item : storage.values()) {
+            if (item.getUserId().equals(userId) && item.getEventId().equals(eventId)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    @Override
     public void deleteAll() {
         storage.clear();
     }

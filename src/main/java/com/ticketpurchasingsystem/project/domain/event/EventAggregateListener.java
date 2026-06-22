@@ -10,6 +10,8 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.IsUpToPolicyEvent;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 
 import java.util.List;
 
@@ -29,10 +31,12 @@ import com.ticketpurchasingsystem.project.domain.event.Purchase_Policy.PurchaseC
 public class EventAggregateListener {
     IEventRepo eventRepo;
     IEventService eventService;
-    // You can inject repositories or handlers here if needed, just like in UserListener
-    public EventAggregateListener(IEventRepo eventRepo, IEventService eventService) {
+    IHistoryOrderRepo historyOrderRepo;
+
+    public EventAggregateListener(IEventRepo eventRepo, IEventService eventService, IHistoryOrderRepo historyOrderRepo) {
         this.eventRepo = eventRepo;
         this.eventService = eventService;
+        this.historyOrderRepo = historyOrderRepo;
     }
 
     @EventListener
@@ -74,9 +78,23 @@ public class EventAggregateListener {
             event.setResult(true); // No policy means no restrictions
             return;
         }
-        PurchaseContext context = new PurchaseContext(  
+
+        int alreadyPurchased = 0;
+        String userId = event.userID();
+        if (userId != null && !userId.isEmpty()) {
+            List<HistoryOrderItem> pastOrders = historyOrderRepo.findAllByUserIdAndEventId(userId, event.getEventID());
+            for (HistoryOrderItem past : pastOrders) {
+                alreadyPurchased += past.getSeatIds().size();
+                for (int qty : past.getStandingAreaQuantities().values()) {
+                    alreadyPurchased += qty;
+                }
+            }
+        }
+
+        PurchaseContext context = new PurchaseContext(
                 event.getTotalTickets(),
-                event.getAge()        );
+                event.getAge(),
+                alreadyPurchased);
 
         boolean isValid = policy.validate(context);
         event.setResult(isValid);
