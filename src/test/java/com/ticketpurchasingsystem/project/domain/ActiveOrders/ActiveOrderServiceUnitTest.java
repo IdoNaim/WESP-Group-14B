@@ -81,6 +81,7 @@ public class ActiveOrderServiceUnitTest {
     @BeforeEach
     void setUp() {
         lenient().when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
     }
 
     //------------------------------------------------------------------------------------------------------------------
