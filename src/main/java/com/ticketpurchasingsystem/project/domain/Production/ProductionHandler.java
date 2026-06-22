@@ -127,25 +127,27 @@ public class ProductionHandler {
     }
     public ProductionCompany appointManager(String appointerId, Integer companyId,
             String managerId, Set<ManagerPermission> permissions, ProductionCompany company) {
+            
         if (isInvalid(appointerId) || companyId == null || isInvalid(managerId)
                 || permissions == null || company == null) {
             loggerDef.getInstance().error("appointManager called with null/blank arguments");
             return null;
         }
+
         if (!company.isOwnerOrManager(appointerId)) {
             loggerDef.getInstance().error(
                     "appointManager: caller " + appointerId + " is not an owner or manager of company " + companyId);
             return null;
         }
-        if (company.isManager(managerId)) {
+
+        boolean requestCreated = company.requestManager(appointerId, managerId, permissions);
+        
+        if (!requestCreated) {
             loggerDef.getInstance().error(
-                    "appointManager: " + managerId + " is already a manager of company " + companyId);
+                    "appointManager: " + managerId + " is already a manager or has a pending request in company " + companyId);
             return null;
         }
-        boolean appointed = company.requestManager(appointerId, managerId, permissions);
-        if (!appointed) {
-            return null;
-        }
+        
         return company;
     }
     public ProductionCompany acceptAppointment(String userId, ProductionCompany company) {
