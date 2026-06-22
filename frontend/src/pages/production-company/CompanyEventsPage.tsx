@@ -989,13 +989,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
         });
     }, [event.eventId]);
 
-    const minDateTime = (() => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })();
-
     const dateError = dateTime !== '' && new Date(dateTime) < new Date()
         ? 'This date is already in the past. Please choose a future date and time.'
         : null;

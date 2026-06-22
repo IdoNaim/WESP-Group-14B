@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCancelledEvent;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCapacityChangedEvent;
 import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventCreatedEvent;
+import com.ticketpurchasingsystem.project.domain.event.Events_Events.EventUpdatedEvent;
 
 @Component
 public class EventAggregatePublisher {
@@ -28,5 +29,9 @@ public class EventAggregatePublisher {
 
     public void publishEventCancelled(String eventId, String eventName) {
         eventPublisher.publishEvent(new EventCancelledEvent(eventId, eventName));
+    }
+
+    public void publishEventUpdated(String eventId, String eventName, String changeDescription) {
+        eventPublisher.publishEvent(new EventUpdatedEvent(eventId, eventName, changeDescription));
     }
 }
