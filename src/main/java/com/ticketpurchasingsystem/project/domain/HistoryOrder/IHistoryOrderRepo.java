@@ -9,5 +9,6 @@ public interface IHistoryOrderRepo {
     List<HistoryOrderItem> findAllByUserId(String userId);
     HistoryOrderItem findByOrderId(String orderId);
     List<HistoryOrderItem> findAllByEventId(String eventId);
+    List<HistoryOrderItem> findAllByUserIdAndEventId(String userId, String eventId);
     void deleteAll();
 }

@@ -45,11 +45,14 @@ public class ProductionService implements IProductionService {
         this.productionHandler = productionHandler;
         this.prodRepo = prodRepo;
         this.productionEventPublisher = productionEventPublisher;
-        // ProductionCompanyDTO testCompanyDTO = new ProductionCompanyDTO("Test Company", "Test Description", "comp@gmail.com");
-        // ProductionCompany testCompany = productionHandler.createProductionCompany("idonaim56@gmail.com", testCompanyDTO);
+        // ProductionCompanyDTO testCompanyDTO = new ProductionCompanyDTO("Test
+        // Company", "Test Description", "comp@gmail.com");
+        // ProductionCompany testCompany =
+        // productionHandler.createProductionCompany("idonaim56@gmail.com",
+        // testCompanyDTO);
         // if(testCompany == null) {
-        //     loggerDef.getInstance().error("Failed to create test company");
-        //     return;
+        // loggerDef.getInstance().error("Failed to create test company");
+        // return;
         // }
         // prodRepo.save(testCompany);
         // loggerDef.getInstance().info("Test company created and saved.");
@@ -120,13 +123,15 @@ public class ProductionService implements IProductionService {
                                 + " for company " + companyId + " by " + appointerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+                loggerDef.getInstance()
+                        .info("assignOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("assignOwner failed: " + e.getMessage());
                 return false;
             }
         }
-        loggerDef.getInstance().error("assignOwner failed after " + maxRetries + " retries due to concurrent modifications");
+        loggerDef.getInstance()
+                .error("assignOwner failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
 
@@ -166,13 +171,15 @@ public class ProductionService implements IProductionService {
                                 + " for company " + companyId + " by " + appointerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+                loggerDef.getInstance()
+                        .info("appointManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("appointManager failed: " + e.getMessage());
                 return false;
             }
         }
-        loggerDef.getInstance().error("appointManager failed after " + maxRetries + " retries due to concurrent modifications");
+        loggerDef.getInstance()
+                .error("appointManager failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
 
@@ -337,15 +344,18 @@ public class ProductionService implements IProductionService {
                                 + " in company " + companyId + " by " + ownerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+                loggerDef.getInstance().info(
+                        "modifyManagerPermissions: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("modifyManagerPermissions failed: " + e.getMessage());
                 return false;
             }
         }
-        loggerDef.getInstance().error("modifyManagerPermissions failed after " + maxRetries + " retries due to concurrent modifications");
+        loggerDef.getInstance().error(
+                "modifyManagerPermissions failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
+
     @Override
     @Transactional(readOnly = true)
     public RolesTreeDTO getRolesTree(String sessionToken, Integer companyId) {
@@ -388,29 +398,34 @@ public class ProductionService implements IProductionService {
                 loggerDef.getInstance().error("removeManager: company not found, id=" + companyId);
                 return false;
             }
-            ProductionCompany company = productionHandler.removeManager(ownerId, companyId, managerId, new ProductionCompany(companyOpt.get()));
+            ProductionCompany company = productionHandler.removeManager(ownerId, companyId, managerId,
+                    new ProductionCompany(companyOpt.get()));
             if (company == null) {
                 return false;
             }
             try {
                 ProductionCompany saved = prodRepo.save(company);
-                loggerDef.getInstance().info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
+                loggerDef.getInstance()
+                        .info("removed manager " + managerId + " from company " + companyId + " by " + ownerId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+                loggerDef.getInstance()
+                        .info("removeManager: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeManager failed: " + e.getMessage());
                 return false;
             }
         }
-        loggerDef.getInstance().error("removeManager failed after " + maxRetries + " retries due to concurrent modifications");
+        loggerDef.getInstance()
+                .error("removeManager failed after " + maxRetries + " retries due to concurrent modifications");
         return false;
     }
 
     @Override
     @Transactional
     public boolean removeOwner(String sessionToken, Integer companyId, String ownerId) {
-        if (!authenticationService.validate(sessionToken)) return false;
+        if (!authenticationService.validate(sessionToken))
+            return false;
         String requesterId = authenticationService.getUser(sessionToken);
         int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++) {
@@ -419,14 +434,18 @@ public class ProductionService implements IProductionService {
                 loggerDef.getInstance().error("removeOwner: company not found, id=" + companyId);
                 return false;
             }
-            ProductionCompany company = productionHandler.removeOwner(requesterId, companyId, ownerId, new ProductionCompany(companyOpt.get()));
-            if (company == null) return false;
+            ProductionCompany company = productionHandler.removeOwner(requesterId, companyId, ownerId,
+                    new ProductionCompany(companyOpt.get()));
+            if (company == null)
+                return false;
             try {
                 prodRepo.save(company);
-                loggerDef.getInstance().info("removed owner " + ownerId + " from company " + companyId + " by " + requesterId);
+                loggerDef.getInstance()
+                        .info("removed owner " + ownerId + " from company " + companyId + " by " + requesterId);
                 return true;
             } catch (OptimisticLockingFailureException | org.springframework.dao.OptimisticLockingFailureException e) {
-                loggerDef.getInstance().info("removeOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
+                loggerDef.getInstance()
+                        .info("removeOwner: concurrent conflict, retrying (attempt " + (attempt + 1) + ")");
             } catch (Exception e) {
                 loggerDef.getInstance().error("removeOwner failed: " + e.getMessage());
                 return false;
@@ -439,14 +458,17 @@ public class ProductionService implements IProductionService {
     @Override
     @Transactional
     public boolean setCompanyPurchasePolicy(String sessionToken, Integer companyId, PurchasePolicyDTO dto) {
-        if (!authenticationService.validate(sessionToken)) return false;
+        if (!authenticationService.validate(sessionToken))
+            return false;
         String userId = authenticationService.getUser(sessionToken);
 
         Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
-        if (companyOpt.isEmpty()) return false;
+        if (companyOpt.isEmpty())
+            return false;
         ProductionCompany company = companyOpt.get();
 
-        if (!company.isOwner(userId) && !company.isFounder(userId)) return false;
+        if (!company.isOwner(userId) && !company.isFounder(userId))
+            return false;
 
         company.setPurchasePolicy(dto);
         try {
@@ -462,9 +484,11 @@ public class ProductionService implements IProductionService {
     @Override
     @Transactional(readOnly = true)
     public PurchasePolicyDTO getCompanyPurchasePolicy(String sessionToken, Integer companyId) {
-        if (!authenticationService.validate(sessionToken)) return null;
+        if (!authenticationService.validate(sessionToken))
+            return null;
         Optional<ProductionCompany> companyOpt = prodRepo.findById(companyId);
-        if (companyOpt.isEmpty()) return null;
+        if (companyOpt.isEmpty())
+            return null;
         return companyOpt.get().getPurchasePolicyDTO();
     }
 
@@ -517,7 +541,8 @@ public class ProductionService implements IProductionService {
             } else {
                 role = "MANAGER";
             }
-            result.add(new CompanySummaryDTO(c.getCompanyId(), c.getCompanyName(), c.getCompanyDescription(), c.getCompanyEmail(), role));
+            result.add(new CompanySummaryDTO(c.getCompanyId(), c.getCompanyName(), c.getCompanyDescription(),
+                    c.getCompanyEmail(), role));
         }
         return result;
     }
@@ -525,10 +550,12 @@ public class ProductionService implements IProductionService {
     @Override
     @Transactional(readOnly = true)
     public MemberInfoDTO getMyMemberInfo(String sessionToken, Integer companyId) {
-        if (!authenticationService.validate(sessionToken)) return null;
+        if (!authenticationService.validate(sessionToken))
+            return null;
         String userId = authenticationService.getUser(sessionToken);
         Optional<ProductionCompany> opt = prodRepo.findById(companyId);
-        if (opt.isEmpty()) return null;
+        if (opt.isEmpty())
+            return null;
         ProductionCompany company = opt.get();
 
         String role;

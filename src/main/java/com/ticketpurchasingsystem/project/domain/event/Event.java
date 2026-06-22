@@ -43,7 +43,7 @@
         @Column(name = "location")
         private String location; // Merged 'location' and 'eventLocation' into one field
 
-        @Column(name = "image_url")
+        @Column(name = "image_url", columnDefinition = "TEXT")
         private String imageUrl;
 
         @Version // Tells Hibernate to use this field for Optimistic Locking (concurrency control)

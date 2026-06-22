@@ -1,5 +1,6 @@
 package com.ticketpurchasingsystem.project.application;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,6 +157,15 @@ public class ActiveOrderService implements IActiveOrderService {
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
         List<String> seatsToReserve = activeOrderHandler.getSeatsToReserve(order.getSeatIds(), seatIds);
 
+        ActiveOrderDTO previewDTO = new ActiveOrderDTO(order);
+        List<String> previewSeats = new ArrayList<>(previewDTO.getSeatIds());
+        previewSeats.addAll(seatsToReserve);
+        previewDTO.setSeatIds(previewSeats);
+        if (!activeOrderPublisher.publishIsUpToPolicy(previewDTO, getUserAge(sessionToken))) {
+            logger.error("Add seats failed: Adding seats would exceed purchase policy limit for order: " + orderId);
+            throw new IllegalStateException("Cannot add tickets: purchase policy limit would be exceeded");
+        }
+
         boolean reserved = activeOrderPublisher.publishReserveSeats(sessionToken.getToken(), order.getOrderId(), order.getEventId(), seatsToReserve);
         if (!reserved) {
             logger.error("Add seats failed: Could not reserve seats for event: " + order.getEventId());
@@ -192,6 +202,15 @@ public class ActiveOrderService implements IActiveOrderService {
         activeOrderHandler.validateOrderOwnershipWithSecurityException(tokenUserStanding, order);
 
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
+
+        ActiveOrderDTO previewStandingDTO = new ActiveOrderDTO(order);
+        HashMap<String, Integer> previewStanding = previewStandingDTO.getStandingAreaQuantities();
+        previewStanding.merge(areaId, quantity, Integer::sum);
+        previewStandingDTO.setStandingAreaQuantities(previewStanding);
+        if (!activeOrderPublisher.publishIsUpToPolicy(previewStandingDTO, getUserAge(sessionToken))) {
+            logger.error("Add standing area failed: Adding tickets would exceed purchase policy limit for order: " + orderId);
+            throw new IllegalStateException("Cannot add tickets: purchase policy limit would be exceeded");
+        }
 
         boolean reserved = activeOrderPublisher.publishReserveStandingArea(sessionToken.getToken(), order.getEventId(), areaId, quantity);
         if (!reserved) {
@@ -320,6 +339,11 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalArgumentException("couldn't find order to edit");
         }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
+
+        if (!activeOrderPublisher.publishIsUpToPolicy(newOrderDTO, getUserAge(sessionToken))) {
+            logger.error("Update order failed: Order violates purchase policy for order: " + newOrderDTO.getOrderId());
+            throw new IllegalStateException("Cannot reserve tickets: you have already purchased the maximum allowed tickets for this event");
+        }
 
         List<String> currentSeats = order.getSeatIds();
         List<String> newOrderSeats = newOrderDTO.getSeatIds();
