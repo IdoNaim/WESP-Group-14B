@@ -1002,28 +1002,44 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
         setLoading(true); setError(null);
         try {
             const eventId = event.eventId!;
-            const ops: Promise<boolean>[] = [];
+            let updated = false;
 
-            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
-                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime }));
-            if (Number(capacity) !== event.eventCapacity)
-                ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
+            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '')) {
+                const ok = await eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (Number(capacity) !== event.eventCapacity) {
+                const ok = await eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
             const newLoc = location || null;
-            if (newLoc !== (event.eventLocation ?? null))
-                ops.push(eventApi.editEventLocation(token, eventId, newLoc));
-            if (imageChanged)
-                ops.push(eventApi.editEventImage(token, eventId, imageUrl));
-            if (updatePolicy)
-                ops.push(eventApi.editEventPolicy(token, eventId, policyDTO));
-            if (updateSeatingMap && zones.length > 0)
-                ops.push(eventApi.editSeatingMap(token, eventId, {
+            if (newLoc !== (event.eventLocation ?? null)) {
+                const ok = await eventApi.editEventLocation(token, eventId, newLoc);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (imageChanged) {
+                const ok = await eventApi.editEventImage(token, eventId, imageUrl);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (updatePolicy) {
+                const ok = await eventApi.editEventPolicy(token, eventId, policyDTO);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (updateSeatingMap && zones.length > 0) {
+                const ok = await eventApi.editSeatingMap(token, eventId, {
                     seatingAreas: zones.filter(z => z.kind === 'seating').map(z => ({ rows: Number(z.rows), seatsPerRow: Number(z.seatsPerRow), price: Number(z.price) })),
                     standingAreas: zones.filter(z => z.kind === 'standing').map(z => ({ capacity: Number(z.capacity), price: Number(z.price) })),
-                }));
+                });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
 
-            if (ops.length === 0) { onClose(); return; }
-            const results = await Promise.all(ops);
-            if (results.some(r => !r)) throw new Error('One or more updates failed');
+            if (!updated) { onClose(); return; }
             onSaved();
         } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update event'); }
         setLoading(false);
