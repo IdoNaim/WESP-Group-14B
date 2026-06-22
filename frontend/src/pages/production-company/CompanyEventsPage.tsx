@@ -1216,8 +1216,8 @@ function EventCard({ event, stats, onEdit, onDelete, canManageInventory }: {
                 <div className="w-10 h-10 rounded-xl bg-[#00dbe7]/10 flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined text-[22px] text-[#00dbe7]">event</span>
                 </div>
-                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${event.isActive ? 'text-[#34d399] bg-emerald-500/10 border-emerald-500/20' : 'text-gray-500 bg-gray-500/10 border-gray-500/20'}`}>
-                    {event.isActive ? 'ACTIVE' : 'INACTIVE'}
+                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${event.isActive ? 'text-[#34d399] bg-emerald-500/10 border-emerald-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'}`}>
+                    {event.isActive ? 'ACTIVE' : 'CANCELED'}
                 </span>
             </div>
 
@@ -1285,8 +1285,8 @@ function EventCard({ event, stats, onEdit, onDelete, canManageInventory }: {
                 {canManageInventory && (
                     <button onClick={onDelete}
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-lg transition-colors border border-red-500/20">
-                        <span className="material-symbols-outlined text-[15px]">delete</span>
-                        DELETE
+                        <span className="material-symbols-outlined text-[15px]">cancel</span>
+                        Cancel
                     </button>
                 )}
             </div>
@@ -1361,10 +1361,10 @@ export default function CompanyEventsPage() {
     const canManagePolicies = myRole !== 'MANAGER' || myPerms.has('PURCHASING_AND_DISCOUNT_POLICY_MANAGEMENT');
 
     const handleDelete = async (event: EventDTO) => {
-        if (!window.confirm(`Delete event "${event.eventName}"?`)) return;
+        if (!window.confirm(`Cancel event "${event.eventName}"? It will stop selling tickets but remain visible in order history.`)) return;
         const ok = await eventApi.removeEvent(token, event.eventId!);
         if (ok) fetchEvents();
-        else alert('Failed to delete event');
+        else alert('Failed to cancel event');
     };
 
     const totalRevenue = events.reduce((sum, ev) => {

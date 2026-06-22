@@ -101,7 +101,8 @@ public class EventAggregateListener {
     }
     @EventListener
     public void onIsValidEventIDEvent(IsValidEventIDEvent event){
-        event.setResult(eventRepo.findById(event.getEventId()) != null);
+        Event e = eventRepo.findById(event.getEventId());
+        event.setResult(e != null && e.isActive());
     }
     @EventListener
     public void onSeatReleaseEvent(SeatReleaseEvent event){

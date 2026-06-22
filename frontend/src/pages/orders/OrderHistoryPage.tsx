@@ -297,7 +297,11 @@ export default function OrderHistory() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[10px] uppercase font-bold mb-1 text-gray-400 tracking-wider">Status</p>
-                                                    <p className="font-mono text-sm text-green-400">CONFIRMED</p>
+                                                    {order.eventDetails && order.eventDetails.isActive === false ? (
+                                                        <p className="font-mono text-sm text-red-400">CANCELED</p>
+                                                    ) : (
+                                                        <p className="font-mono text-sm text-green-400">CONFIRMED</p>
+                                                    )}
                                                 </div>
                                             </div>
 

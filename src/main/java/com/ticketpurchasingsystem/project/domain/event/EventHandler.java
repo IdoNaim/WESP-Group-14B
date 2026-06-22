@@ -234,8 +234,9 @@ public class EventHandler {
             }
             String eventName = event.getEventName();
             eventPublisher.publishEventCancelled(eventId, eventName);
-            eventRepo.delete(eventId);
-            logger.info("Successfully removed event ID: " + eventId);
+            event.cancel();
+            eventRepo.save(event);
+            logger.info("Successfully cancelled event ID: " + eventId);
             return true;
         } catch (Exception e) {
             logger.error("Failed to remove event ID: " + eventId + " | Error: " + e.getMessage());

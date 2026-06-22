@@ -255,8 +255,20 @@ export default function ActiveOrderPage() {
     });
   };
 
-  const handleCheckoutSimulation = () => {
+  const handleCheckoutSimulation = async () => {
     if (checkoutState !== 'idle') return;
+
+    // Guard: make sure the event wasn't canceled while the user was on this page.
+    // A soft-canceled event still exists but returns isActive === false.
+    const token = localStorage.getItem('token');
+    if (token && activeOrder?.eventId) {
+      const latestEvent = await eventApi.getEvent(token, activeOrder.eventId);
+      if (latestEvent && latestEvent.isActive === false) {
+        setApiError('Event got canceled');
+        return;
+      }
+    }
+
     setCheckoutState('processing');
     setTimeout(() => {
       setCheckoutState('finalizing');
