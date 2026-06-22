@@ -529,8 +529,44 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
         capacity: '', rows: '', seatsPerRow: '', price: '',
     }]);
     const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
-    const updateZone = (i: number, field: keyof EventZone, value: string) =>
-        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+    const updateZone = (i: number, field: keyof EventZone, value: string) => {
+        setZones(prev => prev.map((z, idx) => {
+            if (idx === i) {
+                if (field === 'kind') {
+                    if (value === 'standing') {
+                        const currentSeats = (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
+                        return {
+                            ...z,
+                            kind: 'standing',
+                            capacity: currentSeats > 0 ? String(currentSeats) : z.capacity,
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    } else if (value === 'seating') {
+                        return {
+                            ...z,
+                            kind: 'seating',
+                            capacity: '',
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    }
+                }
+                return { ...z, [field]: value };
+            }
+            return z;
+        }));
+    };
+
+    const handleCapacityChange = (newVal: string) => {
+        setCapacity(newVal);
+        setZones(prev => {
+            if (prev.length === 1 && prev[0].kind === 'standing') {
+                return [{ ...prev[0], capacity: newVal }];
+            }
+            return prev;
+        });
+    };
 
     const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
     const eventCapNum = Number(capacity) || 0;
@@ -633,7 +669,7 @@ function CreateEventModal({ companyId, onClose, onCreated }: {
                     <div className="space-y-1">
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1} placeholder="e.g. 500"
-                            value={capacity} onChange={e => setCapacity(e.target.value)} required />
+                            value={capacity} onChange={e => handleCapacityChange(e.target.value)} required />
                     </div>
 
                     {/* Image upload */}
@@ -843,7 +879,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
     const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
-    const [ticketPrice, setTicketPrice] = useState(event.ticketPrice ? String(event.ticketPrice) : '');
 
     // Photo
     const [imagePreview, setImagePreview] = useState<string | null>(event.imageUrl ?? null);
@@ -873,8 +908,44 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const [zones, setZones] = useState<EventZone[]>([]);
     const addZone = () => setZones(prev => [...prev, { label: `Zone ${prev.length + 1}`, kind: 'standing', capacity: '', rows: '', seatsPerRow: '', price: '' }]);
     const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
-    const updateZone = (i: number, field: keyof EventZone, value: string) =>
-        setZones(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z));
+    const updateZone = (i: number, field: keyof EventZone, value: string) => {
+        setZones(prev => prev.map((z, idx) => {
+            if (idx === i) {
+                if (field === 'kind') {
+                    if (value === 'standing') {
+                        const currentSeats = (Number(z.rows) || 0) * (Number(z.seatsPerRow) || 0);
+                        return {
+                            ...z,
+                            kind: 'standing',
+                            capacity: currentSeats > 0 ? String(currentSeats) : z.capacity,
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    } else if (value === 'seating') {
+                        return {
+                            ...z,
+                            kind: 'seating',
+                            capacity: '',
+                            rows: '',
+                            seatsPerRow: '',
+                        };
+                    }
+                }
+                return { ...z, [field]: value };
+            }
+            return z;
+        }));
+    };
+
+    const handleCapacityChange = (newVal: string) => {
+        setCapacity(newVal);
+        setZones(prev => {
+            if (prev.length === 1 && prev[0].kind === 'standing') {
+                return [{ ...prev[0], capacity: newVal }];
+            }
+            return prev;
+        });
+    };
     const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
     const eventCapNum = Number(capacity) || 0;
     const zoneCapacityError = updateSeatingMap && zones.length > 0 && capacity !== '' && totalZoneCapacity !== eventCapNum
@@ -883,6 +954,13 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const minDateTime = (() => {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
 
     useEffect(() => {
         Promise.all([
@@ -931,28 +1009,44 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
         setLoading(true); setError(null);
         try {
             const eventId = event.eventId!;
-            const ops: Promise<boolean>[] = [];
+            let updated = false;
 
-            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? ''))
-                ops.push(eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime }));
-            if (Number(capacity) !== event.eventCapacity)
-                ops.push(eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) }));
+            if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '')) {
+                const ok = await eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (Number(capacity) !== event.eventCapacity) {
+                const ok = await eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
             const newLoc = location || null;
-            if (newLoc !== (event.eventLocation ?? null))
-                ops.push(eventApi.editEventLocation(token, eventId, newLoc));
-            if (imageChanged)
-                ops.push(eventApi.editEventImage(token, eventId, imageUrl));
-            if (updatePolicy)
-                ops.push(eventApi.editEventPolicy(token, eventId, policyDTO));
-            if (updateSeatingMap && zones.length > 0)
-                ops.push(eventApi.editSeatingMap(token, eventId, {
+            if (newLoc !== (event.eventLocation ?? null)) {
+                const ok = await eventApi.editEventLocation(token, eventId, newLoc);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (imageChanged) {
+                const ok = await eventApi.editEventImage(token, eventId, imageUrl);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (updatePolicy) {
+                const ok = await eventApi.editEventPolicy(token, eventId, policyDTO);
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
+            if (updateSeatingMap && zones.length > 0) {
+                const ok = await eventApi.editSeatingMap(token, eventId, {
                     seatingAreas: zones.filter(z => z.kind === 'seating').map(z => ({ rows: Number(z.rows), seatsPerRow: Number(z.seatsPerRow), price: Number(z.price) })),
                     standingAreas: zones.filter(z => z.kind === 'standing').map(z => ({ capacity: Number(z.capacity), price: Number(z.price) })),
-                }));
+                });
+                if (!ok) throw new Error('One or more updates failed');
+                updated = true;
+            }
 
-            if (ops.length === 0) { onClose(); return; }
-            const results = await Promise.all(ops);
-            if (results.some(r => !r)) throw new Error('One or more updates failed');
+            if (!updated) { onClose(); return; }
             onSaved();
         } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update event'); }
         setLoading(false);
@@ -994,7 +1088,7 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                     <div className="space-y-1">
                         <label className={labelCls}>Total Capacity</label>
                         <input className={inputCls} type="number" min={1}
-                            value={capacity} onChange={e => setCapacity(e.target.value)} required
+                            value={capacity} onChange={e => handleCapacityChange(e.target.value)} required
                             disabled={!canManageInventory} />
                     </div>
 
