@@ -739,7 +739,7 @@ export default function CheckoutPage() {
                   {/* MODIFIED: Trigger the new verification flow instead of straight payment */}
                   <button
                     onClick={handleInitiatePayment}
-                    disabled={processState === 'processing' || pricing.subtotal === 0}
+                    disabled={processState === 'processing' || totalTicketsCount === 0}
                     className="w-full bg-[#1a1b20] text-white py-5 font-bold rounded flex items-center justify-center gap-3 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processState === 'processing' ? (
