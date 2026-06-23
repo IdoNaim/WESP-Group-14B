@@ -281,5 +281,16 @@ export const eventApi = {
         if (response.status === 422) return bodyText;
         if (!response.ok) return 'Failed to validate purchase policy.';
         return null;
-    }
+    },
+
+
+    /**
+     * GET /api/events/search?q={query}
+     * Searches active events by a search term.
+     */
+    searchEvents: async (query: string): Promise<EventDTO[]> => {
+        const response = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`, { method: 'GET' });
+        if (!response.ok) return [];
+        return response.json();
+    },
 };

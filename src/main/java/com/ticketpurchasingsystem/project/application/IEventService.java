@@ -37,6 +37,7 @@ public interface IEventService {
      public SeatingMapDTO getEventSeatingMap(String sessionToken, String eventId);
      public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
      public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge);
+     public List<EventDTO> searchActiveEventsByText(String query);
 
 
 

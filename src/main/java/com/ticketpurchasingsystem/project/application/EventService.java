@@ -153,4 +153,9 @@ public class EventService implements IEventService {
     public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge) {
         return eventHandler.validatePurchasePolicy(sessionToken, eventId, quantity, userAge);
     }
+
+    @Override
+    public List<EventDTO> searchActiveEventsByText(String query) {
+        return eventHandler.searchActiveEventsByText(query);
+    }
 }

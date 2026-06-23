@@ -301,4 +301,13 @@ public class EventController {
         public ResponseEntity<java.util.Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
                 return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
         }
+
+        // GET /api/events/search?q={query}
+        @GetMapping("/search")
+        public ResponseEntity<List<EventDTO>> searchEvents(
+                @RequestParam String q) {
+                List<EventDTO> events = eventService.searchActiveEventsByText(q);
+                
+                return ResponseEntity.ok(events != null ? events : Collections.emptyList());
+        }
 }

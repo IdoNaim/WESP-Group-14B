@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
+
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 
@@ -55,4 +56,5 @@ public class DBEventRepo implements IEventRepo {
     public void deleteAll() {
         eventJpaRepository.deleteAll();
     }
+
 }

@@ -27,25 +27,33 @@ function priceDisplay(event: EventDTO): string {
 }
 
 export default function EventsPage() {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const searchQuery = searchParams.get('search') ?? '';
 
+    const [searchInput, setSearchInput] = useState(searchQuery);
+    
     const [events, setEvents] = useState<EventDTO[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        eventApi.getAllActiveEvents().then(list => {
-            setEvents(list);
-            setLoading(false);
-        });
-    }, []);
+        setLoading(true);
+        if (searchQuery) {
+            eventApi.searchEvents(searchQuery).then(list => {
+                setEvents(list);
+                setLoading(false);
+            });
+        } else {
+            eventApi.getAllActiveEvents().then(list => {
+                setEvents(list);
+                setLoading(false);
+            });
+        }
+    }, [searchQuery]);
 
-    const filteredEvents = searchQuery
-        ? events.filter(e =>
-            e.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (e.eventLocation ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : events;
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSearchParams(searchInput ? { search: searchInput } : {});
+    };
 
     return (
         <div className="bg-[#0b1326] text-[#dbe2fd] min-h-screen font-sans overflow-x-hidden pb-32">
@@ -62,23 +70,52 @@ export default function EventsPage() {
                     </div>
                     <div className="flex gap-2">
                         <span className="bg-[#03dbe7]/10 text-[#03dbe7] px-3 py-1 rounded-full text-xs font-mono border border-[#03dbe7]/20">
-                            {filteredEvents.length} EVENTS
+                            {events.length} EVENTS
                         </span>
                     </div>
                 </section>
+
+                {/* Search Bar */}
+                <form onSubmit={handleSearch} className="mb-8 flex flex-col sm:flex-row gap-3">
+                    <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="Search events by name or location..."
+                        className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] px-4 py-3 rounded-lg flex-1 focus:outline-none focus:border-[#03dbe7] placeholder-gray-500"
+                    />
+                    <button
+                        type="submit"
+                        className="bg-[#03dbe7] text-[#00363a] px-8 py-3 rounded-lg font-bold tracking-widest hover:bg-[#75f5ff] hover:shadow-[0_0_15px_rgba(3,219,231,0.4)] transition-all active:scale-95"
+                    >
+                        SEARCH
+                    </button>
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSearchInput('');
+                                setSearchParams({});
+                            }}
+                            className="bg-transparent border border-gray-700 text-gray-400 px-6 py-3 rounded-lg font-bold tracking-widest hover:bg-gray-800 hover:text-white transition-all"
+                        >
+                            CLEAR
+                        </button>
+                    )}
+                </form>
 
                 {loading ? (
                     <div className="flex justify-center py-24">
                         <span className="material-symbols-outlined animate-spin text-4xl text-[#03dbe7]">refresh</span>
                     </div>
-                ) : filteredEvents.length === 0 ? (
-                    <div className="col-span-3 text-center py-20 text-gray-400">
+                ) : events.length === 0 ? (
+                    <div className="text-center py-20 text-gray-400">
                         <p className="text-2xl font-bold mb-2">{searchQuery ? 'No events found' : 'No events yet'}</p>
                         <p className="text-sm">{searchQuery ? 'Try a different search term.' : 'Check back soon!'}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredEvents.map(event => (
+                        {events.map(event => (
                             <div key={event.eventId}
                                 className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] hover:border-[#75f5ff]/50 rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 group">
 
