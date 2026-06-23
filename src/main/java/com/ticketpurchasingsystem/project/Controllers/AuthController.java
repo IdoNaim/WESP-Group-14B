@@ -235,9 +235,7 @@ public class AuthController {
             }
             String userId = authenticationService.getUser(token);
             UserInfo userInfo = userService.getUserInfo(userId);
-            System.out.println("User : " + userInfo.getName()+", id: "+ userInfo.getId());
             boolean isAdmin = userRepo.isAdmin(userId);
-            System.out.println("Is admin: " + isAdmin);
             String state = userInfo.getUserState().name();
 
             Map<Integer, String> productionRoles = Collections.emptyMap();
