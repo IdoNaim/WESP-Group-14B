@@ -16,6 +16,8 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import java.util.Objects;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointmentRequestedEvent;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
@@ -30,16 +32,19 @@ public class NotificationEventListener {
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
     private final IEventRepo eventRepo;
+    private final IPaymentGateway paymentGateway;
     private final loggerDef logger = loggerDef.getInstance();
 
     public NotificationEventListener(INotificationService notificationService,
                                      AuthenticationService authenticationService,
                                      IHistoryOrderRepo historyOrderRepo,
-                                     IEventRepo eventRepo) {
+                                     IEventRepo eventRepo,
+                                     IPaymentGateway paymentGateway) {
         this.notificationService = notificationService;
         this.authenticationService = authenticationService;
         this.historyOrderRepo = Objects.requireNonNull(historyOrderRepo, "historyOrderRepo must not be null");
         this.eventRepo = Objects.requireNonNull(eventRepo, "eventRepo must not be null");
+        this.paymentGateway = Objects.requireNonNull(paymentGateway, "paymentGateway must not be null");
     }
 
     @EventListener
@@ -87,13 +92,31 @@ public class NotificationEventListener {
 
     @EventListener
     public void onEventCancelled(EventCancelledEvent event) {
-        Set<String> buyers = new LinkedHashSet<>();
-        historyOrderRepo.findAllByEventId(event.getEventId())
-                .forEach(order -> buyers.add(order.getUserId()));
-        String message = String.format(
+        java.util.List<HistoryOrderItem> orders = historyOrderRepo.findAllByEventId(event.getEventId());
+        Set<String> buyersWithDefaultNotification = new LinkedHashSet<>();
+        for (HistoryOrderItem order : orders) {
+            if (order.getTransactionId() != null && order.getTransactionId() != -1) {
+                try {
+                    int originalTxId = order.getTransactionId();
+                    paymentGateway.refund(originalTxId);
+                    order.setTransactionId(-1);
+                    historyOrderRepo.save(order);
+                    logger.info("Successfully refunded transaction " + originalTxId + " for order " + order.getOrderId());
+                    String successMessage = String.format("Event \"%s\" has been canceled and your payment of %.2f for order %s has been fully refunded.", event.getEventName(), order.getPrice(), order.getOrderId());
+                    notificationService.createSystemNotification(order.getUserId(), successMessage);
+                } catch (Exception e) {
+                    logger.error("Failed to refund transaction " + order.getTransactionId() + " for order " + order.getOrderId());
+                    String failMessage = String.format("Event \"%s\" has been canceled, but your automatic refund of %.2f for order %s could not be processed. Please contact customer service for assistance.", event.getEventName(), order.getPrice(), order.getOrderId());
+                    notificationService.createSystemNotification(order.getUserId(), failMessage);
+                }
+            } else {
+                buyersWithDefaultNotification.add(order.getUserId());
+            }
+        }
+        String defaultMessage = String.format(
                 "Event \"%s\" has been cancelled.", event.getEventName());
-        for (String userId : buyers) {
-            notificationService.createSystemNotification(userId, message);
+        for (String userId : buyersWithDefaultNotification) {
+            notificationService.createSystemNotification(userId, defaultMessage);
         }
     }
 

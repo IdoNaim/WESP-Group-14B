@@ -13,8 +13,9 @@ public class HistoryOrderDTO {
     public double price;
     public List<String> seatIds;
     public HashMap<String, Integer> StandingAreaQuantities;
+    public Integer transactionId;
 
-    public HistoryOrderDTO(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+    public HistoryOrderDTO(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities, Integer transactionId) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
@@ -23,6 +24,11 @@ public class HistoryOrderDTO {
         this.price = price;
         this.seatIds = seatIds;
         this.StandingAreaQuantities = standingAreaQuantities;
+        this.transactionId = transactionId;
+    }
+
+    public HistoryOrderDTO(String orderId, String userId, String eventId, int companyId, Timestamp purchaseDate, double price, List<String> seatIds, HashMap<String, Integer> standingAreaQuantities) {
+        this(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, standingAreaQuantities, null);
     }
 
     public String getOrderId() { return orderId; }
@@ -33,4 +39,5 @@ public class HistoryOrderDTO {
     public double getPrice() { return price; }
     public List<String> getSeatIds() { return seatIds; }
     public HashMap<String, Integer> getStandingAreaQuantities() { return StandingAreaQuantities; }
+    public Integer getTransactionId() { return transactionId; }
 }

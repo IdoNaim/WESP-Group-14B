@@ -591,4 +591,19 @@ public class EventHandler {
             return "Purchase policy requirements not met.";
         return "Purchase policy violated: " + String.join(", ", violations) + ".";
     }
+
+    public List<EventDTO> searchActiveEventsByText(String query) {
+        //getting all active events from the repo
+        List<Event> activeEvents = eventRepo.findActiveEvents();
+
+        //getting event that contains the query in their name 
+        activeEvents = activeEvents.stream()
+                .filter(event -> event.getEventName().toLowerCase().contains(query.toLowerCase()))
+                .toList();
+        //mapping to DTOs
+        List<EventDTO> events = activeEvents.stream().map(this::toDTO).toList();
+
+        logger.info("Found " + events.size() + " active events matching query: " + query);
+        return events;
+    }
 }
