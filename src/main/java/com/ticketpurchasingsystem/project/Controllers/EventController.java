@@ -225,11 +225,8 @@ public class EventController {
                 @PathVariable String eventId,
                 @RequestBody PurchasePolicyDTO body) {
                 checkPermissionForEvent(authHeader, eventId, ManagerPermission.PURCHASING_AND_DISCOUNT_POLICY_MANAGEMENT);
-                loggerDef.getInstance().info("Received request to edit purchase policy for event " + eventId);
                 boolean success = eventService.editEventPurchasePolicy(authHeader, eventId, body);
                 
-                loggerDef.getInstance().info("Edit event policy for event " + eventId + ": " + (success ? "Success" : "Failure"));
-                loggerDef.getInstance().info("New purchase policy: " + body);
                 return success ? ResponseEntity.ok().build() : ResponseEntity.badRequest().build();
         }
 
@@ -279,7 +276,6 @@ public class EventController {
                 ? authHeader.substring(7) 
                 : authHeader;
                 PurchasePolicyDTO purchasePolicy = eventService.getEventPurchasePolicy(token, eventId);
-                loggerDef.getInstance().info("Retrieved purchase policy for event " + eventId + ": " + purchasePolicy);
                 return purchasePolicy != null
                         ? ResponseEntity.ok(purchasePolicy)
                         : ResponseEntity.notFound().build();
