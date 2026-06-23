@@ -1,7 +1,10 @@
 package com.ticketpurchasingsystem.project.domain.event;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+
+import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 
 public interface IEventRepo {
 
