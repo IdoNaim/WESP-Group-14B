@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 public class LegacyInfrastructureTests {
 
     @Test
-    public void testPaymentGateway() {
+    public void GivenValidPaymentDetails_WhenPayRefundAndHandshake_ThenPaymentGatewayReturnsExpectedResults() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
                 .thenReturn("50000")  // pay
@@ -41,7 +41,7 @@ public class LegacyInfrastructureTests {
     }
 
     @Test
-    public void testBarCodeGateway() {
+    public void GivenValidOrderWithSeatsAndStandingAreas_WhenIssueBarcodes_ThenReturnBarcodeForEachTicket() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
                 .thenReturn("TIX-AAA-0001")
@@ -66,7 +66,7 @@ public class LegacyInfrastructureTests {
     }
 
     @Test
-    public void testPurchasePolicyControllerValidate() {
+    public void GivenValidPolicyRequest_WhenValidatePurchase_ThenReturnSuccessResponse() {
         PurchasePolicyService mockService = mock(PurchasePolicyService.class);
         PolicyValidationResult result = PolicyValidationResult.success();
         when(mockService.validatePurchase("event1", 25, 2)).thenReturn(result);
@@ -87,7 +87,7 @@ public class LegacyInfrastructureTests {
     }
 
     @Test
-    public void testPurchasePolicyControllerBuildRuleAndAssign() {
+    public void GivenVariousPolicyTypes_WhenAssignPolicyToEvent_ThenReturnExpectedHttpStatus() {
         PurchasePolicyService mockService = mock(PurchasePolicyService.class);
         PurchasePolicyController controller = new PurchasePolicyController(mockService);
 
@@ -198,7 +198,7 @@ public class LegacyInfrastructureTests {
     }
 
     @Test
-    public void testPurchasePolicyControllerGetPolicyAndDescribe() {
+    public void GivenVariousPolicyAdapters_WhenGetPolicyByEvent_ThenReturnCorrectDescription() {
         PurchasePolicyService mockService = mock(PurchasePolicyService.class);
         PurchasePolicyController controller = new PurchasePolicyController(mockService);
 

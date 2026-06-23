@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DiscountPolicyTest {
 
     @Test
-    public void testDiscountContextGettersAndSetters() {
+    public void GivenDiscountContext_WhenSettingDiscountedPrice_ThenGettersReturnCorrectValues() {
         DiscountContext context = new DiscountContext(5, "SAVE20", 100.0);
         
         assertEquals(5, context.getTicketCount());
@@ -21,7 +21,7 @@ public class DiscountPolicyTest {
     }
 
     @Test
-    public void testCouponDiscountRuleApplication() {
+    public void GivenCouponDiscountRule_WhenApplyingWithMatchingAndNonMatchingCoupon_ThenReturnCorrectPrice() {
         CouponDiscountRule rule = new CouponDiscountRule("SAVE20", 20.0);
         
         // Scenario 1: Coupon matches
@@ -36,7 +36,7 @@ public class DiscountPolicyTest {
     }
 
     @Test
-    public void testDiscountPolicyCalculation() {
+    public void GivenDiscountPolicyWithMultipleRules_WhenCalculateFinalPrice_ThenApplyMatchingCouponDiscount() {
         DiscountPolicy policy = new DiscountPolicy();
         policy.addDiscountRule(new CouponDiscountRule("SAVE10", 10.0));
         policy.addDiscountRule(new CouponDiscountRule("SAVE20", 20.0));

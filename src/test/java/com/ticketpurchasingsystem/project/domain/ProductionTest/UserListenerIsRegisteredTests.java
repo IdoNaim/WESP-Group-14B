@@ -52,7 +52,7 @@ class UserListenerIsRegisteredTests {
     }
 
     @Test
-    void WhenOnIsUserRegisteredGivenExistingUser_ThenEventRegisteredIsTrue() {
+    void GivenExistingUser_WhenOnIsUserRegistered_ThenEventRegisteredIsTrue() {
         // Arrange
         when(userRepo.findByID(EXISTING_USER_ID)).thenReturn(existingUser);
         when(userHandler.isUserRegistered(existingUser)).thenReturn(true);
@@ -66,7 +66,7 @@ class UserListenerIsRegisteredTests {
     }
 
     @Test
-    void WhenOnIsUserRegisteredGivenUnknownUser_ThenEventRegisteredIsFalse() {
+    void GivenUnknownUser_WhenOnIsUserRegistered_ThenEventRegisteredIsFalse() {
         // Arrange
         when(userRepo.findByID(UNKNOWN_USER_ID)).thenReturn(null);
         IsUserRegisteredEvent event = new IsUserRegisteredEvent(UNKNOWN_USER_ID);
@@ -79,7 +79,7 @@ class UserListenerIsRegisteredTests {
     }
 
     @Test
-    void WhenOnIsUserRegisteredGivenUserId_ThenRepoCalledOnceWithCorrectId() {
+    void GivenUserId_WhenOnIsUserRegistered_ThenRepoCalledOnceWithCorrectId() {
         // Arrange
         when(userRepo.findByID(EXISTING_USER_ID)).thenReturn(existingUser);
         IsUserRegisteredEvent event = new IsUserRegisteredEvent(EXISTING_USER_ID);
@@ -92,7 +92,7 @@ class UserListenerIsRegisteredTests {
     }
 
     @Test
-    void WhenOnIsUserRegisteredGivenUserId_ThenEventPreservesUserId() {
+    void GivenUserId_WhenOnIsUserRegistered_ThenEventPreservesUserId() {
         // Arrange
         when(userRepo.findByID(EXISTING_USER_ID)).thenReturn(existingUser);
         IsUserRegisteredEvent event = new IsUserRegisteredEvent(EXISTING_USER_ID);

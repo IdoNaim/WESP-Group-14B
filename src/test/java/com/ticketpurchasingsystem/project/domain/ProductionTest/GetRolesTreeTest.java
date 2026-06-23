@@ -70,7 +70,7 @@ public class GetRolesTreeTest {
     // ── Service-level positive tests ─────────────────────────────────────────
 
     @Test
-    public void SuccessfulTreeLoad() {
+    public void GivenFounderWithOwnerAndManager_WhenGetRolesTree_ThenReturnCompleteRolesTree() {
         // Setup: users 123, 456, 789
         // 123 is founder, appoints 456 as owner
         // 456 appoints 789 as manager with full permissions
@@ -93,7 +93,7 @@ public class GetRolesTreeTest {
     }
 
     @Test
-    public void TreeWithNoManagers() {
+    public void GivenFounderWithOwnerOnly_WhenGetRolesTree_ThenReturnTreeWithEmptyManagerTree() {
         // Setup: users 123, 456
         // 123 is founder, appoints 456 as owner
         // 123 requests the tree — should show only owners, no managers

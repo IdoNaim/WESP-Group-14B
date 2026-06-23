@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EventDiscountsTest {
 
     @Test
-    public void testVisibleDiscountBehavior() {
+    public void GivenVisibleDiscountWithFutureDate_WhenCalculateDiscount_ThenReturnCorrectAmount() {
         LocalDateTime validUntil = LocalDateTime.now().plusDays(10);
         VisibleDiscount discount = new VisibleDiscount("Summer Sale", 15.5, validUntil);
         
@@ -20,7 +20,7 @@ public class EventDiscountsTest {
     }
 
     @Test
-    public void testCouponDiscountBehavior() {
+    public void GivenCouponDiscountWithFutureDate_WhenCalculateDiscount_ThenReturnCorrectAmount() {
         LocalDateTime validUntil = LocalDateTime.now().plusDays(5);
         CouponDiscount discount = new CouponDiscount("Promo Code", "SAVE10", 10.0, validUntil);
 
@@ -30,7 +30,7 @@ public class EventDiscountsTest {
     }
 
     @Test
-    public void testDependentDiscountBehavior() {
+    public void GivenDependentDiscountWithBuyTwoGetOne_WhenCalculateDiscount_ThenReturnCorrectAmount() {
         DependentDiscount discount = new DependentDiscount("Buy 2 Get 1", 2, 1);
 
         assertEquals("Buy 2 Get 1", discount.getDiscountName());

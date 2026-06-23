@@ -17,7 +17,7 @@ import static org.mockito.Mockito.mock;
 public class LegacyEventTests {
 
     @Test
-    public void testAssignedSeatBehavior() {
+    public void GivenAssignedSeat_WhenBookingAndUnbooking_ThenSeatStateChangesCorrectly() {
         AssignedSeat seat = new AssignedSeat("VIP", 1, 5, 100.0);
         assertEquals("VIP_1_5", seat.getId());
         assertFalse(seat.isBooked());
@@ -56,7 +56,7 @@ public class LegacyEventTests {
     }
 
     @Test
-    public void testStandingAreaBehavior() {
+    public void GivenStandingArea_WhenBookingAndUnbooking_ThenAvailabilityChangesCorrectly() {
         StandingArea area = new StandingArea(100, 50.0, "floor1");
         assertEquals("floor1", area.getId());
         assertEquals(100, area.getAvalibleSeatNumber());
@@ -87,7 +87,7 @@ public class LegacyEventTests {
     }
 
     @Test
-    public void testSeatingMapBehavior() {
+    public void GivenSeatingMap_WhenAddingAreasAndBookingSeats_ThenMapBehavesCorrectly() {
         SeatingMap map = new SeatingMap();
 
         // invalid adds
@@ -160,7 +160,7 @@ public class LegacyEventTests {
     }
 
     @Test
-    public void testEventBehavior() {
+    public void GivenEventWithVariousParameters_WhenSettingFieldsAndCopying_ThenEventBehavesCorrectly() {
         LocalDateTime date = LocalDateTime.now().plusDays(2);
         EventPurchasePolicy purchasePolicy = new EventPurchasePolicy();
         EventDiscountPolicy discountPolicy = new EventDiscountPolicy(List.of());

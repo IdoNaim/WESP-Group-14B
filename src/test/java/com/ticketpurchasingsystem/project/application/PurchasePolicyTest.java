@@ -61,7 +61,7 @@ class PurchasePolicyTest {
         // ──────────────────────────────────────────
 
         @Test
-        void testAgePurchasePolicy() {
+        void GivenAgePolicyWithMinAndMaxBounds_WhenValidatePurchase_ThenEnforceAgeLimitsCorrectly() {
                 // Age policy: min 18, max 60
                 ITicketPurchaseRule rule = new PurchaseRuleAdapter(
                                 new AndRule(new MinAgeRule(18), new MaxAgeRule(60)),
@@ -94,7 +94,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testMinTicketsPurchasePolicy() {
+        void GivenMinTicketsPolicy_WhenValidatePurchase_ThenEnforceMinimumTicketLimit() {
                 ITicketPurchaseRule rule = new PurchaseRuleAdapter(
                                 new MinTicketsRule(3),
                                 "MIN_TICKETS", null, null, 3, null, null);
@@ -108,7 +108,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testMaxTicketsPurchasePolicy() {
+        void GivenMaxTicketsPolicy_WhenValidatePurchase_ThenEnforceMaximumTicketLimit() {
                 ITicketPurchaseRule rule = new PurchaseRuleAdapter(
                                 new MaxTicketsRule(6),
                                 "MAX_TICKETS", null, null, null, 6, null);
@@ -122,7 +122,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testAndPolicyComposition() {
+        void GivenAndPolicyWithAgeAndTicketRules_WhenValidatePurchase_ThenBothRulesMustPass() {
                 ITicketPurchaseRule rule1 = new PurchaseRuleAdapter(
                                 new MinAgeRule(18),
                                 "AGE", 18, null, null, null, null);
@@ -149,7 +149,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testOrPolicyComposition() {
+        void GivenOrPolicyWithAgeAndTicketRules_WhenValidatePurchase_ThenAtLeastOneRuleMustPass() {
                 ITicketPurchaseRule rule1 = new PurchaseRuleAdapter(
                                 new MinAgeRule(18),
                                 "AGE", 18, null, null, null, null);
@@ -182,7 +182,7 @@ class PurchasePolicyTest {
         // ──────────────────────────────────────
 
         @Test
-        void testValidatePurchaseSuccessWhenNoPolicies() {
+        void GivenNoPoliciesAssigned_WhenValidatePurchase_ThenReturnSuccess() {
                 Event event = createMockEvent();
                 when(eventRepo.findById("123")).thenReturn(event);
                 when(prodRepo.findById(1)).thenReturn(Optional.empty());
@@ -192,7 +192,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testValidatePurchaseFailsOnEventPolicy() {
+        void GivenEventPolicyViolated_WhenValidatePurchase_ThenReturnFailure() {
                 Event event = createMockEvent();
                 event.setTicketPurchasePolicy(new PurchaseRuleAdapter(
                                 new MinAgeRule(18),
@@ -205,7 +205,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testValidatePurchaseFailsOnCompanyPolicy() {
+        void GivenCompanyPolicyViolated_WhenValidatePurchase_ThenReturnFailure() {
                 Event event = createMockEvent();
                 event.setTicketPurchasePolicy(null); // Event policy passes
 
@@ -223,7 +223,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testAssignAndGetPolicies() {
+        void GivenPolicyRule_WhenAssignToEventAndCompany_ThenPolicyIsStoredAndRetrievable() {
                 Event event = createMockEvent();
                 when(eventRepo.findById("123")).thenReturn(event);
 
@@ -247,7 +247,7 @@ class PurchasePolicyTest {
         // ──────────────────────────────────────────────────
 
         @Test
-        void testControllerValidatePurchaseEndpoint() throws Exception {
+        void GivenMinTicketsPolicyAndInsufficientTickets_WhenValidatePurchaseEndpoint_ThenReturnRejectionMessage() throws Exception {
                 Event event = createMockEvent();
                 event.setTicketPurchasePolicy(new PurchaseRuleAdapter(
                                 new MinTicketsRule(3),
@@ -269,7 +269,7 @@ class PurchasePolicyTest {
         }
 
         @Test
-        void testControllerAssignAndGetEndpoints() throws Exception {
+        void GivenAgePolicyRequest_WhenAssignAndGetPolicyEndpoints_ThenPolicyIsAssignedAndRetrievable() throws Exception {
                 Event event = createMockEvent();
                 when(eventRepo.findById("123")).thenReturn(event);
 

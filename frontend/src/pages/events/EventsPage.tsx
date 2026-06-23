@@ -115,9 +115,11 @@ export default function EventsPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {events.map(event => (
+{events.map(event => {
+                            const isPast = event.eventDateTime ? new Date(event.eventDateTime) < new Date() : false;
+                            return (
                             <div key={event.eventId}
-                                className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] hover:border-[#75f5ff]/50 rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 group">
+                                className={`bg-[#171f33] border text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all group ${isPast ? 'border-gray-700 opacity-60' : 'border-gray-800 hover:border-[#75f5ff]/50 hover:-translate-y-1'}`}>
 
                                 {/* Image or placeholder */}
                                 <div className="h-48 relative overflow-hidden bg-[#0f1627]">
@@ -125,14 +127,18 @@ export default function EventsPage() {
                                         <img
                                             src={event.imageUrl}
                                             alt={event.eventName}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            className={`w-full h-full object-cover transition-transform duration-500 ${isPast ? 'grayscale' : 'group-hover:scale-105'}`}
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
                                             <span className="material-symbols-outlined text-6xl text-gray-700">event</span>
                                         </div>
                                     )}
-                                    {event.isActive && (
+                                    {isPast ? (
+                                        <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-gray-700 text-gray-300">
+                                            Past
+                                        </div>
+                                    ) : event.isActive && (
                                         <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-[#03dbe7] text-[#00363a]">
                                             Active
                                         </div>
@@ -183,7 +189,7 @@ export default function EventsPage() {
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                        );})}
                     </div>
                 )}
             </main>

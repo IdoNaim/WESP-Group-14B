@@ -13,7 +13,7 @@ public class OrderEventsTest {
     }
 
     @Test
-    public void testOrderEventGetters() {
+    public void GivenOrderEvent_WhenAccessingOrderIdAndEventType_ThenGettersReturnCorrectValues() {
         OrderEvent event = new TestOrderEvent("order-123", "ORDER_COMPLETED");
         assertEquals("order-123", event.getOrderId());
         assertEquals("ORDER_COMPLETED", event.getEventType());

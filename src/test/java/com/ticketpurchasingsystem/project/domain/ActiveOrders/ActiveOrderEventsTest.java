@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ActiveOrderEventsTest {
 
     @Test
-    public void testIsUpToPolicyEventAllBranches() {
+    public void GivenOrderWithMixedSeatIds_WhenCreatingIsUpToPolicyEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         List<String> seatIds = new ArrayList<>();
         seatIds.add("A1");
@@ -60,7 +60,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testSeatReleaseEvent() {
+    public void GivenValidSeatIds_WhenCreatingSeatReleaseEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         List<String> seatIds = List.of("A1", "A2");
         SeatReleaseEvent event = new SeatReleaseEvent(source, "token123", "event1", seatIds, "order1");
@@ -72,7 +72,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testSeatReservationEvent() {
+    public void GivenValidSeatIds_WhenCreatingSeatReservationEvent_ThenGettersAndResultReturnCorrectValues() {
         Object source = new Object();
         List<String> seatIds = List.of("B1");
         SeatReservationEvent event = new SeatReservationEvent(source, "token123", "event1", seatIds, "order1");
@@ -88,7 +88,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testCheckSeatsReservedEvent() {
+    public void GivenValidSeatIds_WhenCreatingCheckSeatsReservedEvent_ThenGettersAndResultReturnCorrectValues() {
         Object source = new Object();
         List<String> seatIds = List.of("C1");
         CheckSeatsReservedEvent event = new CheckSeatsReservedEvent(source, "token123", "order1", "event1", seatIds);
@@ -105,7 +105,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testIsMemberEvent() {
+    public void GivenUserId_WhenCreatingIsMemberEvent_ThenDefaultIsFalseAndCanBeSet() {
         Object source = new Object();
         IsMemberEvent event = new IsMemberEvent(source, "user1");
 
@@ -117,7 +117,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testStandingAreaReservationEvent() {
+    public void GivenValidAreaAndQuantity_WhenCreatingStandingAreaReservationEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         StandingAreaReservationEvent event = new StandingAreaReservationEvent(source, "token123", "event1", "area1", 5);
 
@@ -132,7 +132,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testOrderCancelledEvent() {
+    public void GivenUserAndOrderId_WhenCreatingOrderCancelledEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         OrderCancelledEvent event = new OrderCancelledEvent(source, "user1", "order1");
 
@@ -141,13 +141,13 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testNewActiveOrder() {
+    public void GivenNoInput_WhenCreatingNewActiveOrder_ThenObjectIsNotNull() {
         NewActiveOrder event = new NewActiveOrder();
         assertNotNull(event);
     }
 
     @Test
-    public void testStandingAreaReleaseEvent() {
+    public void GivenValidAreaAndQuantity_WhenCreatingStandingAreaReleaseEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         StandingAreaReleaseEvent event = new StandingAreaReleaseEvent(source, "token123", "event1", "area1", 10);
 
@@ -158,7 +158,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testOrderRefundedEvent() {
+    public void GivenUserOrderAndAmount_WhenCreatingOrderRefundedEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         OrderRefundedEvent event = new OrderRefundedEvent(source, "user1", "order1", 150.0);
 
@@ -168,7 +168,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testCompletedOrderEvent() {
+    public void GivenOrderAndPaymentDetails_WhenCreatingCompletedOrderEvent_ThenGettersReturnCorrectValues() {
         Object source = new Object();
         ActiveOrderDTO order = new ActiveOrderDTO("order1", "user1", "event1", new Timestamp(System.currentTimeMillis()), List.of("A1"), new HashMap<>());
         CompletedOrderEvent event = new CompletedOrderEvent(source, order, 250.0, 99);
@@ -179,7 +179,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testGetCompanyIdEvent() {
+    public void GivenEventId_WhenCreatingGetCompanyIdEvent_ThenResultCanBeSetAndRetrieved() {
         Object source = new Object();
         GetCompanyIdEvent event = new GetCompanyIdEvent(source, "event1");
 
@@ -191,7 +191,7 @@ public class ActiveOrderEventsTest {
     }
 
     @Test
-    public void testIsValidEventIDEvent() {
+    public void GivenEventId_WhenCreatingIsValidEventIDEvent_ThenDefaultIsFalseAndCanBeSet() {
         Object source = new Object();
         IsValidEventIDEvent event = new IsValidEventIDEvent(source, "event1");
 

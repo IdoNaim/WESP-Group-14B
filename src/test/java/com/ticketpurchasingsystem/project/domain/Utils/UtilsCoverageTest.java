@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class UtilsCoverageTest {
 
     @Test
-    public void testRolesTreeDTOToStringAndGetters() {
+    public void GivenValidRolesTreeData_WhenBuildRolesTreeDTO_ThenGettersAndToStringReturnCorrectValues() {
         OwnerDTO founder = new OwnerDTO("owner1", null);
         OwnerDTO owner2 = new OwnerDTO("owner2", "owner1");
 
@@ -58,7 +58,7 @@ public class UtilsCoverageTest {
     }
 
     @Test
-    public void testOwnerDTOBehavior() {
+    public void GivenOwnerDTOWithAndWithoutAppointer_WhenCheckingProperties_ThenBehaviorIsCorrect() {
         OwnerDTO founder = new OwnerDTO("owner1", null);
         OwnerDTO appointed = new OwnerDTO("owner2", "owner1");
 
@@ -75,7 +75,7 @@ public class UtilsCoverageTest {
     }
 
     @Test
-    public void testManagerDTOBehavior() {
+    public void GivenManagerDTOWithEmptyAndNonEmptyPermissions_WhenCheckingProperties_ThenBehaviorIsCorrect() {
         // Branch 1: empty permissions
         ManagerDTO managerEmpty = new ManagerDTO("manager1", "owner1", Collections.emptySet());
         assertEquals("manager1", managerEmpty.getUserId());
@@ -94,7 +94,7 @@ public class UtilsCoverageTest {
     }
 
     @Test
-    public void testPasswordEncoderUtilAndIdGenerator() {
+    public void GivenValidPassword_WhenEncodingAndMatching_ThenPasswordEncoderAndIdGeneratorWorkCorrectly() {
         // PasswordEncoderUtil
         String pw = "mySecretPassword123";
         String encoded = PasswordEncoderUtil.encodePassword(pw);
@@ -122,7 +122,7 @@ public class UtilsCoverageTest {
     }
 
     @Test
-    public void testAllDTOsAndRecords() {
+    public void GivenValidData_WhenConstructingAllDTOs_ThenGettersAndSettersReturnCorrectValues() {
         // DiscountDTO
         LocalDateTime validUntil = LocalDateTime.now();
         DiscountDTO discountDTO = new DiscountDTO(

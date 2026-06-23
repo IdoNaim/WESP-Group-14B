@@ -49,31 +49,31 @@ public class LoggerTests {
     }
 
     @Test
-    void singletonReturnsSameInstance() {
+    void GivenLoggerDef_WhenGetInstanceCalledTwice_ThenReturnSameInstance() {
         assertSame(loggerDef.getInstance(), loggerDef.getInstance());
     }
 
     @Test
-    void formatMsgContainsOriginalMessage() {
+    void GivenMessage_WhenFormatMsg_ThenOutputContainsOriginalMessage() {
         String result = logger.formatMsg("hello world");
         assertTrue(result.contains("hello world"));
     }
 
     @Test
-    void formatMsgContainsCurrentDate() {
+    void GivenCurrentDate_WhenFormatMsg_ThenOutputContainsCurrentDate() {
         String result = logger.formatMsg("msg");
         assertTrue(result.contains(LocalDate.now().toString()),
                 "Timestamp should contain today's date: " + LocalDate.now());
     }
 
     @Test
-    void formatMsgStartsWithCyanColor() {
+    void GivenMessage_WhenFormatMsg_ThenOutputStartsWithCyanColor() {
         String result = logger.formatMsg("msg");
         assertTrue(result.startsWith(CYAN));
     }
 
     @Test
-    void infoLogsWithBlueColor() {
+    void GivenInfoMessage_WhenInfo_ThenLogStartsWithBlueColor() {
         logger.info("test info");
         assertEquals(1, capturedLogs.size());
         String logged = capturedLogs.get(0);
@@ -83,7 +83,7 @@ public class LoggerTests {
     }
 
     @Test
-    void warnLogsWithYellowColor() {
+    void GivenWarnMessage_WhenWarn_ThenLogStartsWithYellowColor() {
         logger.warn("test warning");
         assertEquals(1, capturedLogs.size());
         String logged = capturedLogs.get(0);
@@ -93,7 +93,7 @@ public class LoggerTests {
     }
 
     @Test
-    void errorLogsWithRedColor() {
+    void GivenErrorMessage_WhenError_ThenLogStartsWithRedColor() {
         logger.error("test error");
         assertEquals(1, capturedLogs.size());
         String logged = capturedLogs.get(0);
@@ -103,7 +103,7 @@ public class LoggerTests {
     }
 
     @Test
-    void eachLogCallInvokesOutputLoggerOnce() {
+    void GivenInfoWarnAndErrorCalls_WhenLogging_ThenEachCallInvokesOutputLoggerOnce() {
         logger.info("a");
         logger.warn("b");
         logger.error("c");
@@ -111,7 +111,7 @@ public class LoggerTests {
     }
 
     @Test
-    void emptyMessageIsLoggedWithoutError() {
+    void GivenEmptyMessage_WhenInfo_ThenNoExceptionThrownAndMessageLogged() {
         assertDoesNotThrow(() -> logger.info(""));
         assertEquals(1, capturedLogs.size());
     }
@@ -126,7 +126,7 @@ public class LoggerTests {
     }
 
     @Test
-    void fileOutputLoggerWritesMessageToFile() throws IOException {
+    void GivenFileOutputLogger_WhenLogMessage_ThenMessageIsWrittenToFile() throws IOException {
         fileOutputLogger fileLogger = new fileOutputLogger();
         fileLogger.log("file test message");
         String content = Files.readString(LOG_FILE);
@@ -134,7 +134,7 @@ public class LoggerTests {
     }
 
     @Test
-    void fileOutputLoggerAppendsMultipleMessages() throws IOException {
+    void GivenFileOutputLogger_WhenLogMultipleMessages_ThenAllMessagesAreAppended() throws IOException {
         fileOutputLogger fileLogger = new fileOutputLogger();
         fileLogger.log("first");
         fileLogger.log("second");
@@ -144,7 +144,7 @@ public class LoggerTests {
     }
 
     @Test
-    void fileOutputLoggerCreatesFileIfAbsent() throws IOException {
+    void GivenNoExistingLogFile_WhenFileOutputLoggerLogs_ThenFileIsCreated() throws IOException {
         Files.deleteIfExists(LOG_FILE);
         fileOutputLogger fileLogger = new fileOutputLogger();
         assertDoesNotThrow(() -> fileLogger.log("create file"));
@@ -154,7 +154,7 @@ public class LoggerTests {
     // --- output switching tests ---
 
     @Test
-    void setOutputLoggerFileWritesToFile() throws IOException {
+    void GivenFileOutput_WhenSwitchToFileAndLog_ThenMessageWrittenToFile() throws IOException {
         logger.setOutputLoggerFile(null);
         logger.info("switched to file");
         assertTrue(Files.exists(LOG_FILE), "log.txt should be created after switching to file output");
@@ -162,14 +162,14 @@ public class LoggerTests {
     }
 
     @Test
-    void setOutputLoggerFileStopsWritingToCapturer() {
+    void GivenFileOutput_WhenSwitchToFileAndLog_ThenCapturerReceivesNoMessages() {
         logger.setOutputLoggerFile(null);
         logger.info("should not reach capturer");
         assertTrue(capturedLogs.isEmpty(), "capturer should receive nothing after switching to file output");
     }
 
     @Test
-    void setOutputTerminalStopsWritingToFile() throws IOException {
+    void GivenTerminalOutput_WhenSwitchBackToTerminalAndLog_ThenNoFileIsWritten() throws IOException {
         logger.setOutputLoggerFile(null);
         logger.setOutputTerminal(null);
         logger.info("back to terminal");
@@ -177,7 +177,7 @@ public class LoggerTests {
     }
 
     @Test
-    void switchFromFileToTerminalAndBackWritesToFile() throws IOException {
+    void GivenFileThenTerminalThenFileOutput_WhenLog_ThenMessageWrittenToFile() throws IOException {
         logger.setOutputLoggerFile(null);
         logger.setOutputTerminal(null);
         logger.setOutputLoggerFile(null);

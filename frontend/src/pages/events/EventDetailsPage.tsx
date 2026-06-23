@@ -105,6 +105,8 @@ export default function EventDetailsPage() {
         }
     };
 
+    const isPast = eventData?.eventDateTime ? new Date(eventData.eventDateTime) < new Date() : false;
+
     if (isLoading) {
         return (
             <div className="bg-[#0b1326] min-h-screen flex items-center justify-center">
@@ -194,17 +196,17 @@ export default function EventDetailsPage() {
                         <p className="text-4xl font-mono font-black">{eventData.ticketPrice ? `$${eventData.ticketPrice}` : 'TBD'}</p>
                     </div>
 
-                    {eventData.isActive === false ? (
+                    {isPast ? (
+                        <div className="flex items-center gap-2 bg-gray-700/50 text-white px-6 py-4 rounded-lg font-bold border border-gray-600 text-xs tracking-widest uppercase">
+                            <span className="material-symbols-outlined">event_busy</span>
+                            THIS EVENT HAS ALREADY TAKEN PLACE
+                        </div>
+                    ) : eventData.isActive === false ? (
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">event_busy</span>
                             EVENT CANCELED — NO LONGER AVAILABLE
                         </div>
-                    ) : /* {!isMember ? (
-                        <div className="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-6 py-4 rounded-lg font-bold border border-amber-500/20 text-xs tracking-widest uppercase">
-                            <span className="material-symbols-outlined">lock</span>
-                            SIGN IN AS A MEMBER TO RESERVE TICKETS
-                        </div>
-                    ) : */!isAuthorized ? (
+                    ) : !isAuthorized ? (
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">block</span>
                             PURCHASE UNAVAILABLE

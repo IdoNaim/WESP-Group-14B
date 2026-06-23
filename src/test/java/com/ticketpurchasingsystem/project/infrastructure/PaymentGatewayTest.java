@@ -36,35 +36,35 @@ class PaymentGatewayTest {
     // ─── handshake ────────────────────────────────────────────────────────────
 
     @Test
-    void handshake_returnsTrue_whenResponseIsOK() {
+    void GivenOKResponse_WhenHandshake_ThenReturnTrue() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("OK");
         assertTrue(paymentGateway.handshake());
     }
 
     @Test
-    void handshake_returnsTrue_whenResponseIsOKCaseInsensitive() {
+    void GivenOKResponseCaseInsensitive_WhenHandshake_ThenReturnTrue() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("ok");
         assertTrue(paymentGateway.handshake());
     }
 
     @Test
-    void handshake_returnsTrue_whenResponseHasWhitespace() {
+    void GivenOKResponseWithWhitespace_WhenHandshake_ThenReturnTrue() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("  OK  ");
         assertTrue(paymentGateway.handshake());
     }
 
     @Test
-    void handshake_returnsFalse_whenResponseIsNotOK() {
+    void GivenNonOKResponse_WhenHandshake_ThenReturnFalse() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("ERROR");
         assertFalse(paymentGateway.handshake());
     }
 
     @Test
-    void handshake_returnsFalse_whenResponseIsNull() {
+    void GivenNullResponse_WhenHandshake_ThenReturnFalse() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(null);
         assertFalse(paymentGateway.handshake());
@@ -73,28 +73,28 @@ class PaymentGatewayTest {
     // ─── pay ─────────────────────────────────────────────────────────────────
 
     @Test
-    void pay_returnsTransactionId_whenResponseIsValidInt() {
+    void GivenValidIntResponse_WhenPay_ThenReturnTransactionId() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("42");
         assertEquals(42, paymentGateway.pay(validDetails));
     }
 
     @Test
-    void pay_returnsNegativeOne_whenResponseIsNull() {
+    void GivenNullResponse_WhenPay_ThenReturnNegativeOne() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(null);
         assertEquals(-1, paymentGateway.pay(validDetails));
     }
 
     @Test
-    void pay_returnsNegativeOne_whenResponseIsNotAnInt() {
+    void GivenNonIntResponse_WhenPay_ThenReturnNegativeOne() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("error");
         assertEquals(-1, paymentGateway.pay(validDetails));
     }
 
     @Test
-    void pay_returnsNegativeOne_whenResponseIsEmpty() {
+    void GivenEmptyResponse_WhenPay_ThenReturnNegativeOne() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("");
         assertEquals(-1, paymentGateway.pay(validDetails));
@@ -103,21 +103,21 @@ class PaymentGatewayTest {
     // ─── refund ───────────────────────────────────────────────────────────────
 
     @Test
-    void refund_returnsTransactionId_whenResponseIsValidInt() {
+    void GivenValidIntResponse_WhenRefund_ThenReturnTransactionId() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("7");
         assertEquals(7, paymentGateway.refund(42));
     }
 
     @Test
-    void refund_returnsNegativeOne_whenResponseIsNull() {
+    void GivenNullResponse_WhenRefund_ThenReturnNegativeOne() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(null);
         assertEquals(-1, paymentGateway.refund(42));
     }
 
     @Test
-    void refund_returnsNegativeOne_whenResponseIsNotAnInt() {
+    void GivenNonIntResponse_WhenRefund_ThenReturnNegativeOne() {
         when(restTemplate.postForObject(eq(PaymentGateway.API_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("FAILED");
         assertEquals(-1, paymentGateway.refund(42));
