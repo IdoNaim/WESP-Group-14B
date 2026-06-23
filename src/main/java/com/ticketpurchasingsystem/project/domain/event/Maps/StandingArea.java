@@ -1,6 +1,11 @@
 package com.ticketpurchasingsystem.project.domain.event.Maps;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "EventsStandingAreas")
@@ -35,7 +40,9 @@ public class StandingArea {
         return areaId; // Keeps your Map logic working perfectly
     }
 
-    public boolean book(String orderId, int numberOfTickets) {
+    // Test number 1
+
+    public synchronized boolean book(String orderId, int numberOfTickets) {
         if(isBookeable(numberOfTickets)) {
             availableSeats -= numberOfTickets;
             return true;
@@ -55,7 +62,7 @@ public class StandingArea {
         return availableSeats;
     }
 
-    public boolean unbook(int numberOfTickets) {
+    public synchronized boolean unbook(int numberOfTickets) {
         if (numberOfTickets <= 0 || availableSeats + numberOfTickets > capacity) {
             return false;
         }

@@ -47,7 +47,7 @@ public class AssignedSeat {
         return isBooked;
     }
 
-    public boolean book(String orderId, int numberOfTickets) {
+    public synchronized boolean book(String orderId, int numberOfTickets) {
         if (numberOfTickets != 1 || isBooked) {
             return false;
         }
@@ -56,7 +56,7 @@ public class AssignedSeat {
         return true;
     }
 
-    public boolean unbook(int numberOfTickets) {
+    public synchronized boolean unbook(int numberOfTickets) {
         if(numberOfTickets != 1 || !isBooked) {
             return false;
         }
