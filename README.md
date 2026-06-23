@@ -14,7 +14,7 @@ The application behavior and data initialization are controlled via Spring Boot 
 
 To boot the system locally using the development profile, run the following Maven command in your terminal from the root directory:
 
-    mvn clean spring-boot:run -Dspring-boot.run.profiles=dev
+    mvn clean spring-boot:run "-Dspring-boot.run.profiles=dev"
 
 Once the application is running, you can access the H2 database console at http://localhost:8080/h2-console to inspect your tables and data.
 
