@@ -606,4 +606,14 @@ public class EventHandler {
         logger.info("Found " + events.size() + " active events matching query: " + query);
         return events;
     }
+    public int getEventCompanyId(String token, String eventId){
+        if (!authenticationService.validate(extractToken(token))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        Event event = eventRepo.findById(eventId);
+        if (event == null) {
+            throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
+        }
+        return event.getCompanyId();
+    }
 }

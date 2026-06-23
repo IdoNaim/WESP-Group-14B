@@ -146,6 +146,17 @@ export const eventApi = {
         return response.json();
     },
 
+    getEventCompanyId: async (token: string, eventId: string): Promise<number> => {
+    const response = await fetch(`${BASE_URL}/companyId?eventId=${eventId}`, {
+        method: 'GET',
+        headers: getHeaders(token),
+    });
+    if (!response.ok) throw new Error("failed to get events companyId");
+    
+    // Parse the plain numeric string into a TypeScript number
+    return Number(await response.text());
+    },
+
     /**
      * PUT /api/events/{eventId}/date
      * Updates the date and time of an existing event.

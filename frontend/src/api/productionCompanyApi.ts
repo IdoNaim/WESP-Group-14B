@@ -4,6 +4,7 @@ function getToken(): string {
     return localStorage.getItem('token') || '';
 }
 
+
 export interface CompanySummary {
     companyId: number;
     companyName: string;
@@ -92,7 +93,6 @@ async function apiRequest<T>(method: string, path: string, body?: unknown): Prom
     }
     return res.json();
 }
-
 export const getRolesTree = (companyId: number): Promise<RolesTreeDTO> =>
     apiRequest('GET', `/companies/${companyId}/roles`);
 
