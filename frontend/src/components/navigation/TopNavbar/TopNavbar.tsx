@@ -33,7 +33,12 @@ export default function TopNavbar() {
 
         try {
             await logout();
-            navigate('/dashboard', { replace: true }); // Redirect to a safe page after logout
+
+            // ❌ REMOVE THIS: navigate('/dashboard', { replace: true });
+
+            //  FIX: Force a hard refresh to the dashboard
+            // This obliterates any stuck React component memory (like the welcome banner)
+            window.location.href = '/dashboard';
         }
         catch (error: any) {
             console.error('Logout failed:', error);
