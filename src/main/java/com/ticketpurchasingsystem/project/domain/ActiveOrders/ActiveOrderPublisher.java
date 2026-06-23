@@ -55,9 +55,12 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId){
-        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid, companyId);
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId, int transactionId){
+        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid, companyId, transactionId);
         eventPublisher.publishEvent(event);
+    }
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId){
+        publishCompletedOrder(order, amountPaid, companyId, -1);
     }
     public Integer publishGetCompanyId(String eventId){
         GetCompanyIdEvent event = new GetCompanyIdEvent(this, eventId);

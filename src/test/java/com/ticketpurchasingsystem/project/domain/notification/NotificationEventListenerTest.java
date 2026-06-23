@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.INotificationService;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.CompletedOrderEvent;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.OrderRefundedEvent;
@@ -37,6 +38,7 @@ class NotificationEventListenerTest {
     @Mock private AuthenticationService authenticationService;
     @Mock private IHistoryOrderRepo historyOrderRepo;
     @Mock private IEventRepo eventRepo;
+    @Mock private IPaymentGateway paymentGateway;
 
     private NotificationEventListener listener;
 
@@ -49,7 +51,7 @@ class NotificationEventListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new NotificationEventListener(notificationService, authenticationService, historyOrderRepo, eventRepo);
+        listener = new NotificationEventListener(notificationService, authenticationService, historyOrderRepo, eventRepo, paymentGateway);
     }
 
     // ── CompletedOrderEvent ─────────────────────────────────────────────────
@@ -213,6 +215,60 @@ class NotificationEventListenerTest {
         listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
 
         verify(notificationService, never()).createSystemNotification(any(), any());
+    }
+
+    @Test
+    void GivenBuyersWithTransactionId_WhenOnEventCancelled_ThenRefundAndNotify() {
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 12345);
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", "user-002", EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), -1);
+        HistoryOrderItem order3 = new HistoryOrderItem("ORD-003", "user-003", EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), null);
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2, order3));
+        when(historyOrderRepo.save(any(HistoryOrderItem.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(paymentGateway).refund(12345);
+        verify(paymentGateway, never()).refund(-1);
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("Event \"Rock Concert\" has been canceled and your payment of 50.00 for order ORD-001 has been fully refunded."));
+        verify(notificationService).createSystemNotification(eq("user-002"), contains("Rock Concert"));
+        verify(notificationService).createSystemNotification(eq("user-003"), contains("Rock Concert"));
+    }
+
+    @Test
+    void GivenFailedRefund_WhenOnEventCancelled_ThenNotifyFailureAndContinue() {
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 12345);
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", "user-002", EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 67890);
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2));
+
+        when(paymentGateway.refund(12345)).thenThrow(new RuntimeException("Gateway offline"));
+        when(historyOrderRepo.save(any(HistoryOrderItem.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(paymentGateway).refund(12345);
+        verify(paymentGateway).refund(67890);
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("Event \"Rock Concert\" has been canceled, but your automatic refund of 50.00 for order ORD-001 could not be processed. Please contact customer service for assistance."));
+        verify(notificationService).createSystemNotification(eq("user-002"), eq("Event \"Rock Concert\" has been canceled and your payment of 50.00 for order ORD-002 has been fully refunded."));
+    }
+
+    @Test
+    void GivenCancellationRetriedAfterPartialFailure_WhenOnEventCancelled_ThenOnlyRefundRemainingOrders() {
+        // order1 was already refunded in a previous attempt (transactionId is -1)
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), -1);
+        // order2 is not yet refunded (has a valid transaction ID)
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", "user-002", EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 67890);
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2));
+        when(historyOrderRepo.save(any(HistoryOrderItem.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        // Verify that paymentGateway.refund is only called for the remaining order (67890) and NOT for the already refunded one (-1)
+        verify(paymentGateway, never()).refund(-1);
+        verify(paymentGateway).refund(67890);
+        
+        // Verify appropriate notifications are sent
+        verify(notificationService).createSystemNotification(eq("user-002"), eq("Event \"Rock Concert\" has been canceled and your payment of 50.00 for order ORD-002 has been fully refunded."));
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("Event \"Rock Concert\" has been cancelled."));
     }
 
     // ── OrderRefundedEvent ──────────────────────────────────────────────────

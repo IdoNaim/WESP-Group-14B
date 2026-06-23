@@ -736,7 +736,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
     }
 
     @Test
@@ -757,7 +757,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
     }
 
     @Test
@@ -842,7 +842,7 @@ public class ActiveOrderServiceUnitTest {
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
         verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
+        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt(), anyInt());
     }
 
 
@@ -870,7 +870,7 @@ public class ActiveOrderServiceUnitTest {
         verify(paymentGatewayMock, times(1)).refund(100);
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("C-1"));
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt());
+        verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt(), anyInt());
     }
 
     @Test
@@ -891,7 +891,7 @@ public class ActiveOrderServiceUnitTest {
 
         doThrow(new RuntimeException("Persistence failed"))
                 .when(activeOrderPublisherMock)
-                .publishCompletedOrder(any(), anyDouble(), anyInt());
+                .publishCompletedOrder(any(), anyDouble(), anyInt(), anyInt());
 
         when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
