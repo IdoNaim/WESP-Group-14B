@@ -93,21 +93,27 @@ public class NotificationEventListener {
     @EventListener
     public void onEventCancelled(EventCancelledEvent event) {
         java.util.List<HistoryOrderItem> orders = historyOrderRepo.findAllByEventId(event.getEventId());
-        Set<String> buyers = new LinkedHashSet<>();
+        Set<String> buyersWithDefaultNotification = new LinkedHashSet<>();
         for (HistoryOrderItem order : orders) {
-            buyers.add(order.getUserId());
             if (order.getTransactionId() != null && order.getTransactionId() != -1) {
                 try {
                     paymentGateway.refund(order.getTransactionId());
+                    logger.info("Successfully refunded transaction " + order.getTransactionId() + " for order " + order.getOrderId());
+                    String successMessage = "The event has been canceled and your payment has been fully refunded.";
+                    notificationService.createSystemNotification(order.getUserId(), successMessage);
                 } catch (Exception e) {
-                    logger.error("Failed to refund transaction ID " + order.getTransactionId() + " for order " + order.getOrderId() + ": " + e.getMessage());
+                    logger.error("Failed to refund transaction " + order.getTransactionId() + " for order " + order.getOrderId());
+                    String failMessage = "The event has been canceled, but your automatic refund could not be processed. Please contact customer service for assistance.";
+                    notificationService.createSystemNotification(order.getUserId(), failMessage);
                 }
+            } else {
+                buyersWithDefaultNotification.add(order.getUserId());
             }
         }
-        String message = String.format(
+        String defaultMessage = String.format(
                 "Event \"%s\" has been cancelled.", event.getEventName());
-        for (String userId : buyers) {
-            notificationService.createSystemNotification(userId, message);
+        for (String userId : buyersWithDefaultNotification) {
+            notificationService.createSystemNotification(userId, defaultMessage);
         }
     }
 

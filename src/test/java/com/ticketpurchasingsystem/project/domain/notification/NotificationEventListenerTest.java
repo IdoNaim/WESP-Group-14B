@@ -228,9 +228,25 @@ class NotificationEventListenerTest {
 
         verify(paymentGateway).refund(12345);
         verify(paymentGateway, never()).refund(-1);
-        verify(notificationService).createSystemNotification(eq(USER_ID), contains("Rock Concert"));
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("The event has been canceled and your payment has been fully refunded."));
         verify(notificationService).createSystemNotification(eq("user-002"), contains("Rock Concert"));
         verify(notificationService).createSystemNotification(eq("user-003"), contains("Rock Concert"));
+    }
+
+    @Test
+    void GivenFailedRefund_WhenOnEventCancelled_ThenNotifyFailureAndContinue() {
+        HistoryOrderItem order1 = new HistoryOrderItem("ORD-001", USER_ID, EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 12345);
+        HistoryOrderItem order2 = new HistoryOrderItem("ORD-002", "user-002", EVENT_ID, 1, 50.0, List.of(), new HashMap<>(), 67890);
+        when(historyOrderRepo.findAllByEventId(EVENT_ID)).thenReturn(List.of(order1, order2));
+
+        when(paymentGateway.refund(12345)).thenThrow(new RuntimeException("Gateway offline"));
+
+        listener.onEventCancelled(new EventCancelledEvent(EVENT_ID, "Rock Concert"));
+
+        verify(paymentGateway).refund(12345);
+        verify(paymentGateway).refund(67890);
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("The event has been canceled, but your automatic refund could not be processed. Please contact customer service for assistance."));
+        verify(notificationService).createSystemNotification(eq("user-002"), eq("The event has been canceled and your payment has been fully refunded."));
     }
 
     // ── OrderRefundedEvent ──────────────────────────────────────────────────
