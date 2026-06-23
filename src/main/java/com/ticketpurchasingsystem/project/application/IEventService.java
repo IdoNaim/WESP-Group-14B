@@ -38,6 +38,7 @@ public interface IEventService {
      public PurchasePolicyDTO getEventPurchasePolicy(String sessionToken, String eventId);
      public String validatePurchasePolicy(String sessionToken, String eventId, int quantity, int userAge);
      public List<EventDTO> searchActiveEventsByText(String query);
+     public int getEventCompanyId(String sessionToken, String eventId);
 
 
 

@@ -3,6 +3,7 @@ import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO, PurchasePolicyDTO }
 import { authApi } from "../../api/authApi";
 import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
 import { historyOrderApi } from "../../api/historyOrderApi";
+import { getCompanyPurchasePolicy } from "../../api/productionCompanyApi";
 import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -68,7 +69,6 @@ function parseSeatId(id: string): { zone: string; row: number; number: number } 
   };
 }
 
-// Builds zone and standing layouts based on backend data and currently reserved seats
 function buildZonesFromSeatingMap(
   dto: SeatingMapDTO,
   activeOrder: ActiveOrderDTO | null
@@ -187,6 +187,8 @@ function SeatDot({
   );
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 function StandingZoneCard({
   zone,
   onAdd,
@@ -289,7 +291,6 @@ function PurchaseRules({ policy }: { policy: PurchasePolicyDTO | null }) {
       );
     }
   } else {
-    // Corrected rule text descriptor
     rules.push("Minimum of 1 ticket required per order. Maximum amount is unlimited.");
   }
 
@@ -474,8 +475,31 @@ export default function ReserveTicketsPage() {
   const [mapError, setMapError] = useState(false);
 
   const [purchasePolicy, setPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
+  const [companyPurchasePolicy, setCompanyPurchasePolicy] = useState<PurchasePolicyDTO | null>(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(0);
-  const effectiveMaxTickets = purchasePolicy?.maxTickets ?? null;
+
+  // Derived merged policy
+  const mergedPolicy: PurchasePolicyDTO | null = (() => {
+    if (!purchasePolicy && !companyPurchasePolicy) return null;
+    const base = purchasePolicy ?? companyPurchasePolicy!;
+    if (!purchasePolicy || !companyPurchasePolicy) return base;
+    return {
+      ...base,
+      maxTickets: (() => {
+        const vals = [purchasePolicy.maxTickets, companyPurchasePolicy.maxTickets]
+          .filter((v): v is number => v !== null && v !== undefined);
+        return vals.length > 0 ? Math.min(...vals) : null;
+      })(),
+      minTickets: (() => {
+        const vals = [purchasePolicy.minTickets, companyPurchasePolicy.minTickets]
+          .filter((v): v is number => v !== null && v !== undefined);
+        return vals.length > 0 ? Math.max(...vals) : null;
+      })(),
+    };
+  })();
+
+  const effectiveMaxTickets = mergedPolicy?.maxTickets ?? null;
+
   const remainingAllowed = effectiveMaxTickets !== null ? Math.max(0, effectiveMaxTickets - alreadyPurchased) : null;
 
   useEffect(() => {
@@ -525,6 +549,17 @@ export default function ReserveTicketsPage() {
         eventApi.getEventPurchasePolicy(token, eventId)
           .then((policy) => {
             if (policy) setPurchasePolicy(policy);
+          })
+          .catch(() => {});
+
+        // Fetch company policy via the event's companyId
+        eventApi.getEventCompanyId(token, eventId)
+          .then((companyId) => {
+            if (companyId == null) return null;
+            return getCompanyPurchasePolicy(companyId);
+          })
+          .then((policy) => {
+            if (policy) setCompanyPurchasePolicy(policy);
           })
           .catch(() => {});
 
@@ -737,8 +772,6 @@ export default function ReserveTicketsPage() {
     proceedToCheckout();
   };
 
-
-  // Reserves the tickets and navigates to checkout.
   const proceedToCheckout = async () => {
     if (!purchasePolicy && totalSelected < 1) {
       showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
@@ -918,7 +951,8 @@ export default function ReserveTicketsPage() {
               </div>
             </div>
 
-            <PurchaseRules policy={purchasePolicy} />
+            {/* Fixed component reference */}
+            <PurchaseRules policy={mergedPolicy} />
 
             {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
               <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded">

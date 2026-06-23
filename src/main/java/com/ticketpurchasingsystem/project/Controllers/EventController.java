@@ -306,4 +306,15 @@ public class EventController {
                 
                 return ResponseEntity.ok(events != null ? events : Collections.emptyList());
         }
+        // GET /api/events/companyId?eventId=abc
+        @GetMapping("/companyId")
+        public ResponseEntity<Integer> getEventCompanyId(
+                @RequestHeader("Authorization") String authHeader,
+                @RequestParam String eventId) {
+                
+                String token = extractToken(authHeader);
+                int companyId = eventService.getEventCompanyId(token, eventId);
+                
+                return ResponseEntity.ok(companyId);
+        }
 }

@@ -158,4 +158,8 @@ public class EventService implements IEventService {
     public List<EventDTO> searchActiveEventsByText(String query) {
         return eventHandler.searchActiveEventsByText(query);
     }
+    @Override
+    public int getEventCompanyId(String token, String eventId){
+        return eventHandler.getEventCompanyId(token, eventId);
+    }
 }
