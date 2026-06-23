@@ -120,7 +120,8 @@ public class NotificationHandler {
         requireValidToken(token);
         return notificationRepo.findByUserId(authenticationService.getUser(token)).stream()
                 .map(Notification::toDTO)
-                .collect(Collectors.toList());
+                .toList()
+                .reversed();
     }
 
     public NotificationDTO getNotificationById(String token, String notificationId) {
