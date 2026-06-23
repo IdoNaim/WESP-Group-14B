@@ -97,8 +97,11 @@ public class NotificationEventListener {
         for (HistoryOrderItem order : orders) {
             if (order.getTransactionId() != null && order.getTransactionId() != -1) {
                 try {
-                    paymentGateway.refund(order.getTransactionId());
-                    logger.info("Successfully refunded transaction " + order.getTransactionId() + " for order " + order.getOrderId());
+                    int originalTxId = order.getTransactionId();
+                    paymentGateway.refund(originalTxId);
+                    order.setTransactionId(-1);
+                    historyOrderRepo.save(order);
+                    logger.info("Successfully refunded transaction " + originalTxId + " for order " + order.getOrderId());
                     String successMessage = String.format("Event \"%s\" has been canceled and your payment of %.2f for order %s has been fully refunded.", event.getEventName(), order.getPrice(), order.getOrderId());
                     notificationService.createSystemNotification(order.getUserId(), successMessage);
                 } catch (Exception e) {
