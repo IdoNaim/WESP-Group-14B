@@ -228,7 +228,7 @@ class NotificationEventListenerTest {
 
         verify(paymentGateway).refund(12345);
         verify(paymentGateway, never()).refund(-1);
-        verify(notificationService).createSystemNotification(eq(USER_ID), eq("The event has been canceled and your payment has been fully refunded."));
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("Event \"Rock Concert\" has been canceled and your payment of 50.00 for order ORD-001 has been fully refunded."));
         verify(notificationService).createSystemNotification(eq("user-002"), contains("Rock Concert"));
         verify(notificationService).createSystemNotification(eq("user-003"), contains("Rock Concert"));
     }
@@ -245,8 +245,8 @@ class NotificationEventListenerTest {
 
         verify(paymentGateway).refund(12345);
         verify(paymentGateway).refund(67890);
-        verify(notificationService).createSystemNotification(eq(USER_ID), eq("The event has been canceled, but your automatic refund could not be processed. Please contact customer service for assistance."));
-        verify(notificationService).createSystemNotification(eq("user-002"), eq("The event has been canceled and your payment has been fully refunded."));
+        verify(notificationService).createSystemNotification(eq(USER_ID), eq("Event \"Rock Concert\" has been canceled, but your automatic refund of 50.00 for order ORD-001 could not be processed. Please contact customer service for assistance."));
+        verify(notificationService).createSystemNotification(eq("user-002"), eq("Event \"Rock Concert\" has been canceled and your payment of 50.00 for order ORD-002 has been fully refunded."));
     }
 
     // ── OrderRefundedEvent ──────────────────────────────────────────────────

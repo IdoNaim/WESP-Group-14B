@@ -99,11 +99,11 @@ public class NotificationEventListener {
                 try {
                     paymentGateway.refund(order.getTransactionId());
                     logger.info("Successfully refunded transaction " + order.getTransactionId() + " for order " + order.getOrderId());
-                    String successMessage = "The event has been canceled and your payment has been fully refunded.";
+                    String successMessage = String.format("Event \"%s\" has been canceled and your payment of %.2f for order %s has been fully refunded.", event.getEventName(), order.getPrice(), order.getOrderId());
                     notificationService.createSystemNotification(order.getUserId(), successMessage);
                 } catch (Exception e) {
                     logger.error("Failed to refund transaction " + order.getTransactionId() + " for order " + order.getOrderId());
-                    String failMessage = "The event has been canceled, but your automatic refund could not be processed. Please contact customer service for assistance.";
+                    String failMessage = String.format("Event \"%s\" has been canceled, but your automatic refund of %.2f for order %s could not be processed. Please contact customer service for assistance.", event.getEventName(), order.getPrice(), order.getOrderId());
                     notificationService.createSystemNotification(order.getUserId(), failMessage);
                 }
             } else {
