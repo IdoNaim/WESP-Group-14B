@@ -291,7 +291,7 @@ public class ProductionCompany {
         Map<String, ManagerDTO> tree = new LinkedHashMap<>();
         
         Set<String> managerIds = members.stream()
-                .filter(m -> m.getRole() == UserProductionCompany.MemberRole.MANAGER)
+                .filter(m -> m.getRole() == UserProductionCompany.MemberRole.MANAGER && m.isActive())
                 .map(UserProductionCompany::getUserId)
                 .collect(Collectors.toSet());
                 
