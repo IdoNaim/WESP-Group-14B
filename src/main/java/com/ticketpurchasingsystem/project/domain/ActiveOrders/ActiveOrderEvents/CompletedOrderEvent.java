@@ -8,12 +8,18 @@ public class CompletedOrderEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
     private int companyId;
     private double amountPaid;
-    public CompletedOrderEvent(Object source, ActiveOrderDTO order, double amountPaid ,int companyId){
+    private int transactionId;
+
+    public CompletedOrderEvent(Object source, ActiveOrderDTO order, double amountPaid, int companyId, int transactionId) {
         super(source);
         this.order = order;
         this.amountPaid = amountPaid;
         this.companyId = companyId;
+        this.transactionId = transactionId;
+    }
 
+    public CompletedOrderEvent(Object source, ActiveOrderDTO order, double amountPaid, int companyId) {
+        this(source, order, amountPaid, companyId, -1);
     }
 
     public ActiveOrderDTO getOrder() {
@@ -26,5 +32,9 @@ public class CompletedOrderEvent extends ApplicationEvent {
 
     public int getCompanyId() {
         return companyId;
+    }
+
+    public int getTransactionId() {
+        return transactionId;
     }
 }

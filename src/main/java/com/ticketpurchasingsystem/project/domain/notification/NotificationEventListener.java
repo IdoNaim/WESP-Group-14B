@@ -16,6 +16,8 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.
 import java.util.Objects;
 
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.AppointmentRequestedEvent;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
@@ -30,16 +32,19 @@ public class NotificationEventListener {
     private final AuthenticationService authenticationService;
     private final IHistoryOrderRepo historyOrderRepo;
     private final IEventRepo eventRepo;
+    private final IPaymentGateway paymentGateway;
     private final loggerDef logger = loggerDef.getInstance();
 
     public NotificationEventListener(INotificationService notificationService,
                                      AuthenticationService authenticationService,
                                      IHistoryOrderRepo historyOrderRepo,
-                                     IEventRepo eventRepo) {
+                                     IEventRepo eventRepo,
+                                     IPaymentGateway paymentGateway) {
         this.notificationService = notificationService;
         this.authenticationService = authenticationService;
         this.historyOrderRepo = Objects.requireNonNull(historyOrderRepo, "historyOrderRepo must not be null");
         this.eventRepo = Objects.requireNonNull(eventRepo, "eventRepo must not be null");
+        this.paymentGateway = Objects.requireNonNull(paymentGateway, "paymentGateway must not be null");
     }
 
     @EventListener
@@ -87,9 +92,18 @@ public class NotificationEventListener {
 
     @EventListener
     public void onEventCancelled(EventCancelledEvent event) {
+        java.util.List<HistoryOrderItem> orders = historyOrderRepo.findAllByEventId(event.getEventId());
         Set<String> buyers = new LinkedHashSet<>();
-        historyOrderRepo.findAllByEventId(event.getEventId())
-                .forEach(order -> buyers.add(order.getUserId()));
+        for (HistoryOrderItem order : orders) {
+            buyers.add(order.getUserId());
+            if (order.getTransactionId() != null && order.getTransactionId() != -1) {
+                try {
+                    paymentGateway.refund(order.getTransactionId());
+                } catch (Exception e) {
+                    logger.error("Failed to refund transaction ID " + order.getTransactionId() + " for order " + order.getOrderId() + ": " + e.getMessage());
+                }
+            }
+        }
         String message = String.format(
                 "Event \"%s\" has been cancelled.", event.getEventName());
         for (String userId : buyers) {

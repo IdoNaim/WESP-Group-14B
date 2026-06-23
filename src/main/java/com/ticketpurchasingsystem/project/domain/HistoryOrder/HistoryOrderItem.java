@@ -52,9 +52,12 @@ public class HistoryOrderItem {
     @Column(name = "quantity")
     private Map<String, Integer> StandingAreaQuantities;
 
+    @Column(name = "transaction_id")
+    private Integer transactionId;
+
     public HistoryOrderItem() {}
 
-    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities) {
+    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities, Integer transactionId) {
         this.orderId = orderId;
         this.userId = userId;
         this.eventId = eventId;
@@ -63,6 +66,11 @@ public class HistoryOrderItem {
         this.price = price;
         this.seatIds = new ArrayList<>(seatIds);
         this.StandingAreaQuantities = new HashMap<>(standingAreaQuantities);
+        this.transactionId = transactionId;
+    }
+
+    public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities) {
+        this(orderId, userId, eventId, companyId, price, seatIds, standingAreaQuantities, null);
     }
 
     public HistoryOrderItem(HistoryOrderDTO dto) {
@@ -74,6 +82,7 @@ public class HistoryOrderItem {
         this.price = dto.getPrice();
         this.seatIds = new ArrayList<>(dto.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(dto.getStandingAreaQuantities());
+        this.transactionId = dto.getTransactionId();
     }
 
     public String getOrderId() { return orderId; }
@@ -104,8 +113,11 @@ public class HistoryOrderItem {
         this.StandingAreaQuantities = standingAreaQuantities;
     }
 
+    public Integer getTransactionId() { return transactionId; }
+    public void setTransactionId(Integer transactionId) { this.transactionId = transactionId; }
+
     public HistoryOrderDTO makeDTO() {
-        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, getStandingAreaQuantities());
+        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, getStandingAreaQuantities(), transactionId);
     }
 }
 
