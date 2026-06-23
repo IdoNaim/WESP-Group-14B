@@ -139,6 +139,11 @@ public class ProductionHandler {
                     "appointManager: caller " + appointerId + " is not an owner or manager of company " + companyId);
             return null;
         }
+        if(company.isOwner(managerId)) {
+            loggerDef.getInstance().error(
+                    "appointManager: caller " + managerId + " is already the owner of the company " + companyId);
+            return null;
+        }
 
         boolean requestCreated = company.requestManager(appointerId, managerId, permissions);
         
