@@ -354,6 +354,10 @@ public class EventHandler {
             logger.warn("Cannot book seats. Event not found: " + eventId);
             throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
+        if (event.getEventDate() != null && event.getEventDate().isBefore(LocalDateTime.now())) {
+            logger.warn("Cannot book seats: event has already passed: " + eventId);
+            throw new IllegalArgumentException("This event has already taken place and tickets are no longer available.");
+        }
         if(!event.getSeatingMap().bookAssignedSeats(seatIds, orderId)){
             logger.warn("Cannot book seats: one or more seats are already taken or do not exist");
             throw new IllegalArgumentException("The selected seats are no longer available. Please choose different seats.");
@@ -371,6 +375,10 @@ public class EventHandler {
         if (event == null) {
             logger.warn("Cannot book standing area. Event not found: " + eventId);
             throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
+        }
+        if (event.getEventDate() != null && event.getEventDate().isBefore(LocalDateTime.now())) {
+            logger.warn("Cannot book standing area: event has already passed: " + eventId);
+            throw new IllegalArgumentException("This event has already taken place and tickets are no longer available.");
         }
         if(!event.getSeatingMap().bookStandingArea(areaId, null, quantity)){
             logger.warn("Cannot book standing area: insufficient availability");
