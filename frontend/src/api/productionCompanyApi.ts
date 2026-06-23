@@ -4,15 +4,6 @@ function getToken(): string {
     return localStorage.getItem('token') || '';
 }
 
-export interface PurchasePolicyDTO {
-    minTickets: number | null;
-    maxTickets: number | null;
-    minAge: number | null;
-    maxAge: number | null;
-    isQuantityOr: boolean;
-    isAgeOr: boolean;
-    isAgeAndQuantityOr: boolean;
-}
 
 export interface CompanySummary {
     companyId: number;
@@ -102,8 +93,6 @@ async function apiRequest<T>(method: string, path: string, body?: unknown): Prom
     }
     return res.json();
 }
-export const getCompanyPurchasePolicy = (companyId: number): Promise<PurchasePolicyDTO | null> =>
-    apiRequest<PurchasePolicyDTO>('GET', `/companies/${companyId}/purchase-policy`).catch(() => null);
 export const getRolesTree = (companyId: number): Promise<RolesTreeDTO> =>
     apiRequest('GET', `/companies/${companyId}/roles`);
 

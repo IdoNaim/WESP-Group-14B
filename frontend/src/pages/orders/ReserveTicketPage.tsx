@@ -3,7 +3,7 @@ import { eventApi, EventDTO, SeatingMapDTO, AssignedSeatDTO, PurchasePolicyDTO }
 import { authApi } from "../../api/authApi";
 import { activeOrderApi, ActiveOrderDTO } from "../../api/activeOrderApi";
 import { historyOrderApi } from "../../api/historyOrderApi";
-import { getCompanyPurchasePolicy } from "../../api/productionCompanyApi";
+import { getCompanyPolicyDTO } from "../../api/purchasePoliciesApi";
 import { useNavigate } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -552,11 +552,11 @@ export default function ReserveTicketsPage() {
           })
           .catch(() => {});
 
-        // Fetch company policy via the event's companyId
+        // Fetch company policy via updated endpoints from purchasePoliciesApi
         eventApi.getEventCompanyId(token, eventId)
           .then((companyId) => {
             if (companyId == null) return null;
-            return getCompanyPurchasePolicy(companyId);
+            return getCompanyPolicyDTO(companyId);
           })
           .then((policy) => {
             if (policy) setCompanyPurchasePolicy(policy);
@@ -951,7 +951,6 @@ export default function ReserveTicketsPage() {
               </div>
             </div>
 
-            {/* Fixed component reference */}
             <PurchaseRules policy={mergedPolicy} />
 
             {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
