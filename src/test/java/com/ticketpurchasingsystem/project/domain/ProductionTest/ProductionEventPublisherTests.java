@@ -39,7 +39,7 @@ class ProductionEventPublisherTests {
     // --- publishIsUserRegisteredEvent ---
 
     @Test
-    void WhenPublishIsUserRegisteredGivenListenerSetsTrue_ThenReturnTrue() {
+    void GivenListenerSetsTrue_WhenPublishIsUserRegistered_ThenReturnTrue() {
         // Arrange
         doAnswer(inv -> {
             IsUserRegisteredEvent event = inv.getArgument(0);
@@ -55,7 +55,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishIsUserRegisteredGivenNoListener_ThenReturnFalse() {
+    void GivenNoListener_WhenPublishIsUserRegistered_ThenReturnFalse() {
         // Act
         boolean result = productionEventPublisher.publishIsUserRegisteredEvent(USER_ID);
 
@@ -64,7 +64,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishIsUserRegisteredGivenUserId_ThenEventCarriesUserId() {
+    void GivenUserId_WhenPublishIsUserRegistered_ThenEventCarriesUserId() {
         // Arrange
         doAnswer(inv -> {
             IsUserRegisteredEvent event = inv.getArgument(0);
@@ -80,7 +80,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishIsUserRegisteredGivenListenerSetsFalse_ThenReturnFalse() {
+    void GivenListenerSetsFalse_WhenPublishIsUserRegistered_ThenReturnFalse() {
         // Arrange
         doAnswer(inv -> {
             IsUserRegisteredEvent event = inv.getArgument(0);
@@ -98,7 +98,7 @@ class ProductionEventPublisherTests {
     // --- publishGetCompanyHistoryEvent ---
 
     @Test
-    void WhenPublishGetCompanyHistoryGivenListenerResponds_ThenReturnHistory() {
+    void GivenListenerResponds_WhenPublishGetCompanyHistory_ThenReturnHistory() {
         // Arrange
         List<String> seats = List.of("seat1");
         HashMap<String,Integer> standing = new HashMap<>();
@@ -119,7 +119,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishGetCompanyHistoryGivenNoListener_ThenReturnNull() {
+    void GivenNoListener_WhenPublishGetCompanyHistory_ThenReturnNull() {
         // Act
         List<HistoryOrderItem> result = productionEventPublisher.publishGetCompanyHistoryEvent(COMPANY_ID);
 
@@ -128,7 +128,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishGetCompanyHistoryGivenEmptyResult_ThenReturnEmptyList() {
+    void GivenEmptyResult_WhenPublishGetCompanyHistory_ThenReturnEmptyList() {
         // Arrange
         doAnswer(inv -> {
             GetCompanyHistoryEvent event = inv.getArgument(0);
@@ -145,7 +145,7 @@ class ProductionEventPublisherTests {
     }
 
     @Test
-    void WhenPublishGetCompanyHistoryGivenCompanyId_ThenEventCarriesCompanyId() {
+    void GivenCompanyId_WhenPublishGetCompanyHistory_ThenEventCarriesCompanyId() {
         // Arrange
         doAnswer(inv -> {
             GetCompanyHistoryEvent event = inv.getArgument(0);

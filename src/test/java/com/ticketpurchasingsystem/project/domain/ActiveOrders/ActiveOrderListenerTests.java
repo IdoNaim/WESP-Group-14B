@@ -24,7 +24,7 @@ class ActiveOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllActiveOrdersEventGivenOrders_ThenEventResultIsSet() {
+    void GivenOrdersInRepo_WhenHandleGetAllActiveOrdersEvent_ThenEventResultIsSet() {
         List<ActiveOrderItem> mockOrders = List.of(new ActiveOrderItem("1", "1","1"));
         when(activeOrderRepo.findAll()).thenReturn(mockOrders);
         GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(REQ_ID);
@@ -35,7 +35,7 @@ class ActiveOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllActiveOrdersEventGivenEmptyRepo_ThenEventResultIsEmpty() {
+    void GivenEmptyRepo_WhenHandleGetAllActiveOrdersEvent_ThenEventResultIsEmpty() {
         when(activeOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(REQ_ID);
 
@@ -46,7 +46,7 @@ class ActiveOrderListenerTests {
 
 
     @Test
-    void WhenHandleGetAllActiveOrdersEventGiven_ThenRepoCalledOnce() {
+    void GivenAnyRequest_WhenHandleGetAllActiveOrdersEvent_ThenRepoCalledOnce() {
         when(activeOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(REQ_ID);
 
@@ -56,7 +56,7 @@ class ActiveOrderListenerTests {
     }
 
     @Test
-    void WhenHandleGetAllActiveOrdersEventGivenReqId_ThenEventPreservesReqId() {
+    void GivenReqId_WhenHandleGetAllActiveOrdersEvent_ThenEventPreservesReqId() {
         when(activeOrderRepo.findAll()).thenReturn(Collections.emptyList());
         GetAllActiveOrdersEvent event = new GetAllActiveOrdersEvent(REQ_ID);
 

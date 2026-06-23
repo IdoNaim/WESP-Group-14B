@@ -57,7 +57,7 @@ class AuthControllerTest {
         // POST /api/identity/guest
 
         @Test
-        void WhenGuestEntry_ThenReturn200WithToken() throws Exception {
+        void GivenGuestSession_WhenGuestEntry_ThenReturn200WithToken() throws Exception {
                 when(userService.guestEntry()).thenReturn("guest-token-123");
 
                 mockMvc.perform(post("/api/identity/guest"))
@@ -66,7 +66,7 @@ class AuthControllerTest {
         }
 
         @Test
-        void WhenGuestEntryFails_ThenReturn500WithError() throws Exception {
+        void GivenServiceThrowsException_WhenGuestEntry_ThenReturn500WithError() throws Exception {
                 when(userService.guestEntry()).thenThrow(new RuntimeException("Session store unavailable"));
 
                 mockMvc.perform(post("/api/identity/guest"))
