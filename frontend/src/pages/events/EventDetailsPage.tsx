@@ -202,6 +202,17 @@ export default function EventDetailsPage() {
                             THIS EVENT HAS ALREADY TAKEN PLACE
                         </div>
                     ) : !isAuthorized ? (
+                    {eventData.isActive === false ? (
+                        <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
+                            <span className="material-symbols-outlined">event_busy</span>
+                            EVENT CANCELED — NO LONGER AVAILABLE
+                        </div>
+                    ) : /* {!isMember ? (
+                        <div className="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-6 py-4 rounded-lg font-bold border border-amber-500/20 text-xs tracking-widest uppercase">
+                            <span className="material-symbols-outlined">lock</span>
+                            SIGN IN AS A MEMBER TO RESERVE TICKETS
+                        </div>
+                    ) : */!isAuthorized ? (
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">block</span>
                             PURCHASE UNAVAILABLE

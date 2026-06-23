@@ -244,9 +244,9 @@ public class EventServiceTest {
         verify(mockRepo, never()).save(any());
     }
 
-    // ================= REMOVE EVENT =================
+    // ================= REMOVE (SOFT-CANCEL) EVENT =================
     @Test
-    void GivenExistingEvent_WhenRemoveEvent_ThenDeleteAndReturnTrue() {
+    void GivenExistingEvent_WhenRemoveEvent_ThenSoftCancelAndReturnTrue() {
         Event mockEvent = mock(Event.class);
         when(mockEvent.getEventName()).thenReturn("Concert");
         when(mockRepo.findById("1")).thenReturn(mockEvent);
@@ -254,7 +254,21 @@ public class EventServiceTest {
         boolean result = eventService.removeEvent(VALID_TOKEN, "1");
 
         assertTrue(result);
-        verify(mockRepo).delete("1");
+        // Soft-cancel: the event is cancelled and saved, NOT deleted from the DB.
+        verify(mockEvent).cancel();
+        verify(mockRepo).save(mockEvent);
+        verify(mockRepo, never()).delete(any());
+    }
+
+    @Test
+    void GivenExistingEvent_WhenRemoveEvent_ThenPublishesCancellation() {
+        Event mockEvent = mock(Event.class);
+        when(mockEvent.getEventName()).thenReturn("Concert");
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
+
+        eventService.removeEvent(VALID_TOKEN, "1");
+
+        verify(mockPublisher).publishEventCancelled("1", "Concert");
     }
 
     @Test
@@ -265,6 +279,7 @@ public class EventServiceTest {
 
         assertFalse(result);
         verify(mockRepo, never()).delete(any());
+        verify(mockRepo, never()).save(any());
     }
 
     // ================= EDIT EVENT CAPACITY =================

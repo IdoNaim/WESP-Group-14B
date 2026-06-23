@@ -346,6 +346,18 @@ export default function CheckoutPage() {
   const handleInitiatePayment = async () => {
     // Validate card details first
     setPaymentError('');
+
+    // Guard: make sure the event wasn't canceled while the user was on this page.
+    // A soft-canceled event still exists but returns isActive === false.
+    if (order?.eventId) {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+      const latestEvent = await eventApi.getEvent(token, order.eventId);
+      if (latestEvent && latestEvent.isActive === false) {
+        setPaymentError('Event got canceled');
+        return;
+      }
+    }
+
     const errors = validatePaymentFields({ cardholderName, cardholderId, cardNumber, expiryDate, cvv });
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -727,7 +739,7 @@ export default function CheckoutPage() {
                   {/* MODIFIED: Trigger the new verification flow instead of straight payment */}
                   <button
                     onClick={handleInitiatePayment}
-                    disabled={processState === 'processing' || pricing.subtotal === 0}
+                    disabled={processState === 'processing' || totalTicketsCount === 0}
                     className="w-full bg-[#1a1b20] text-white py-5 font-bold rounded flex items-center justify-center gap-3 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processState === 'processing' ? (

@@ -150,6 +150,13 @@
 
         public boolean isActive() { return isActive; }
 
+        /**
+         * Cancels the event (soft delete). The event row is kept in the database
+         * with isActive = false so its name and status remain available to past
+         * orders, while it is hidden from public listings and blocked from purchase.
+         */
+        public void cancel() { this.isActive = false; }
+
         public LocalDateTime getEventDate() { return eventDate; }
         public void setEventDate(LocalDateTime eventDate) { this.eventDate = eventDate; }
 
