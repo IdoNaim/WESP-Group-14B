@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderHandler;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
 import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
@@ -25,15 +26,18 @@ public class HistoryOrderService implements IHistoryOrderService {
     private final HistoryOrderHandler historyOrderHandler;
     private final AuthenticationService authenticationService;
     private final ProductionService productionService;
+    private final IUserRepo userRepo;
 
     @Autowired
     public HistoryOrderService(IHistoryOrderRepo historyOrderRepo, HistoryOrderHandler historyOrderHandler,
                                AuthenticationService authenticationService,
-                               ProductionService productionService) {
+                               ProductionService productionService,
+                               IUserRepo userRepo) {
         this.historyOrderRepo = historyOrderRepo;
         this.historyOrderHandler = historyOrderHandler;
         this.authenticationService = authenticationService;
         this.productionService = productionService;
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -73,8 +77,7 @@ public class HistoryOrderService implements IHistoryOrderService {
         if (!isSessionTokenValid(st)) return historyOrders;
         String tokenOwner = authenticationService.getUser(st.getToken());
         boolean isOwner = userASk.equals(tokenOwner);
-        boolean isAdmin = authenticationService.isAdmin(st.getToken());
-        if (!isOwner && !isAdmin) return historyOrders;
+        if (!isOwner && !userRepo.isAdmin(tokenOwner)) return historyOrders;
         for (HistoryOrderItem item : historyOrderRepo.findAllByUserId(userASk)) {
             historyOrders.add(item.makeDTO());
         }

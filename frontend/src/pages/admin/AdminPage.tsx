@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminApi, type SystemHistoryOrderDTO, type SystemActiveOrderDTO, type SystemUserDTO } from "../../api/adminApi";
+import { historyOrderApi, type HistoryOrderDTO } from "../../api/historyOrderApi";
 import { useAuth } from "../../context/AuthContext";
 import "./AdminPage.scss";
 
@@ -182,11 +183,7 @@ export default function AdminPage() {
             )}
 
             {!loading && selectedTab === "historyOrders" && (
-              <AdminGenericTable
-                title="History Orders"
-                emptyMessage="No history orders found."
-                items={data.historyOrders}
-              />
+              <AdminHistorySearch token={token!} />
             )}
           </div>
         </>
@@ -212,13 +209,8 @@ function AdminOverview() {
         </div>
 
         <div className="admin-page__action-card">
-          <h3>Global Order History</h3>
-          <p>View completed purchases across the platform.</p>
-        </div>
-
-        <div className="admin-page__action-card admin-page__action-card--disabled">
-          <h3>Company / Complaint Tools</h3>
-          <p>Reserved for future backend support.</p>
+          <h3>History Orders Search</h3>
+          <p>Look up completed purchases by user ID or company ID.</p>
         </div>
       </div>
     </div>
@@ -344,4 +336,101 @@ function formatCellValue(value: unknown): string {
   }
 
   return String(value);
+}
+
+type HistorySearchMode = "user" | "company";
+
+function AdminHistorySearch({ token }: { token: string }) {
+  const [mode, setMode] = useState<HistorySearchMode>("user");
+  const [inputValue, setInputValue] = useState("");
+  const [results, setResults] = useState<HistoryOrderDTO[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleModeChange = (newMode: HistorySearchMode) => {
+    setMode(newMode);
+    setInputValue("");
+    setResults([]);
+    setSearched(false);
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    setSearching(true);
+    setError(null);
+    try {
+      let data: HistoryOrderDTO[];
+      if (mode === "user") {
+        data = await historyOrderApi.getUserOrders(token, inputValue.trim());
+      } else {
+        const id = parseInt(inputValue, 10);
+        if (isNaN(id)) { setError("Company ID must be a number."); return; }
+        data = await historyOrderApi.getOrdersByCompany(token, id);
+      }
+      setResults(data);
+      setSearched(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch orders.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    flex: 1,
+    padding: "0.65rem 1rem",
+    borderRadius: "0.5rem",
+    border: "1px solid rgba(15,23,42,0.2)",
+    fontSize: "0.9rem",
+  };
+
+  const selectStyle: React.CSSProperties = {
+    padding: "0.65rem 1rem",
+    borderRadius: "0.5rem",
+    border: "1px solid rgba(15,23,42,0.2)",
+    fontSize: "0.9rem",
+    background: "white",
+    cursor: "pointer",
+  };
+
+  return (
+    <div>
+      <h2>History Orders</h2>
+      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem", alignItems: "center" }}>
+        <select
+          value={mode}
+          onChange={(e) => handleModeChange(e.target.value as HistorySearchMode)}
+          style={selectStyle}
+        >
+          <option value="user">By User</option>
+          <option value="company">By Company</option>
+        </select>
+        <input
+          type={mode === "company" ? "number" : "text"}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={mode === "user" ? "Enter user ID" : "Enter company ID"}
+          style={inputStyle}
+        />
+        <button
+          type="submit"
+          disabled={searching || !inputValue.trim()}
+          className="admin-page__tab admin-page__tab--active"
+        >
+          {searching ? "Searching…" : "Search"}
+        </button>
+      </form>
+      {error && <div className="admin-page__error">{error}</div>}
+      {!error && searched && (
+        <AdminGenericTable
+          title=""
+          emptyMessage={mode === "user" ? "No orders found for this user." : "No orders found for this company."}
+          items={results as unknown as Array<Record<string, unknown>>}
+        />
+      )}
+    </div>
+  );
 }

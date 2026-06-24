@@ -39,6 +39,8 @@ import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import org.mockito.Mockito;
 
 public class HistoryOrderAcceptanceTests {
 
@@ -91,7 +93,9 @@ public class HistoryOrderAcceptanceTests {
                 (ConcurrentHashMap<Integer, ProductionCompany>) ReflectionTestUtils.getField(prodRepo, "storage");
         storage.put(10, company10);
 
-        historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService);
+        IUserRepo userRepo = Mockito.mock(IUserRepo.class);
+        Mockito.when(userRepo.isAdmin("admin")).thenReturn(true);
+        historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService, userRepo);
 
         // Initialize reusable mock data for orders
         purchaseDate = new Timestamp(System.currentTimeMillis());
