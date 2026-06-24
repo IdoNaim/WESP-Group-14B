@@ -18,6 +18,8 @@ import com.ticketpurchasingsystem.project.domain.authentication.ISessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.HistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 import com.ticketpurchasingsystem.project.infrastructure.ProdRepo;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -83,7 +85,7 @@ class HistoryOrderApiAcceptanceTest {
         storage.put(COMPANY_ID, company);
 
         historyOrderService = new HistoryOrderService(
-                historyRepo, new HistoryOrderHandler(), authService, productionService);
+                historyRepo, new HistoryOrderHandler(), authService, productionService, Mockito.mock(IUserRepo.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(
                 new HistoryOrderController(historyOrderService)).build();

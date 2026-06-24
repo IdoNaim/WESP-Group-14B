@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -119,7 +120,7 @@ public class ConcurrencyIntegrationTests {
         eventListener = new EventAggregateListener(eventRepo, eventService, historyOrderRepo);
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
         ProductionService productionService = new ProductionService(authenticationService, null, null, null);
-        historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService);
+        historyOrderService = new HistoryOrderService(historyOrderRepo, historyOrderHandler, authenticationService, productionService, Mockito.mock(IUserRepo.class));
         historyOrderListener = new HistoryOrderListener(historyOrderRepo, historyOrderService);
 
         // Active Order Setup

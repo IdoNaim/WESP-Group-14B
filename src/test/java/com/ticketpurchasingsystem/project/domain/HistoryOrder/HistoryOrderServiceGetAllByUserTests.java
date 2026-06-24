@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.HistoryOrderService;
 import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.HistoryOrderDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.SessionToken;
 
@@ -25,6 +26,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     @Mock private HistoryOrderHandler historyOrderHandler;
     @Mock private AuthenticationService authenticationService;
     @Mock private ProductionService productionService;
+    @Mock private IUserRepo userRepo;
 
     private HistoryOrderService historyOrderService;
 
@@ -45,7 +47,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     @BeforeEach
     void setUp() {
         historyOrderService = new HistoryOrderService(
-            historyOrderRepo, historyOrderHandler, authenticationService, productionService
+            historyOrderRepo, historyOrderHandler, authenticationService, productionService, userRepo
         );
         item = new HistoryOrderItem(ORDER_ID, USER_ID, EVENT_ID, COMPANY_ID, PRICE,
             List.of("seat-1"), new HashMap<>());
@@ -54,7 +56,7 @@ public class HistoryOrderServiceGetAllByUserTests {
     private void stubValidSession(String tokenOwner, boolean isAdmin) {
         when(authenticationService.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationService.getUser(VALID_TOKEN)).thenReturn(tokenOwner);
-        when(authenticationService.isAdmin(VALID_TOKEN)).thenReturn(isAdmin);
+        lenient().when(userRepo.isAdmin(tokenOwner)).thenReturn(isAdmin);
     }
 
     // --- invalid session ---

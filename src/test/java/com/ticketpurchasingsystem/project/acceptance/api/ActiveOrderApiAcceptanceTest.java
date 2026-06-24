@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import com.ticketpurchasingsystem.project.domain.User.IUserRepo;
 import static org.mockito.Mockito.when;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -109,7 +110,7 @@ class ActiveOrderApiAcceptanceTest {
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
         ProductionService productionServiceStub = mock(ProductionService.class);
         HistoryOrderService historyOrderService = new HistoryOrderService(
-                historyRepo, historyOrderHandler, authService, productionServiceStub);
+                historyRepo, historyOrderHandler, authService, productionServiceStub, mock(IUserRepo.class));
         HistoryOrderListener historyOrderListener = new HistoryOrderListener(historyRepo, historyOrderService);
 
         EventAggregateListener eventListener = new EventAggregateListener(eventRepo, eventService, historyRepo);
