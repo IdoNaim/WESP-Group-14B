@@ -52,8 +52,18 @@ export default function LoginPage() {
         } catch (error: any) {
             const backendMessage = error.message || "";
 
+            // Intercept offline network failure
+            const isOffline = navigator.onLine === false || 
+                             backendMessage.toLowerCase().includes("failed to fetch") || 
+                             backendMessage.toLowerCase().includes("load failed") || 
+                             backendMessage.toLowerCase().includes("network error") ||
+                             (error.name === "TypeError" && backendMessage.toLowerCase().includes("fetch"));
+
+            if (isOffline) {
+                setErrorMessage("No internet connection. Please check your Wi-Fi or mobile data and try again.");
+            }
             // 1. Clean up known authentication exceptions
-            if (backendMessage.includes("User not found") || backendMessage.includes("Invalid user ID or password")) {
+            else if (backendMessage.includes("User not found") || backendMessage.includes("Invalid user ID or password")) {
                 setErrorMessage("Invalid user ID or password");
             }
             // 2. Global Sanitizer: Intercept unhandled Java runtime errors, database crashes, or 500s
