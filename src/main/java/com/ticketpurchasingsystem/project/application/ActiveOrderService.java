@@ -69,11 +69,15 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.warn("Cancel order failed: Order " + orderId + " is already being processed");
             throw new IllegalStateException("order is already being processed, cannot cancel");
         }
-
-        rollbackOrderReservations(sessionToken.getToken(), new ActiveOrderDTO(order));
-        activeOrderRepo.delete(orderId);
-        activeOrderPublisher.publishOrderCancelled(userId, orderId);
-        logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
+        try {
+            rollbackOrderReservations(sessionToken.getToken(), new ActiveOrderDTO(order));
+            activeOrderRepo.delete(orderId);
+            activeOrderPublisher.publishOrderCancelled(userId, orderId);
+            logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
+        }catch (Exception e){
+            activeOrderRepo.markAsNotProcessing(orderId);
+            logger.error("got error when trying to cancel order: "+ e.getMessage());
+        }
     }
 
     @Override
@@ -283,7 +287,8 @@ public class ActiveOrderService implements IActiveOrderService {
         if(transactionId == -1){
             logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
             rollbackOrderReservations(sessionToken.getToken(), orderDTO);
-            activeOrderRepo.delete(orderId);
+//            activeOrderRepo.delete(orderId);
+            activeOrderRepo.markAsNotProcessing(orderId);
             throw new IllegalStateException("Payment failed");
         }
 
@@ -316,11 +321,17 @@ public class ActiveOrderService implements IActiveOrderService {
             } catch (Exception rollbackEx) {
                 logger.error("Failed to rollback reservations during rollback: " + rollbackEx.getMessage());
             }
-            try {
-                activeOrderRepo.delete(orderId);
-            } catch (Exception deleteEx) {
-                logger.error("Failed to delete active order during rollback: " + deleteEx.getMessage());
+            try{
+                activeOrderRepo.markAsNotProcessing(orderId);
             }
+            catch (Exception exception){
+                logger.error("Failed to mark order "+ orderId+" as not processing: "+ exception.getMessage());
+            }
+//            try {
+//                activeOrderRepo.delete(orderId);
+//            } catch (Exception deleteEx) {
+//                logger.error("Failed to delete active order during rollback: " + deleteEx.getMessage());
+//            }
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;
             }

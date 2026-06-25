@@ -12,5 +12,6 @@ public interface IActiveOrderRepo {
     ActiveOrderItem findByUserId(String userId);
     Optional<ActiveOrderItem> findByIdForUpdate(String orderId);
     boolean markAsProcessing(String orderId);
+    boolean markAsNotProcessing(String orderId);
     void deleteAll();
 }
