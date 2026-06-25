@@ -9,12 +9,15 @@ class ConfigurationLoadingTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(TicketApplication.class);
 
+    // Negative (failure) configuration tests
     @Test
     void GivenMissingJwtSecret_WhenContextLoads_ThenInitializationFails() {
         contextRunner
                 .withPropertyValues(
                         "jwt.secret=",
+                        "spring.security.user.name=user",
                         "spring.security.user.password=dummy-password-12345",
+                        "spring.profiles.active=test",
                         "spring.datasource.url=jdbc:h2:mem:testdb_missing_jwt;DB_CLOSE_DELAY=-1",
                         "init.file=empty_init.txt"
                 )
@@ -29,7 +32,9 @@ class ConfigurationLoadingTest {
         contextRunner
                 .withPropertyValues(
                         "jwt.secret=short",
+                        "spring.security.user.name=user",
                         "spring.security.user.password=dummy-password-12345",
+                        "spring.profiles.active=test",
                         "spring.datasource.url=jdbc:h2:mem:testdb_short_jwt;DB_CLOSE_DELAY=-1",
                         "init.file=empty_init.txt"
                 )
@@ -44,7 +49,9 @@ class ConfigurationLoadingTest {
         contextRunner
                 .withPropertyValues(
                         "jwt.secret=myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong",
+                        "spring.security.user.name=user",
                         "spring.security.user.password=",
+                        "spring.profiles.active=test",
                         "spring.datasource.url=jdbc:h2:mem:testdb_missing_pwd;DB_CLOSE_DELAY=-1",
                         "init.file=empty_init.txt"
                 )
@@ -55,11 +62,48 @@ class ConfigurationLoadingTest {
     }
 
     @Test
+    void GivenMissingSecurityUsername_WhenContextLoads_ThenInitializationFails() {
+        contextRunner
+                .withPropertyValues(
+                        "jwt.secret=myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong",
+                        "spring.security.user.name=",
+                        "spring.security.user.password=dummy-password-12345",
+                        "spring.profiles.active=test",
+                        "spring.datasource.url=jdbc:h2:mem:testdb_missing_user;DB_CLOSE_DELAY=-1",
+                        "init.file=empty_init.txt"
+                )
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).isNotNull();
+                });
+    }
+
+    @Test
+    void GivenMissingActiveProfiles_WhenContextLoads_ThenInitializationFails() {
+        contextRunner
+                .withPropertyValues(
+                        "jwt.secret=myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong",
+                        "spring.security.user.name=user",
+                        "spring.security.user.password=dummy-password-12345",
+                        "spring.profiles.active=",
+                        "spring.datasource.url=jdbc:h2:mem:testdb_missing_profile;DB_CLOSE_DELAY=-1",
+                        "init.file=empty_init.txt"
+                )
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).isNotNull();
+                });
+    }
+
+    // Positive (success) path configuration test
+    @Test
     void GivenValidConfiguration_WhenContextLoads_ThenInitializationSucceeds() {
         contextRunner
                 .withPropertyValues(
                         "jwt.secret=myUltraSecretKeyForJWTSigningThatIsAtLeast32CharactersLong",
+                        "spring.security.user.name=user",
                         "spring.security.user.password=valid-password-12345",
+                        "spring.profiles.active=test",
                         "spring.datasource.url=jdbc:h2:mem:testdb_valid;DB_CLOSE_DELAY=-1",
                         "init.file=empty_init.txt"
                 )
