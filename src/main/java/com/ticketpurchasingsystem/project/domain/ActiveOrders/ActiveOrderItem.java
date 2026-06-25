@@ -175,4 +175,9 @@ public class ActiveOrderItem {
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
+    public boolean markAsNotProcessing() {
+        if (!processing) return false;
+        processing = false;
+        return true;
+    }
 }

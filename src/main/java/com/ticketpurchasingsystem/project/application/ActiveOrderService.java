@@ -282,12 +282,18 @@ public class ActiveOrderService implements IActiveOrderService {
             logger.warn("Complete order failed: Order " + orderId + " is already being processed");
             throw new IllegalStateException("order is already being processed");
         }
-
-        int transactionId = payment(paymentGateway, sessionToken, paymentDetails);
-        if(transactionId == -1){
-            logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
-            rollbackOrderReservations(sessionToken.getToken(), orderDTO);
+        int transactionId = -1;
+        try {
+            transactionId = payment(paymentGateway, sessionToken, paymentDetails);
+            if (transactionId == -1) {
+                logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
+//                rollbackOrderReservations(sessionToken.getToken(), orderDTO);
 //            activeOrderRepo.delete(orderId);
+                activeOrderRepo.markAsNotProcessing(orderId);
+                throw new IllegalStateException("Payment failed");
+            }
+        }catch (Exception e){
+            logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
             activeOrderRepo.markAsNotProcessing(orderId);
             throw new IllegalStateException("Payment failed");
         }
