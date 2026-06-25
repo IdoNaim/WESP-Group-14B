@@ -69,6 +69,7 @@ export default function DashboardPage() {
   const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch permissions + profile on mount
   useEffect(() => {
@@ -88,8 +89,18 @@ export default function DashboardPage() {
         setUsername(profile.name);
       } catch (error: any) {
         console.error('[Dashboard] Failed to load user data:', error.message);
-        setPermissions(null);
-        setUsername(null);
+        const msg = error.message || '';
+        if (
+          navigator.onLine === false ||
+          msg.toLowerCase().includes('failed to fetch') ||
+          msg.toLowerCase().includes('load failed') ||
+          msg.toLowerCase().includes('network error')
+        ) {
+          setError('No internet connection. Please check your network settings.');
+        } else {
+          setPermissions(null);
+          setUsername(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -147,6 +158,24 @@ export default function DashboardPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-[#3980f4] border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-[#5c5f61]">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f8f9ff]">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center p-8 bg-white border border-[#c6c6cd] rounded-2xl shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <span className="material-symbols-outlined text-red-500 text-6xl">cloud_off</span>
+          <h2 className="text-xl font-bold text-[#0b1c30]">Connection Failed</h2>
+          <p className="text-sm text-[#5c5f61]">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 w-full py-3 bg-gradient-to-b from-[#2563eb] to-[#0053db] text-white font-bold rounded-xl shadow-lg hover:shadow-[#2563eb]/20 active:scale-[0.98] transition-all"
+          >
+            Retry Connection
+          </button>
         </div>
       </div>
     );
