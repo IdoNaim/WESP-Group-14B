@@ -67,7 +67,12 @@ const getHeaders = (token?: string) => {
 
 function cleanErrorMessage(raw: string | undefined, status: number): string {
     if (raw) {
+        // Strip Java exception class names (e.g. "com.example.SomeException: ")
         const cleaned = raw.replace(/(?:[\w]+\.)+\w+(?:Exception|Error):\s*/g, '').trim();
+        // Replace any remaining technical network/IO patterns with a friendly fallback
+        if (/i\/o error|read timed out|connection refused|socket timeout|connect timed out|network error|post request for/i.test(cleaned)) {
+            return 'Payment could not be processed. Please try again in a moment.';
+        }
         if (cleaned.length > 0) return cleaned;
     }
     switch (status) {
