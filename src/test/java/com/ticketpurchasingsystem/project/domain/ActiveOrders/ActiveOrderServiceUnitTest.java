@@ -817,7 +817,7 @@ public class ActiveOrderServiceUnitTest {
 
     // Fix 6: GivenPaymentFails — remove isUsersOrder stub, use lenient for rollback guards
     @Test
-    void GivenPaymentFails_WhenCompleteOrder_ThenThrowIllegalStateExceptionAndRollback() {
+    void GivenPaymentFails_WhenCompleteOrder_ThenThrowIllegalStateException() {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         validOrder.setSeatIds(List.of("B-10", "B-11"));
@@ -839,15 +839,42 @@ public class ActiveOrderServiceUnitTest {
                 activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
-        verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
-        verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
-        verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
+        //verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
+        //verify(activeOrderPublisherMock, times(1)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
+        //verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt(), anyInt());
+    }
+    @Test
+    void GivenPaymentFails_WhenCompleteOrder_ThenDontDeleteOrder() {
+        IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
+        ActiveOrderItem validOrder = orderForUser(USER_ID);
+        validOrder.setSeatIds(List.of("B-10", "B-11"));
+
+        HashMap<String, Integer> standingArea = new HashMap<>();
+        standingArea.put("VIP-1", 2);
+        validOrder.setStandingAreaQuantities(standingArea);
+
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
+        when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
+        when(paymentGatewayMock.pay(any())).thenReturn(-1);
+        lenient().when(activeOrderHandlerMock.canReleaseSeats(validOrder.getSeatIds())).thenReturn(true);
+        lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
+
+        assertThrows(Exception.class, () ->
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+        );
+
+        verify(activeOrderPublisherMock, times(0)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
+        verify(activeOrderPublisherMock, times(0)).publishReleaseStandingArea(VALID_TOKEN, EVENT_ID, "VIP-1", 2);
+        verify(activeOrderRepoMock, times(0)).delete(ORDER_ID);
     }
 
 
     @Test
-    void GivenBarcodeGenerationFails_WhenCompleteOrder_ThenThrowIllegalStateExceptionAndRollback() {
+    void GivenBarcodeGenerationFails_WhenCompleteOrder_ThenThrowExceptionAndRollback() {
         IPaymentGateway paymentGatewayMock = mock(IPaymentGateway.class);
         ActiveOrderItem validOrder = orderForUser(USER_ID);
         validOrder.setSeatIds(List.of("C-1"));
@@ -869,7 +896,7 @@ public class ActiveOrderServiceUnitTest {
 
         verify(paymentGatewayMock, times(1)).refund(100);
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("C-1"));
-        verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
+        //verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
         verify(activeOrderPublisherMock, never()).publishCompletedOrder(any(), anyDouble(), anyInt(), anyInt());
     }
 

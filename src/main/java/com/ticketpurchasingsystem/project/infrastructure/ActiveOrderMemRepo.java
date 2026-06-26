@@ -136,4 +136,22 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             lock.unlock();
         }
     }
+    @Override
+    public boolean markAsNotProcessing(String orderId){
+        ReentrantLock lock = orderLocks.get(orderId);
+        if(lock == null){
+            throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+        }
+        lock.lock();
+        try{
+            ActiveOrderItem existing = activeOrders.get(orderId);
+            if(existing == null){
+                throw new IllegalArgumentException("tried processing active order that was deleted or doesnt exist");
+            }
+            return existing.markAsNotProcessing();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
 }

@@ -737,7 +737,30 @@ public class ActiveOrderAcceptanceTests {
     }
 
     @Test
-    public void GivenPaymentFailed_WhenCompleteOrder_ThenDeleteOrderAndThrowException() {
+    public void GivenPaymentFailed_WhenCompleteOrder_ThenThrowException() {
+        try {
+            String sessionToken = authenticationService.login(USER1_ID);
+            SessionToken session = new SessionToken(sessionToken, 1000);
+            ActiveOrderItem orderItem = activeOrderService.createPendingOrder(session, USER1_ID, testEvent.eventId());
+            if (orderItem == null) {
+                fail("couldnt create active order, should have worked");
+            }
+            activeOrderService.addSeatsToActiveOrder(session, orderItem.getOrderId(), seatIds);
+            ActiveOrderDTO order = activeOrderService.getActiveOrderInfo(session, orderItem.getOrderId());
+
+            double amountToPay = 100;
+            when(paymentGatewayMock.pay(any())).thenReturn(-1);
+
+
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
+            //assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
+            //assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
+        } catch (Exception e) {
+            fail("got exception : " + e.getMessage());
+        }
+    }
+    @Test
+    public void GivenPaymentFailed_WhenCompleteOrder_ThenDontDeleteOrder() {
         try {
             String sessionToken = authenticationService.login(USER1_ID);
             SessionToken session = new SessionToken(sessionToken, 1000);
@@ -752,15 +775,15 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(-1);
 
             assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
-            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
-            assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
+            assertFalse(activeOrderRepo.findById(order.getOrderId()).isEmpty());
+            assertTrue(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds).isEmpty());
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
         }
     }
 
     @Test
-    public void GivenBarcodeIssueFailed_WhenCompleteOrder_ThenDeleteOrderAndThrowException() {
+    public void GivenBarcodeIssueFailed_WhenCompleteOrder_ThenThrowException() {
         try {
             String sessionToken = authenticationService.login(USER1_ID);
             SessionToken session = new SessionToken(sessionToken, 1000);
@@ -775,8 +798,9 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(50000);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
-            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(),null));
-            assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
+
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
+            //assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
             fail("got exception : " + e.getMessage() + '\n' + java.util.Arrays.toString(e.getStackTrace()));
