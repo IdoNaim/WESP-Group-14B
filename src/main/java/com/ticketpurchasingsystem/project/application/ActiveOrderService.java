@@ -303,9 +303,16 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new IllegalStateException("order is already being processed");
         }
 
-        int transactionId = payment(paymentGateway, sessionToken, paymentDetails);
-        if (transactionId == -1) {
-            logger.error("Payment failed for order: " + orderId + ". Rolling back and deleting order.");
+        int transactionId =-1;
+        try {
+            transactionId = payment(paymentGateway, sessionToken, paymentDetails);
+            if (transactionId == -1) {
+                logger.error("Payment failed for order: " + orderId + " got -1 transactionId.");
+                activeOrderRepo.markAsNotProcessing(orderId);
+                throw new IllegalStateException("Payment failed");
+            }
+        }catch (Exception e){
+            logger.error("Payment failed for order: " + orderId + " got exception when paying");
             activeOrderRepo.markAsNotProcessing(orderId);
             throw new IllegalStateException("Payment failed");
         }
