@@ -59,4 +59,17 @@ public interface DBActiveOrderRepo extends JpaRepository<ActiveOrderItem, String
         }
         return result;
     }
+    @Override
+    default boolean markAsNotProcessing(String orderId){
+        Optional<ActiveOrderItem> opt = findByIdForUpdate(orderId);
+        if (opt.isEmpty()) {
+            throw new IllegalArgumentException("Active order not found or already deleted: " + orderId);
+        }
+        ActiveOrderItem order = opt.get();
+        boolean result = order.markAsNotProcessing();
+        if (result) {
+            saveAndFlush(order);
+        }
+        return result;
+    }
 }
