@@ -81,7 +81,7 @@ public class ActiveOrderServiceUnitTest {
     @BeforeEach
     void setUp() {
         lenient().when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -726,7 +726,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
@@ -747,7 +747,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
@@ -828,7 +828,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
@@ -855,7 +855,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(100);
@@ -881,7 +881,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(200);
@@ -922,7 +922,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.getUser("valid-token")).thenReturn("userA");
         // validateOrderOwnership: default void mock passes — no stub needed
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
@@ -970,7 +970,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         lenient().when(activeOrderHandlerMock.isUsersOrder(anyString(), any())).thenReturn(true);
@@ -1027,7 +1027,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
@@ -1285,7 +1285,7 @@ public class ActiveOrderServiceUnitTest {
 
         verify(activeOrderHandlerMock, times(1)).removeSeatsFromActiveOrder(order, unreservedSeats);
         verify(activeOrderRepoMock, times(1)).update(updatedOrderMock);
-        verify(activeOrderPublisherMock, never()).publishIsUpToPolicy(any(), anyInt());
+        verify(activeOrderPublisherMock, never()).publishIsUpToPolicy(any(), any());
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(barcodeGatewayMock, never()).issueBarcodes(any());
         verifyNoInteractions(paymentGatewayMock);
