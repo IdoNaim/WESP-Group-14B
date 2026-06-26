@@ -856,7 +856,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
@@ -864,7 +864,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(activeOrderPublisherMock, times(0)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
