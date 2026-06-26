@@ -50,7 +50,7 @@ public class ActiveOrderPublisher {
     //     eventPublisher.publishEvent(event);
     // }
 
-    public boolean publishIsUpToPolicy(ActiveOrderDTO order, int age){
+    public boolean publishIsUpToPolicy(ActiveOrderDTO order, Integer age){
         IsUpToPolicyEvent event = new IsUpToPolicyEvent(this,order, age);
         eventPublisher.publishEvent(event);
         return event.getResult();
