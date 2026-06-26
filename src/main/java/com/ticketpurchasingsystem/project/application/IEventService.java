@@ -22,6 +22,7 @@ public interface IEventService {
      public boolean editEventInventory(String sessionToken, String eventId, int newCapacity);
      public SeatingMap configureSeatingMap(String sessionToken, List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas);
      public boolean editEventSeatingMap(String sessionToken, String eventId, SeatingMap seatingMap);
+     public boolean addZonesToSeatingMap(String sessionToken, String eventId, List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas);
      //public boolean configureEventSeatinMap(String eventId, SeatingMap seatingMapDTO);
      public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds);
      public void releaseStandingArea(String sessionToken, String eventId, String areaID, int quantity);

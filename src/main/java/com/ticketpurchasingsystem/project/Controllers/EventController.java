@@ -250,8 +250,7 @@ public class EventController {
                         .map(a -> new StandingAreaConfig(a.getCapacity(), a.getPrice()))
                         .collect(Collectors.toList());
 
-                SeatingMap seatingMap = eventService.configureSeatingMap(authHeader, seatingAreas, standingAreas);
-                boolean success = eventService.editEventSeatingMap(authHeader, eventId, seatingMap);
+                boolean success = eventService.addZonesToSeatingMap(authHeader, eventId, seatingAreas, standingAreas);
                 return success
                         ? ResponseEntity.ok().build()
                         : ResponseEntity.badRequest().build();

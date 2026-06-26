@@ -81,6 +81,11 @@ public class EventService implements IEventService {
     }
 
     @Override
+    public boolean addZonesToSeatingMap(String sessionToken, String eventId, List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas) {
+        return eventHandler.addZonesToSeatingMap(sessionToken, eventId, seatingAreas, standingAreas);
+    }
+
+    @Override
     public SeatingMap configureSeatingMap(String sessionToken, List<SeatingAreaConfig> seatingAreas,
                                           List<StandingAreaConfig> standingAreas) {
         return eventHandler.configureSeatingMap(sessionToken, seatingAreas, standingAreas);

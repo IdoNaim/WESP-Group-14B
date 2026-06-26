@@ -55,6 +55,11 @@ public class HistoryOrderItem {
     @Column(name = "transaction_id")
     private Integer transactionId;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "history_order_barcodes", joinColumns = @JoinColumn(name = "order_id"))
+    @Column(name = "barcode")
+    private List<String> barcodes;
+
     public HistoryOrderItem() {}
 
     public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities, Integer transactionId) {
@@ -67,6 +72,7 @@ public class HistoryOrderItem {
         this.seatIds = new ArrayList<>(seatIds);
         this.StandingAreaQuantities = new HashMap<>(standingAreaQuantities);
         this.transactionId = transactionId;
+        this.barcodes = new ArrayList<>();
     }
 
     public HistoryOrderItem(String orderId, String userId, String eventId, int companyId, double price, List<String> seatIds, Map<String, Integer> standingAreaQuantities) {
@@ -83,6 +89,7 @@ public class HistoryOrderItem {
         this.seatIds = new ArrayList<>(dto.getSeatIds());
         this.StandingAreaQuantities = new HashMap<>(dto.getStandingAreaQuantities());
         this.transactionId = dto.getTransactionId();
+        this.barcodes = dto.getBarcodes() != null ? new ArrayList<>(dto.getBarcodes()) : new ArrayList<>();
     }
 
     public String getOrderId() { return orderId; }
@@ -116,8 +123,11 @@ public class HistoryOrderItem {
     public Integer getTransactionId() { return transactionId; }
     public void setTransactionId(Integer transactionId) { this.transactionId = transactionId; }
 
+    public List<String> getBarcodes() { return barcodes != null ? barcodes : new ArrayList<>(); }
+    public void setBarcodes(List<String> barcodes) { this.barcodes = barcodes; }
+
     public HistoryOrderDTO makeDTO() {
-        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, getStandingAreaQuantities(), transactionId);
+        return new HistoryOrderDTO(orderId, userId, eventId, companyId, purchaseDate, price, seatIds, getStandingAreaQuantities(), transactionId, getBarcodes());
     }
 }
 

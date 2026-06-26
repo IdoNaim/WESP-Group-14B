@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 // no useNavigate import
 import { historyOrderApi, HistoryOrderDTO } from './../../api/historyOrderApi';
 import { authApi, UserPermissionsDTO } from '../../api/authApi';
@@ -392,17 +393,33 @@ export default function OrderHistory() {
                             </div>
                         </div>
 
-                        <div className="bg-[#0b1326] p-8 md:p-10 border-t md:border-t-0 md:border-l border-dashed border-gray-700 flex flex-col items-center justify-center relative md:w-[300px] flex-shrink-0">
+                        <div className="bg-[#0b1326] p-8 md:p-10 border-t md:border-t-0 md:border-l border-dashed border-gray-700 flex flex-col items-start justify-start relative md:w-[300px] flex-shrink-0">
                             <div className="hidden md:block absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0b1326] rounded-full border-r border-gray-700"></div>
-                            <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-6 text-center">Scan at Entrance</p>
-                            <div className="w-40 h-40 bg-white p-2 rounded-lg mb-6 shadow-[0_0_20px_rgba(3,219,231,0.2)]">
-                                <svg viewBox="0 0 100 100" className="w-full h-full text-black">
-                                    <rect width="100" height="100" fill="white"/>
-                                    <path d="M10,10 h20 v20 h-20 z M15,15 h10 v10 h-10 z M70,10 h20 v20 h-20 z M75,15 h10 v10 h-10 z M10,70 h20 v20 h-20 z M15,75 h10 v10 h-10 z M40,10 h20 v10 h-20 z M45,25 h10 v10 h-10 z M10,40 h10 v20 h-10 z M25,45 h10 v10 h-10 z M40,40 h20 v20 h-20 z M70,40 h20 v10 h-20 z M75,55 h10 v10 h-10 z M40,70 h10 v20 h-10 z M55,75 h10 v10 h-10 z M70,70 h10 v10 h-10 z M85,85 h5 v5 h-5 z M75,80 h5 v5 h-5 z" fill="black"/>
-                                </svg>
+                            <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-4">Ticket Barcodes</p>
+                            {selectedTicket.barcodes && selectedTicket.barcodes.length > 0 ? (
+                                <div className="w-full space-y-4 max-h-80 overflow-y-auto pr-1 mb-4">
+                                    {selectedTicket.barcodes.map((code, idx) => (
+                                        <div key={idx} className="bg-[#171f33] border border-gray-700 rounded-lg p-3 flex flex-col items-center gap-2">
+                                            <p className="text-gray-500 text-[9px] uppercase font-bold tracking-wider self-start">Ticket #{idx + 1}</p>
+                                            <div className="bg-white p-2 rounded-lg shadow-[0_0_12px_rgba(3,219,231,0.15)]">
+                                                <QRCodeSVG value={code} size={160} />
+                                            </div>
+                                            <p className="font-mono text-[#03dbe7] text-[10px] font-bold break-all text-center">{code}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="w-full mb-4 flex flex-col items-center gap-3">
+                                    <div className="bg-white p-2 rounded-lg shadow-[0_0_12px_rgba(3,219,231,0.15)]">
+                                        <QRCodeSVG value={selectedTicket.orderId} size={160} />
+                                    </div>
+                                    <p className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Order ID QR</p>
+                                </div>
+                            )}
+                            <div className="w-full mt-auto border-t border-gray-800 pt-4">
+                                <p className="text-gray-500 text-[9px] uppercase font-bold tracking-wider mb-1">Order Reference</p>
+                                <p className="font-mono text-[#03dbe7] text-sm font-bold tracking-widest break-all">{selectedTicket.orderId}</p>
                             </div>
-                            <div className="w-full h-12 barcode-stripes opacity-80 mb-4"></div>
-                            <p className="font-mono text-[#03dbe7] text-sm font-bold tracking-widest break-all text-center">{selectedTicket.orderId}</p>
                         </div>
                     </div>
                 </div>

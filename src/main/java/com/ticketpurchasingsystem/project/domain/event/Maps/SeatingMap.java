@@ -38,6 +38,27 @@ public class SeatingMap {
         this.standingAreas = new ConcurrentHashMap<>();
     }
 
+    @PostLoad
+    public void initAreaIdGenerator() {
+        long maxId = 0;
+        for (String areaId : standingAreas.keySet()) {
+            try {
+                long id = Long.parseLong(areaId);
+                if (id >= maxId) maxId = id + 1;
+            } catch (NumberFormatException ignored) {}
+        }
+        for (String seatId : seats.keySet()) {
+            String[] parts = seatId.split("_");
+            if (parts.length > 0) {
+                try {
+                    long id = Long.parseLong(parts[0]);
+                    if (id >= maxId) maxId = id + 1;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        areaIDGenerator.set(maxId);
+    }
+
     private String generateAreaID() {
         return "" + areaIDGenerator.getAndIncrement();
     }

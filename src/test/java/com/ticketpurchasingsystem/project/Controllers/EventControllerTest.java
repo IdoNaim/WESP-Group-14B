@@ -36,7 +36,6 @@ import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
-import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
 
 @WebMvcTest(EventController.class)
 @Import(SecurityConfig.class)
@@ -349,9 +348,7 @@ class EventControllerTest {
         dto.setSeatingAreas(List.of(area));
         dto.setStandingAreas(Collections.emptyList());
 
-        // FIXED: Added authHeader parameter to both mock setups
-        when(eventService.configureSeatingMap(any(), any(), any())).thenReturn(mock(SeatingMap.class));
-        when(eventService.editEventSeatingMap(eq(VALID_AUTH), eq("evt-1"), any())).thenReturn(true);
+        when(eventService.addZonesToSeatingMap(any(), any(), any(), any())).thenReturn(true);
 
         mockMvc.perform(put("/api/events/evt-1/seating-map")
                         .header("Authorization", VALID_AUTH)
@@ -366,9 +363,7 @@ class EventControllerTest {
         dto.setSeatingAreas(Collections.emptyList());
         dto.setStandingAreas(Collections.emptyList());
 
-        // FIXED: Added authHeader parameter to both mock setups
-        when(eventService.configureSeatingMap(any(), any(), any())).thenReturn(mock(SeatingMap.class));
-        when(eventService.editEventSeatingMap(any(), any(), any())).thenReturn(false);
+        when(eventService.addZonesToSeatingMap(any(), any(), any(), any())).thenReturn(false);
 
         mockMvc.perform(put("/api/events/unknown/seating-map")
                         .header("Authorization", VALID_AUTH)

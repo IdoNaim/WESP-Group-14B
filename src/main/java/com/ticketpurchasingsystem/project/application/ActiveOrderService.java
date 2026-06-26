@@ -72,13 +72,12 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         try {
             rollbackOrderReservations(sessionToken.getToken(), new ActiveOrderDTO(order));
-            activeOrderRepo.delete(orderId);
-            activeOrderPublisher.publishOrderCancelled(userId, orderId);
-            logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
-        }catch (Exception e){
-            activeOrderRepo.markAsNotProcessing(orderId);
-            logger.error("got error when trying to cancel order: "+ e.getMessage());
+        } catch (Exception e) {
+            logger.warn("Could not fully release reservations for order " + orderId + " during cancel: " + e.getMessage() + ". Proceeding with deletion.");
         }
+        activeOrderRepo.delete(orderId);
+        activeOrderPublisher.publishOrderCancelled(userId, orderId);
+        logger.info("Successfully cancelled active order: " + orderId + " for user: " + userId);
     }
 
     @Override
@@ -317,7 +316,7 @@ public class ActiveOrderService implements IActiveOrderService {
                 throw new IllegalStateException("Barcode generation failed");
             }
             activeOrderRepo.delete(orderId);
-            activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId, transactionId);
+            activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId, transactionId, barcodesIssued);
 //            activeOrderRepo.delete(orderId);
             logger.info("Successfully completed order: " + orderId);
             return barcodesIssued;
@@ -430,8 +429,12 @@ public class ActiveOrderService implements IActiveOrderService {
         Map<String, Integer> standingAreaTicketsToRelease = activeOrderHandler
                 .calculateStandingToRelease(currentStanding, newOrderStanding);
         for (Map.Entry<String, Integer> entry : standingAreaTicketsToRelease.entrySet()) {
-            activeOrderPublisher.publishReleaseStandingArea(sessionToken.getToken(), order.getEventId(), entry.getKey(),
-                    entry.getValue());
+            try {
+                activeOrderPublisher.publishReleaseStandingArea(sessionToken.getToken(), order.getEventId(), entry.getKey(),
+                        entry.getValue());
+            } catch (Exception e) {
+                logger.warn("Failed to release standing area " + entry.getKey() + " during order update: " + e.getMessage());
+            }
         }
         logger.info("Successfully updated order: " + order.getOrderId());
     }

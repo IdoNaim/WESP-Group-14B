@@ -309,6 +309,20 @@ public class EventServiceTest {
         verify(mockPublisher, never()).publishCapacityChanged(anyString(), anyInt());
     }
 
+    @Test
+    void GivenCapacityDecreased_WhenEditEventInventory_ThenReturnFalse() {
+        Event mockEvent = mock(Event.class);
+        when(mockRepo.findById("1")).thenReturn(mockEvent);
+        when(mockEvent.getEventCapacity()).thenReturn(500);
+
+        boolean result = eventService.editEventInventory(VALID_TOKEN, "1", 200);
+
+        assertFalse(result);
+        verify(mockEvent, never()).setEventCapacity(anyInt());
+        verify(mockRepo, never()).save(any());
+        verify(mockPublisher, never()).publishCapacityChanged(anyString(), anyInt());
+    }
+
     // ================= CONFIGURE SEATING MAP =================
     @Test
     void GivenValidConfigs_WhenConfigureSeatingMap_ThenReturnSeatingMap() {

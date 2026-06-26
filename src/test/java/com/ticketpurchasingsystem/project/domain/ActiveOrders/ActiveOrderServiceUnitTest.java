@@ -166,6 +166,28 @@ public class ActiveOrderServiceUnitTest {
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
     }
 
+    @Test
+    void GivenRollbackThrows_WhenCancelActiveOrder_ThenDeleteIsStillCalled() {
+        ActiveOrderItem order = orderForUser(USER_ID);
+        HashMap<String, Integer> standing = new HashMap<>();
+        standing.put(AREA_ID, QUANTITY);
+        order.setStandingAreaQuantities(standing);
+
+        when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
+        when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
+        when(activeOrderHandlerMock.canReleaseSeats(any())).thenReturn(false);
+        when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
+        doThrow(new RuntimeException("Release failed"))
+                .when(activeOrderPublisherMock).publishReleaseStandingArea(any(), any(), any(), anyInt());
+
+        assertDoesNotThrow(() ->
+                activeOrderService.cancelActiveOrder(VALID_SESSION, USER_ID, ORDER_ID)
+        );
+
+        verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
+    }
+
     //------------------------------------------------------------------------------------------------------------------
     // getActiveOrderInfo
     //------------------------------------------------------------------------------------------------------------------
@@ -736,7 +758,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000), any());
     }
 
     @Test
@@ -757,7 +779,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000), any());
     }
 
     @Test

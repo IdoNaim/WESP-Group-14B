@@ -1,7 +1,6 @@
 package com.ticketpurchasingsystem.project.infrastructure;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +8,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
@@ -38,15 +39,18 @@ public class BarCodeGateway implements IBarCodeGateway {
             String row  = parts[1];
             String seat = parts[2];
 
-            Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "issue_ticket");
-            body.put("customer_id", order.getUserId());
-            body.put("event_id", order.getEventId());
-            body.put("zone", zone);
-            body.put("is_seating", true);
-            body.put("seats", List.of(Map.of("row", row, "seat", seat)));
+            // seats must be a JSON-serialized string per the API spec
+            String seatsJson = "[{\"row\": " + row + ", \"seat\": " + seat + "}]";
 
-            String response = post(body);
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("action_type", "issue_ticket");
+            form.add("customer_id", order.getUserId());
+            form.add("event_id", order.getEventId());
+            form.add("zone", zone);
+            form.add("is_seating", "true");
+            form.add("seats", seatsJson);
+
+            String response = post(form);
             if (response == null || response.trim().equals(FAILURE)) {
                 cancelTickets(issued);
                 return null;
@@ -55,14 +59,14 @@ public class BarCodeGateway implements IBarCodeGateway {
         }
 
         for (Map.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
-            Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "issue_ticket");
-            body.put("customer_id", order.getUserId());
-            body.put("event_id", order.getEventId());
-            body.put("zone", entry.getKey());
-            body.put("quantity", entry.getValue());
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("action_type", "issue_ticket");
+            form.add("customer_id", order.getUserId());
+            form.add("event_id", order.getEventId());
+            form.add("zone", entry.getKey());
+            form.add("quantity", String.valueOf(entry.getValue()));
 
-            String response = post(body);
+            String response = post(form);
             if (response == null || response.trim().equals(FAILURE)) {
                 cancelTickets(issued);
                 return null;
@@ -76,22 +80,22 @@ public class BarCodeGateway implements IBarCodeGateway {
     @Override
     public void cancelTickets(List<BarcodeDTO> barcodes) {
         for (BarcodeDTO barcode : barcodes) {
-            Map<String, Object> body = new HashMap<>();
-            body.put("action_type", "cancel_ticket");
-            body.put("ticket_id", barcode.getBarcodeValue());
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("action_type", "cancel_ticket");
+            form.add("ticket_id", barcode.getBarcodeValue());
             try {
-                post(body);
+                post(form);
             } catch (Exception ignored) {
                 // best-effort cancellation
             }
         }
     }
 
-    private String post(Map<String, Object> body) {
+    private String post(MultiValueMap<String, String> form) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            return restTemplate.postForObject(API_URL, new HttpEntity<>(body, headers), String.class);
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
         } catch (Exception e) {
             loggerDef.getInstance().error("Network error calling external BarCodeGateway: " + e.getMessage());
             return null;
