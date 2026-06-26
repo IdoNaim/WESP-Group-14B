@@ -14,4 +14,8 @@ public class MinAgeRule implements IPurchaseRule {
     public int getMinAge() {
         return minAge;
     }
+
+    public boolean validateTicketPolicy(PurchaseContext context){
+        return true;
+    }
 }

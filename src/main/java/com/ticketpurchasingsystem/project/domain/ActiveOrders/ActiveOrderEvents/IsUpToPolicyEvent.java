@@ -9,8 +9,8 @@ import java.util.List;
 public class IsUpToPolicyEvent extends ApplicationEvent {
     private ActiveOrderDTO order;
     private Boolean result;
-    private int age;
-    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order, int age){
+    private Integer age= null;
+    public IsUpToPolicyEvent(Object source, ActiveOrderDTO order, Integer age){
         super(source);
         this.order = order;
         this.result = null;
@@ -49,7 +49,7 @@ public class IsUpToPolicyEvent extends ApplicationEvent {
         return total;
     }
 
-    public int getAge()
+    public Integer getAge()
     {
        return age;
     }

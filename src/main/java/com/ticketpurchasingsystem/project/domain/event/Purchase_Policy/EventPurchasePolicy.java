@@ -128,4 +128,11 @@ public class EventPurchasePolicy implements IPurchaseRule {
                 isAgeAndQuantityOr != null && isAgeAndQuantityOr
         );
     }
+
+    public boolean validateTicketPolicy(PurchaseContext context){
+        for (IPurchaseRule rule : rules) {
+            if (!rule.validateTicketPolicy(context)) { return false; }
+        }
+        return true;
+    }
 }
