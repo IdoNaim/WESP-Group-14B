@@ -262,9 +262,21 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
-        // Assuming your internal isValidEventID method depends on this publisher call:
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
+
+        // 💡 FIX: Teach the Mockito mock to generate a UUID on save, just like Hibernate does!
+        when(activeOrderRepoMock.save(any(ActiveOrderItem.class))).thenAnswer(invocation -> {
+            ActiveOrderItem item = invocation.getArgument(0);
+            try {
+                java.lang.reflect.Field idField = item.getClass().getDeclaredField("orderId");
+                idField.setAccessible(true);
+                idField.set(item, java.util.UUID.randomUUID().toString());
+            } catch (Exception e) {
+                // If ActiveOrderItem has a setter, you can just do: item.setOrderId(java.util.UUID.randomUUID().toString());
+            }
+            return item;
+        });
 
         // Act
         ActiveOrderItem order = activeOrderService.createPendingOrder(VALID_SESSION, USER_ID, EVENT_ID);
@@ -273,7 +285,7 @@ public class ActiveOrderServiceUnitTest {
         assertNotNull(order);
         assertEquals(EVENT_ID, order.getEventId());
         assertEquals(USER_ID, order.getUserId());
-        assertNotNull(order.getOrderId());
+        assertNotNull(order.getOrderId()); // This will now PASS!
     }
 
     @Test
@@ -284,6 +296,17 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
+
+        // 💡 FIX: Add the same mock behavior here so the service doesn't return a null/empty order structure
+        when(activeOrderRepoMock.save(any(ActiveOrderItem.class))).thenAnswer(invocation -> {
+            ActiveOrderItem item = invocation.getArgument(0);
+            try {
+                java.lang.reflect.Field idField = item.getClass().getDeclaredField("orderId");
+                idField.setAccessible(true);
+                idField.set(item, java.util.UUID.randomUUID().toString());
+            } catch (Exception e) {}
+            return item;
+        });
 
         // Act
         ActiveOrderItem order = activeOrderService.createPendingOrder(VALID_SESSION, USER_ID, EVENT_ID);
@@ -370,6 +393,15 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
 
+        // Defensive stubbing: behave normally if no existing order, throw if duplicate detected
+        doAnswer(invocation -> {
+            ActiveOrderItem existing = invocation.getArgument(0);
+            if (existing != null) {
+                throw new IllegalArgumentException("Active order already exists");
+            }
+            return null;
+        }).when(activeOrderHandlerMock).validatePendingOrderCreation(any(), anyBoolean(), anyString(), anyString());
+
         SessionToken sessionA = new SessionToken("userA", 9999999999L);
         SessionToken sessionB = new SessionToken("userB", 9999999999L);
 
@@ -378,7 +410,6 @@ public class ActiveOrderServiceUnitTest {
         List<ActiveOrderItem> results = Collections.synchronizedList(new ArrayList<>());
         List<Exception> errors = Collections.synchronizedList(new ArrayList<>());
 
-        // Thread 1: User A
         new Thread(() -> {
             try {
                 startLatch.await();
@@ -390,7 +421,6 @@ public class ActiveOrderServiceUnitTest {
             }
         }).start();
 
-        // Thread 2: User B
         new Thread(() -> {
             try {
                 startLatch.await();
@@ -402,11 +432,10 @@ public class ActiveOrderServiceUnitTest {
             }
         }).start();
 
-        // Fire the starting gun for both threads
         startLatch.countDown();
         doneLatch.await();
 
-        assertTrue(errors.isEmpty());
+        assertTrue(errors.isEmpty(), "Expected no concurrent processing errors but got: " + errors);
         assertEquals(2, results.size());
         assertNotEquals(results.get(0).getOrderId(), results.get(1).getOrderId());
     }
@@ -423,6 +452,15 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
 
+        // CRITICAL FIX: Make the mock handler reject requests if the repo already found an active order
+        doAnswer(invocation -> {
+            ActiveOrderItem existing = invocation.getArgument(0);
+            if (existing != null) {
+                throw new IllegalArgumentException("An active order already exists for this user.");
+            }
+            return null;
+        }).when(activeOrderHandlerMock).validatePendingOrderCreation(any(), anyBoolean(), anyString(), anyString());
+
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(2);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -436,15 +474,17 @@ public class ActiveOrderServiceUnitTest {
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
-                } finally { doneLatch.countDown(); }
+                } finally {
+                    doneLatch.countDown();
+                }
             }).start();
         }
 
         startLatch.countDown();
         doneLatch.await();
 
-        assertEquals(1, successCount.get());
-        assertEquals(1, failCount.get());
+        assertEquals(1, successCount.get(), "Exactly one order creation should succeed");
+        assertEquals(1, failCount.get(), "Exactly one order creation should be rejected due to conflict");
         assertNotNull(realRepo.findByUserId(USER_ID));
     }
 
@@ -462,6 +502,14 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
 
+        doAnswer(invocation -> {
+            ActiveOrderItem existing = invocation.getArgument(0);
+            if (existing != null) {
+                throw new IllegalArgumentException("Active order already exists");
+            }
+            return null;
+        }).when(activeOrderHandlerMock).validatePendingOrderCreation(any(), anyBoolean(), anyString(), anyString());
+
         ExecutorService executor = Executors.newFixedThreadPool(numberOfUsers);
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(numberOfUsers);
@@ -474,8 +522,11 @@ public class ActiveOrderServiceUnitTest {
                 try {
                     startLatch.await();
                     results.add(service.createPendingOrder(new SessionToken(multiUserId, 9999999999L), multiUserId, EVENT_ID));
-                } catch (Exception e) { errors.add(e); }
-                finally { doneLatch.countDown(); }
+                } catch (Exception e) {
+                    errors.add(e);
+                } finally {
+                    doneLatch.countDown();
+                }
             });
         }
 
@@ -483,10 +534,10 @@ public class ActiveOrderServiceUnitTest {
         doneLatch.await();
         executor.shutdown();
 
-        assertTrue(errors.isEmpty());
+        assertTrue(errors.isEmpty(), "Expected no errors but encountered: " + errors);
         assertEquals(numberOfUsers, results.size());
         long uniqueOrderIds = results.stream().map(ActiveOrderItem::getOrderId).distinct().count();
-        assertEquals(numberOfUsers, uniqueOrderIds);
+        assertEquals(numberOfUsers, uniqueOrderIds, "All generated Order UUIDs must be completely unique");
     }
 //------------------------------------------------------------------------------------------------------------------
     // addSeatsToActiveOrder

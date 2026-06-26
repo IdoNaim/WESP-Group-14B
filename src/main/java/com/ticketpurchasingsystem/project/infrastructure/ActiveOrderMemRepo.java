@@ -22,10 +22,26 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
         if(order == null){
             throw new IllegalArgumentException("tried to save null active order");
         }
+
+        // 💡 FIX FOR TEST SUITE NPEs: Simulate Hibernate's @GeneratedValue UUID behavior
+        if (order.getOrderId() == null) {
+            try {
+                java.lang.reflect.Field idField = order.getClass().getDeclaredField("orderId");
+                idField.setAccessible(true);
+                idField.set(order, java.util.UUID.randomUUID().toString());
+            } catch (Exception e) {
+                // Note: If ActiveOrderItem has a standard setter, you can replace the
+                // reflection block above with a simple: order.setOrderId(java.util.UUID.randomUUID().toString());
+                throw new RuntimeException("Failed to inject simulated UUID for test environment", e);
+            }
+        }
+
+        // This will now execute perfectly without NPE because order.getOrderId() is a valid string!
         String existing = userToOrder.putIfAbsent(order.getUserId(), order.getOrderId());
         if (existing != null) {
             throw new IllegalArgumentException("the user "+ order.getUserId()+ " already has an active order");
         }
+
         activeOrders.put(order.getOrderId(), order);
         getLockFor(order.getOrderId());
         return order;

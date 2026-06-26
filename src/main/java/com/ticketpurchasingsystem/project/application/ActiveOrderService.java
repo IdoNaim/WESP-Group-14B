@@ -137,14 +137,14 @@ public class ActiveOrderService implements IActiveOrderService {
         boolean isValidEvent = isValidEventID(eventId);
         activeOrderHandler.validatePendingOrderCreation(existingOrder, isValidEvent, eventId, userId);
 
-        String orderId = "" + IdGenerator.getInstance().nextId();
-        ActiveOrderItem orderItem = new ActiveOrderItem(orderId, userId, eventId);
+        //String orderId = "" + IdGenerator.getInstance().nextId();
+        ActiveOrderItem orderItem = new ActiveOrderItem(null, userId, eventId);
 
         activeOrderHandler.canCreateActiveOrder(orderItem);
 
         logger.info("Saving order: " + orderItem.getOrderId());
         activeOrderRepo.save(orderItem);
-        logger.info("Successfully created pending order: " + orderId + " for user: " + userId);
+        logger.info("Successfully created pending order: " + " for user: " + userId);
         return orderItem;
     }
 
