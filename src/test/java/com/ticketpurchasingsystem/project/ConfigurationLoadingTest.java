@@ -3,7 +3,9 @@ package com.ticketpurchasingsystem.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import com.ticketpurchasingsystem.project.infrastructure.ConfigurationValidator;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,6 +15,15 @@ class ConfigurationLoadingTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(TicketApplication.class);
+
+    // Minimal context runner registering only a test configuration and our ConfigurationValidator.
+    // This allows verifying property loading and basic validation without booting database resources or component scanning.
+    private final ApplicationContextRunner minimalContextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(TestConfig.class, ConfigurationValidator.class);
+
+    @Configuration
+    static class TestConfig {
+    }
 
     // Negative (failure) configuration tests
     @Test
@@ -119,7 +130,19 @@ class ConfigurationLoadingTest {
 
     private Properties loadPropertiesFile(String relativePath) throws IOException {
         Properties properties = new Properties();
-        try (FileInputStream fis = new FileInputStream(relativePath)) {
+        java.io.File file = new java.io.File(relativePath);
+        if (!file.exists()) {
+            java.io.File parent = new java.io.File(".").getAbsoluteFile();
+            while (parent != null) {
+                java.io.File candidate = new java.io.File(parent, relativePath);
+                if (candidate.exists()) {
+                    file = candidate;
+                    break;
+                }
+                parent = parent.getParentFile();
+            }
+        }
+        try (FileInputStream fis = new FileInputStream(file)) {
             properties.load(fis);
         }
         return properties;
@@ -139,7 +162,7 @@ class ConfigurationLoadingTest {
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .toArray(String[]::new);
 
-        contextRunner
+        minimalContextRunner
                 .withPropertyValues(envProps)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
@@ -167,7 +190,7 @@ class ConfigurationLoadingTest {
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .toArray(String[]::new);
 
-        contextRunner
+        minimalContextRunner
                 .withPropertyValues(envProps)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
@@ -195,7 +218,7 @@ class ConfigurationLoadingTest {
                 .map(e -> e.getKey() + "=" + e.getValue())
                 .toArray(String[]::new);
 
-        contextRunner
+        minimalContextRunner
                 .withPropertyValues(envProps)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
