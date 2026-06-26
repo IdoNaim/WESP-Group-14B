@@ -316,7 +316,7 @@ public class ActiveOrderService implements IActiveOrderService {
                 throw new IllegalStateException("Barcode generation failed");
             }
             activeOrderRepo.delete(orderId);
-            activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId, transactionId);
+            activeOrderPublisher.publishCompletedOrder(orderDTO, amount, companyId, transactionId, barcodesIssued);
 //            activeOrderRepo.delete(orderId);
             logger.info("Successfully completed order: " + orderId);
             return barcodesIssued;

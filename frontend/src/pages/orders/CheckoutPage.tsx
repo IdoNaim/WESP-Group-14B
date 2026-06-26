@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { activeOrderApi, ActiveOrderDTO, CheckoutRequestDTO } from '../../api/activeOrderApi';
 import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { authApi, UserProfileDTO } from '../../api/authApi';
@@ -344,16 +345,20 @@ export default function CheckoutPage() {
 
   // ─── Pre-Payment Policy Verification ──────────────────────────────────────
   const handleInitiatePayment = async () => {
-    // Validate card details first
+    // Prevent double-submission: if already in flight or done, do nothing
+    if (processState !== 'idle') return;
+
+    // Lock the button immediately — before any awaits
+    setProcessState('processing');
     setPaymentError('');
 
     // Guard: make sure the event wasn't canceled while the user was on this page.
-    // A soft-canceled event still exists but returns isActive === false.
     if (order?.eventId) {
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
       const latestEvent = await eventApi.getEvent(token, order.eventId);
       if (latestEvent && latestEvent.isActive === false) {
         setPaymentError('Event got canceled');
+        setProcessState('idle');
         return;
       }
     }
@@ -361,11 +366,14 @@ export default function CheckoutPage() {
     const errors = validatePaymentFields({ cardholderName, cardholderId, cardNumber, expiryDate, cvv });
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      setProcessState('idle');
       return;
     }
     setValidationErrors({});
 
     if (policyRequiresAge(purchasePolicy)) {
+      // Keep processState='processing' so button stays disabled while modal is open.
+      // Age modal cancel must reset it back to idle (see Cancel button onClick below).
       setIsAgeModalOpen(true);
     } else {
       proceedToValidatePolicyAndPay(null);
@@ -499,11 +507,16 @@ export default function CheckoutPage() {
             </div>
             <div>
               <p className="text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">SECURE TICKET ACCESS BARCODES ({successBarcodes.length})</p>
-              <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {successBarcodes.map((code, index) => (
-                  <div key={index} className="bg-[#f2f3f9] px-3 py-2 text-xs font-mono font-bold rounded flex items-center justify-between border border-[#e2e2e9]">
-                    <span>Ticket #{index + 1}</span>
-                    <span className="text-blue-700 tracking-wider font-extrabold">{code}</span>
+                  <div key={index} className="bg-[#f2f3f9] px-3 py-2 text-xs font-mono font-bold rounded flex items-center justify-between gap-3 border border-[#e2e2e9]">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="text-[#46464b]">Ticket #{index + 1}</span>
+                      <span className="text-blue-700 tracking-wider font-extrabold break-all">{code}</span>
+                    </div>
+                    <div className="bg-white p-1 rounded flex-shrink-0">
+                      <QRCodeSVG value={code} size={52} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -793,7 +806,7 @@ export default function CheckoutPage() {
             />
             <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => setIsAgeModalOpen(false)}
+                onClick={() => { setIsAgeModalOpen(false); setProcessState('idle'); }}
                 className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
               >
                 Cancel

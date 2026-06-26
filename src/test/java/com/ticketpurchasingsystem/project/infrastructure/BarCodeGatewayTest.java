@@ -76,11 +76,14 @@ class BarCodeGatewayTest {
         // Verify cancel ticket was triggered for TIX-111
         verify(restTemplate).postForObject(
                 eq(BarCodeGateway.API_URL),
-                argThat((HttpEntity entity) -> {
-                    java.util.Map<?, ?> body = (java.util.Map<?, ?>) entity.getBody();
+                argThat(entity -> {
+                    @SuppressWarnings("unchecked")
+                    org.springframework.util.MultiValueMap<String, String> body =
+                            (org.springframework.util.MultiValueMap<String, String>)
+                            ((HttpEntity<?>) entity).getBody();
                     return body != null &&
-                            "cancel_ticket".equals(body.get("action_type")) &&
-                            "TIX-111".equals(body.get("ticket_id"));
+                            "cancel_ticket".equals(body.getFirst("action_type")) &&
+                            "TIX-111".equals(body.getFirst("ticket_id"));
                 }),
                 eq(String.class)
         );
@@ -108,11 +111,14 @@ class BarCodeGatewayTest {
 
         verify(restTemplate).postForObject(
                 eq(BarCodeGateway.API_URL),
-                argThat((HttpEntity entity) -> {
-                    java.util.Map<?, ?> body = (java.util.Map<?, ?>) entity.getBody();
+                argThat(entity -> {
+                    @SuppressWarnings("unchecked")
+                    org.springframework.util.MultiValueMap<String, String> body =
+                            (org.springframework.util.MultiValueMap<String, String>)
+                            ((HttpEntity<?>) entity).getBody();
                     return body != null &&
-                            "cancel_ticket".equals(body.get("action_type")) &&
-                            "TIX-999".equals(body.get("ticket_id"));
+                            "cancel_ticket".equals(body.getFirst("action_type")) &&
+                            "TIX-999".equals(body.getFirst("ticket_id"));
                 }),
                 eq(String.class)
         );

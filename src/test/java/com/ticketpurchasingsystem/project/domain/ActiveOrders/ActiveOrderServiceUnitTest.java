@@ -758,7 +758,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000), any());
     }
 
     @Test
@@ -779,7 +779,7 @@ public class ActiveOrderServiceUnitTest {
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
-        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000));
+        verify(activeOrderPublisherMock, times(1)).publishCompletedOrder(any(ActiveOrderDTO.class), eq(AMOUNT), eq(COMPANY_ID), eq(50000), any());
     }
 
     @Test
