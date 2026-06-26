@@ -11,6 +11,7 @@ public class CheckoutRequestDTO {
     private String holder;
     private String cvv;
     private String id;
+    private Integer age;
 
     public PaymentDetails toPaymentDetails() {
         return new PaymentDetails(amount, currency, cardNumber, month, year, holder, cvv, id);
@@ -39,4 +40,7 @@ public class CheckoutRequestDTO {
 
     public String getId()          { return id; }
     public void setId(String id)   { this.id = id; }
+
+    public Integer getAge(){ return age; }
+    public void setAge(Integer age){ this.age = age; }
 }

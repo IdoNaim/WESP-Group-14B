@@ -249,10 +249,14 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
+
+    /**
+    call with age = null if age is irrelevant
+     */
     @Override
     @Transactional(noRollbackFor = RuntimeException.class)
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken,
-            PaymentDetails paymentDetails, String orderId) {
+            PaymentDetails paymentDetails, String orderId, Integer age) {
         double amount = paymentDetails.getAmount();
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         validateSession(sessionToken, "Session validation failed while completing order: " + orderId,
@@ -286,7 +290,6 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new RuntimeException("couldn't retrieve company information for this event");
         }
 
-        int age = getUserAge(sessionToken);
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO, age);
         if (!upToPolicy) {
             logger.error("Complete order failed: Order " + orderId + " violates purchase policies");
@@ -515,9 +518,5 @@ public class ActiveOrderService implements IActiveOrderService {
 
     private boolean isValidEventID(String eventId) {
         return activeOrderPublisher.publishIsValidEventIDEvent(eventId);
-    }
-
-    private int getUserAge(SessionToken sessionToken) {
-        return 20;
     }
 }

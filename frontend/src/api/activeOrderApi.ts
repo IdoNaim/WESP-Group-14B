@@ -32,6 +32,7 @@ export interface CheckoutRequestDTO {
     expirationDate: string;
     cvv: string;
     id: string;
+    age: number|null
 }
 
 export interface CheckoutResponseDTO {
@@ -208,7 +209,8 @@ export const activeOrderApi = {
             year: year || '',
             holder: data.cardHolderName,
             cvv: data.cvv,
-            id: data.id
+            id: data.id,
+            age: data.age
         };
 
         const response = await fetch(`${BASE_URL}/${orderId}/checkout`, {
