@@ -15,4 +15,7 @@ public class MaxAgeRule implements IPurchaseRule {
     public int getMaxAge() {
         return maxAge;
     }
+    public boolean validateTicketPolicy(PurchaseContext context){
+        return true;
+    }
 }

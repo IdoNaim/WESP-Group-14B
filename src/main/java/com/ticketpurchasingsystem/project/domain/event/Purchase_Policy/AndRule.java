@@ -17,4 +17,7 @@ public class AndRule implements IPurchaseRule{
     public IPurchaseRule getComponent2() {
         return component2;
     }
+    public boolean validateTicketPolicy(PurchaseContext context){
+        return component1.validateTicketPolicy(context) && component2.validateTicketPolicy(context);
+    }
 }

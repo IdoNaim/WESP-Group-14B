@@ -91,13 +91,23 @@ public class EventAggregateListener {
             }
         }
 
-        PurchaseContext context = new PurchaseContext(
-                event.getTotalTickets(),
-                event.getAge(),
-                alreadyPurchased);
-
-        boolean isValid = policy.validate(context);
-        event.setResult(isValid);
+            PurchaseContext context;
+        boolean isValid;
+        if(event.getAge() != null) {
+            context = new PurchaseContext(
+                    event.getTotalTickets(),
+                    event.getAge(),
+                    alreadyPurchased);
+            isValid = policy.validate(context);
+        }
+        else {
+            context = new PurchaseContext(
+                    event.getTotalTickets(),
+                    0,
+                    alreadyPurchased);
+            isValid = policy.validateTicketPolicy(context);
+        }
+            event.setResult(isValid);
     }
     @EventListener
     public void onIsValidEventIDEvent(IsValidEventIDEvent event){

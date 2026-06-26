@@ -169,7 +169,7 @@ public class ActiveOrderService implements IActiveOrderService {
         List<String> previewSeats = new ArrayList<>(previewDTO.getSeatIds());
         previewSeats.addAll(seatsToReserve);
         previewDTO.setSeatIds(previewSeats);
-        if (!activeOrderPublisher.publishIsUpToPolicy(previewDTO, getUserAge(sessionToken))) {
+        if (!activeOrderPublisher.publishIsUpToPolicy(previewDTO, null)) {
             logger.error("Add seats failed: Adding seats would exceed purchase policy limit for order: " + orderId);
             throw new IllegalStateException("Cannot add tickets: purchase policy limit would be exceeded");
         }
@@ -220,7 +220,7 @@ public class ActiveOrderService implements IActiveOrderService {
         HashMap<String, Integer> previewStanding = previewStandingDTO.getStandingAreaQuantities();
         previewStanding.merge(areaId, quantity, Integer::sum);
         previewStandingDTO.setStandingAreaQuantities(previewStanding);
-        if (!activeOrderPublisher.publishIsUpToPolicy(previewStandingDTO, getUserAge(sessionToken))) {
+        if (!activeOrderPublisher.publishIsUpToPolicy(previewStandingDTO, null)) {
             logger.error("Add standing area failed: Adding tickets would exceed purchase policy limit for order: "
                     + orderId);
             throw new IllegalStateException("Cannot add tickets: purchase policy limit would be exceeded");
@@ -252,10 +252,14 @@ public class ActiveOrderService implements IActiveOrderService {
         }
     }
 
+
+    /**
+    call with age = null if age is irrelevant
+     */
     @Override
     @Transactional(noRollbackFor = RuntimeException.class)
     public List<BarcodeDTO> completeOrder(IPaymentGateway paymentGateway, SessionToken sessionToken,
-            PaymentDetails paymentDetails, String orderId) {
+            PaymentDetails paymentDetails, String orderId, Integer age) {
         double amount = paymentDetails.getAmount();
         logger.info("Attempting to complete order: " + orderId + " with amount: " + amount);
         validateSession(sessionToken, "Session validation failed while completing order: " + orderId,
@@ -289,7 +293,6 @@ public class ActiveOrderService implements IActiveOrderService {
             throw new RuntimeException("couldn't retrieve company information for this event");
         }
 
-        int age = getUserAge(sessionToken);
         boolean upToPolicy = activeOrderPublisher.publishIsUpToPolicy(orderDTO, age);
         if (!upToPolicy) {
             logger.error("Complete order failed: Order " + orderId + " violates purchase policies");
@@ -371,7 +374,7 @@ public class ActiveOrderService implements IActiveOrderService {
         }
         checkIfExpiredAndThrowException(sessionToken.getToken(), order);
 
-        if (!activeOrderPublisher.publishIsUpToPolicy(newOrderDTO, getUserAge(sessionToken))) {
+        if (!activeOrderPublisher.publishIsUpToPolicy(newOrderDTO, null)) {
             logger.error("Update order failed: Order violates purchase policy for order: " + newOrderDTO.getOrderId());
             throw new IllegalStateException(
                     "Cannot reserve tickets: you have already purchased the maximum allowed tickets for this event");
@@ -528,9 +531,5 @@ public class ActiveOrderService implements IActiveOrderService {
 
     private boolean isValidEventID(String eventId) {
         return activeOrderPublisher.publishIsValidEventIDEvent(eventId);
-    }
-
-    private int getUserAge(SessionToken sessionToken) {
-        return 20;
     }
 }

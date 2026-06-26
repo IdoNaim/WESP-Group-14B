@@ -81,7 +81,7 @@ public class ActiveOrderServiceUnitTest {
     @BeforeEach
     void setUp() {
         lenient().when(authenticationServiceMock.getUser(VALID_TOKEN)).thenReturn(USER_ID);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -748,13 +748,13 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
 
-        List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID);
+        List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null);
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
@@ -769,13 +769,13 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode")));
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
 
-        List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID);
+        List<BarcodeDTO> result = activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null);
 
         assertNotNull(result);
         verify(activeOrderRepoMock, times(1)).delete(ORDER_ID);
@@ -790,7 +790,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Act & Assert
         assertThrows(RuntimeException.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, INVALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, INVALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(activeOrderRepoMock, never()).delete(anyString());
@@ -805,7 +805,7 @@ public class ActiveOrderServiceUnitTest {
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
         verify(activeOrderRepoMock, never()).delete(anyString());
     }
@@ -829,7 +829,7 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.canReleaseStanding(any())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("A-1", "A-2"));
@@ -850,7 +850,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
@@ -858,7 +858,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         //verify(activeOrderPublisherMock, times(1)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
@@ -878,7 +878,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(-1);
@@ -886,7 +886,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(activeOrderPublisherMock, times(0)).publishReleaseSeats(VALID_TOKEN, ORDER_ID, EVENT_ID, List.of("B-10", "B-11"));
@@ -904,7 +904,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         // validateOrderOwnership: default void mock passes — no stub needed
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(100);
@@ -913,7 +913,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(paymentGatewayMock, times(1)).refund(100);
@@ -930,7 +930,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderRepoMock.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(validOrder));
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(activeOrderRepoMock.markAsProcessing(ORDER_ID)).thenReturn(true);
         when(paymentGatewayMock.pay(any())).thenReturn(200);
@@ -946,7 +946,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(activeOrderHandlerMock.canReleaseStanding(validOrder.getStandingAreaQuantities())).thenReturn(true);
 
         assertThrows(Exception.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(paymentGatewayMock, times(1)).refund(200);
@@ -971,7 +971,7 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.getUser("valid-token")).thenReturn("userA");
         // validateOrderOwnership: default void mock passes — no stub needed
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         when(paymentGatewayMock.pay(any())).thenReturn(50000);
         when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
@@ -987,7 +987,7 @@ public class ActiveOrderServiceUnitTest {
         Runnable completionTask = () -> {
             try {
                 startLatch.await();
-                service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId);
+                service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId, null);
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failCount.incrementAndGet();
@@ -1019,7 +1019,7 @@ public class ActiveOrderServiceUnitTest {
 
         when(authenticationServiceMock.validate("valid-token")).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
         lenient().when(activeOrderHandlerMock.isUsersOrder(anyString(), any())).thenReturn(true);
@@ -1036,7 +1036,7 @@ public class ActiveOrderServiceUnitTest {
         new Thread(() -> {
             try {
                 startLatch.await();
-                service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId);
+                service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId, null);
                 successCount.incrementAndGet();
             } catch (Exception e) { failCount.incrementAndGet(); }
             finally { doneLatch.countDown(); }
@@ -1076,7 +1076,7 @@ public class ActiveOrderServiceUnitTest {
         lenient().when(authenticationServiceMock.getUser(anyString())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(activeOrderHandlerMock.isUsersOrder(any(), any())).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishIsValidEventIDEvent(anyString())).thenReturn(true);
-        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), anyInt())).thenReturn(true);
+        lenient().when(activeOrderPublisherMock.publishIsUpToPolicy(any(), any())).thenReturn(true);
         lenient().when(activeOrderPublisherMock.publishGetCompanyId(anyString())).thenReturn(COMPANY_ID);
         lenient().when(paymentGatewayMock.pay(any())).thenReturn(50000);
         lenient().when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(mock(BarcodeDTO.class)));
@@ -1099,7 +1099,7 @@ public class ActiveOrderServiceUnitTest {
             executor.submit(() -> {
                 try {
                     startLatch.await();
-                    service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId);
+                    service.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), liveOrderId, null);
                     successCount.incrementAndGet();
                 } catch (Exception e) { errors.add(e); }
                 finally { doneLatch.countDown(); }
@@ -1305,7 +1305,7 @@ public class ActiveOrderServiceUnitTest {
         IPaymentGateway paymentGateway = mock(IPaymentGateway.class);
 
         Exception exception = assertThrows(IllegalArgumentException.class, () ->
-                activeOrderService.completeOrder(paymentGateway, sessionTokenUserA, validPaymentDetails(), "order1")
+                activeOrderService.completeOrder(paymentGateway, sessionTokenUserA, validPaymentDetails(), "order1", null)
         );
 
         assertEquals("Unauthorized: Order does not belong to the current user", exception.getMessage());
@@ -1329,12 +1329,12 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderHandlerMock.removeSeatsFromActiveOrder(order, unreservedSeats)).thenReturn(updatedOrderMock);
 
         assertThrows(IllegalStateException.class, () ->
-                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID)
+                activeOrderService.completeOrder(paymentGatewayMock, VALID_SESSION, validPaymentDetails(), ORDER_ID, null)
         );
 
         verify(activeOrderHandlerMock, times(1)).removeSeatsFromActiveOrder(order, unreservedSeats);
         verify(activeOrderRepoMock, times(1)).update(updatedOrderMock);
-        verify(activeOrderPublisherMock, never()).publishIsUpToPolicy(any(), anyInt());
+        verify(activeOrderPublisherMock, never()).publishIsUpToPolicy(any(), any());
         verify(activeOrderRepoMock, never()).markAsProcessing(anyString());
         verify(barcodeGatewayMock, never()).issueBarcodes(any());
         verifyNoInteractions(paymentGatewayMock);

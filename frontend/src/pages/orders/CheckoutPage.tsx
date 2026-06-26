@@ -278,7 +278,7 @@ export default function CheckoutPage() {
   };
 
   // ─── Main Payment Authorization Execution ─────────────────────────────────
-  const handlePayment = async () => {
+  const handlePayment = async (age: number | null = null) => {
     try {
       setProcessState('processing');
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
@@ -292,6 +292,7 @@ export default function CheckoutPage() {
         expirationDate: expiryDate.replace(/\s/g, ''),
         cvv: cvv.trim(),
         id: cardholderId.trim(),
+        age:age
       };
 
       const checkoutResult = await activeOrderApi.checkout(token, order.orderId, checkoutPayload);
@@ -328,7 +329,7 @@ export default function CheckoutPage() {
     }
 
     // If the policy passes validation, call the payment routine
-    await handlePayment();
+    await handlePayment(age);
   }
 
   const handleConfirmAge = () => {
