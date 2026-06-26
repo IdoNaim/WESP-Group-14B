@@ -258,6 +258,9 @@ public class EventHandler {
                 logger.warn("Cannot update capacity. Event not found: " + eventId);
                 return false;
             }
+            if (newCapacity < event.getEventCapacity()) {
+                throw new IllegalArgumentException("Capacity can only be increased, not reduced.");
+            }
             event.setEventCapacity(newCapacity);
             eventRepo.save(event);
             eventPublisher.publishCapacityChanged(eventId, newCapacity);
@@ -309,6 +312,38 @@ public class EventHandler {
         }
         logger.info("Seating map configured successfully");
         return seatingMap;
+    }
+
+    public boolean addZonesToSeatingMap(String sessionToken, String eventId, List<SeatingAreaConfig> seatingAreas, List<StandingAreaConfig> standingAreas) {
+        if (!authenticationService.validate(extractToken(sessionToken))) {
+            throw new IllegalArgumentException("Invalid session token");
+        }
+        logger.info("Adding zones to seating map for event ID: " + eventId);
+        try {
+            Event event = eventRepo.findById(eventId);
+            if (event == null) {
+                logger.warn("Cannot add zones. Event not found: " + eventId);
+                return false;
+            }
+            SeatingMap map = event.getSeatingMap();
+            if (map == null) {
+                map = new SeatingMap();
+                event.setSeatingMap(map);
+            }
+            for (SeatingAreaConfig seatingConfig : seatingAreas) {
+                map.addSeatingArea(seatingConfig.getRows(), seatingConfig.getseatsPerRow(), seatingConfig.getPrice());
+            }
+            for (StandingAreaConfig standingConfig : standingAreas) {
+                map.addStandingArea(standingConfig.getCapacity(), standingConfig.getPrice());
+            }
+            eventRepo.save(event);
+            publishUpdateNotification(eventId, event.getEventName(), "New zones have been added to this event's seating map.");
+            logger.info("Successfully added zones to seating map for event ID: " + eventId);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to add zones to seating map for event ID: " + eventId + " | Error: " + e.getMessage());
+            return false;
+        }
     }
 
     public void releaseSeats(String sessionToken, String orderId, String eventId, List<String> seatIds) {

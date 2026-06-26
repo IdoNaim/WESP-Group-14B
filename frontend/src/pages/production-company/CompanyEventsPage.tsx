@@ -877,7 +877,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
 
     // Basic fields
     const [dateTime, setDateTime] = useState(event.eventDateTime ? toDatetimeLocal(event.eventDateTime) : '');
-    const [capacity, setCapacity] = useState(String(event.eventCapacity));
     const [location, setLocation] = useState(event.eventLocation ?? '');
 
     // Photo
@@ -903,8 +902,9 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const [currentEventPolicy, setCurrentEventPolicy] = useState<PurchasePolicyDTO | null>(null);
     const [loadingInitial, setLoadingInitial] = useState(true);
 
-    // Seating map
+    // Seating map — existing zones are read-only; only new zones can be added
     const [updateSeatingMap, setUpdateSeatingMap] = useState(false);
+    const [existingZones, setExistingZones] = useState<EventZone[]>([]);
     const [zones, setZones] = useState<EventZone[]>([]);
     const addZone = () => setZones(prev => [...prev, { label: `Zone ${prev.length + 1}`, kind: 'standing', capacity: '', rows: '', seatsPerRow: '', price: '' }]);
     const removeZone = (i: number) => setZones(prev => prev.filter((_, idx) => idx !== i));
@@ -937,20 +937,7 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
         }));
     };
 
-    const handleCapacityChange = (newVal: string) => {
-        setCapacity(newVal);
-        setZones(prev => {
-            if (prev.length === 1 && prev[0].kind === 'standing') {
-                return [{ ...prev[0], capacity: newVal }];
-            }
-            return prev;
-        });
-    };
-    const totalZoneCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
-    const eventCapNum = Number(capacity) || 0;
-    const zoneCapacityError = updateSeatingMap && zones.length > 0 && capacity !== '' && totalZoneCapacity !== eventCapNum
-        ? `Zone capacities must total exactly ${eventCapNum}. Currently: ${totalZoneCapacity}.`
-        : null;
+    const newZonesCapacity = zones.reduce((s, z) => s + zoneSeats(z), 0);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -983,7 +970,7 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                     })),
                     ...reconstructSeatingZones(sm.assignedSeats),
                 ];
-                setZones(loadedZones);
+                setExistingZones(loadedZones);
             }
             setLoadingInitial(false);
         });
@@ -996,8 +983,7 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '') && dateError) { setError(dateError); return; }
-        if (zoneCapacityError) { setError(zoneCapacityError); return; }
-        if (updateSeatingMap && zones.length === 0) { setError('Add at least one zone or disable Update Seating Map.'); return; }
+        if (updateSeatingMap && zones.length === 0) { setError('Add at least one new zone or disable Add Zones.'); return; }
         if (updatePolicy && policyHasError) { setError('Fix the AND group errors in the purchase policy before saving.'); return; }
         setLoading(true); setError(null);
         try {
@@ -1006,11 +992,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
 
             if (dateTime !== toDatetimeLocal(event.eventDateTime ?? '')) {
                 const ok = await eventApi.editEventDate(token, eventId, { newDateTime: dateTime.length === 16 ? dateTime + ':00' : dateTime });
-                if (!ok) throw new Error('One or more updates failed');
-                updated = true;
-            }
-            if (Number(capacity) !== event.eventCapacity) {
-                const ok = await eventApi.editEventCapacity(token, eventId, { newCapacity: Number(capacity) });
                 if (!ok) throw new Error('One or more updates failed');
                 updated = true;
             }
@@ -1078,13 +1059,6 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                             </p>
                         )}
                     </div>
-                    <div className="space-y-1">
-                        <label className={labelCls}>Total Capacity</label>
-                        <input className={inputCls} type="number" min={1}
-                            value={capacity} onChange={e => handleCapacityChange(e.target.value)} required
-                            disabled={!canManageInventory} />
-                    </div>
-
                     {/* Photo */}
                     <div className="space-y-2">
                         <label className={labelCls}>Event Photo <span className="text-gray-600 normal-case font-normal">(optional)</span></label>
@@ -1167,16 +1141,43 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${updateSeatingMap ? 'bg-[#00dbe7]/10 border-[#00dbe7]/30 text-[#00dbe7]' : 'bg-[#0b1326] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
                         <span className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-[18px]">map</span>
-                            Replace Seating Map
+                            Add Zones to Seating Map
                         </span>
                         <span className="material-symbols-outlined text-[18px]">{updateSeatingMap ? 'expand_less' : 'expand_more'}</span>
                     </button>
 
                     {updateSeatingMap && (
                         <div className="mt-3 space-y-3">
-                            <p className="text-[10px] text-gray-600 font-mono">Defining zones here replaces the existing seating map entirely.</p>
+                            <p className="text-[10px] text-amber-400/70 font-mono">Existing zones are locked and cannot be changed. You can only add new zones.</p>
 
-                            <div className="flex justify-end">
+                            {/* Existing zones — read-only */}
+                            {existingZones.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Current Zones</p>
+                                    {existingZones.map((zone, i) => (
+                                        <div key={i} className="bg-[#080f1e] border border-gray-800 rounded-xl p-3 flex items-center justify-between opacity-60">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px] text-gray-500">
+                                                    {zone.kind === 'standing' ? 'people' : 'event_seat'}
+                                                </span>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-bold">{zone.label}</p>
+                                                    <p className="text-[10px] text-gray-600 font-mono">
+                                                        {zone.kind === 'standing'
+                                                            ? `Standing · ${zone.capacity} spots · $${zone.price}`
+                                                            : `Seating · ${zone.rows} rows × ${zone.seatsPerRow} seats · $${zone.price}`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="material-symbols-outlined text-[14px] text-gray-700">lock</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* New zones to add */}
+                            <div className="flex items-center justify-between">
+                                <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">New Zones</p>
                                 <button type="button" onClick={addZone}
                                     className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00dbe7]/10 border border-[#00dbe7]/30 text-[#00dbe7] hover:bg-[#00dbe7]/20 transition-colors">
                                     <span className="material-symbols-outlined text-[15px]">add</span>
@@ -1184,12 +1185,16 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                                 </button>
                             </div>
 
+                            {zones.length === 0 && (
+                                <p className="text-[10px] text-gray-600 font-mono text-center py-2">No new zones added yet.</p>
+                            )}
+
                             {zones.map((zone, i) => {
                                 const seats = zoneSeats(zone);
                                 return (
                                     <div key={i} className="bg-[#0b1326] border border-gray-700 rounded-xl p-3.5 space-y-2.5">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-[#00dbe7] tracking-widest">ZONE {i + 1}</span>
+                                            <span className="text-xs font-bold text-[#00dbe7] tracking-widest">NEW ZONE {i + 1}</span>
                                             <button type="button" onClick={() => removeZone(i)} className="text-gray-600 hover:text-red-400 transition-colors">
                                                 <span className="material-symbols-outlined text-[18px]">delete</span>
                                             </button>
@@ -1257,25 +1262,8 @@ function EditEventModal({ event, onClose, onSaved, canManageInventory, canConfig
                             })}
 
                             {zones.length > 0 && (
-                                <div className={`space-y-2 p-3 rounded-lg border text-[11px] font-mono ${zoneCapacityError ? 'bg-red-500/10 border-red-500/30' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#00dbe7]/5 border-[#00dbe7]/15'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <span className={zoneCapacityError ? 'text-red-400' : totalZoneCapacity === eventCapNum && eventCapNum > 0 ? 'text-emerald-400' : 'text-gray-400'}>
-                                            {zoneCapacityError ?? (totalZoneCapacity === eventCapNum && eventCapNum > 0
-                                                ? `All ${eventCapNum} seats assigned`
-                                                : `Assigned: ${totalZoneCapacity} / ${eventCapNum || '?'}`)}
-                                        </span>
-                                        {zoneCapacityError
-                                            ? <span className="material-symbols-outlined text-[14px] text-red-400">warning</span>
-                                            : totalZoneCapacity === eventCapNum && eventCapNum > 0
-                                                ? <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
-                                                : null}
-                                    </div>
-                                    {eventCapNum > 0 && (
-                                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full transition-all ${totalZoneCapacity > eventCapNum ? 'bg-red-500' : totalZoneCapacity === eventCapNum ? 'bg-emerald-500' : 'bg-[#00dbe7]'}`}
-                                                style={{ width: `${Math.min(100, (totalZoneCapacity / eventCapNum) * 100)}%` }} />
-                                        </div>
-                                    )}
+                                <div className="p-3 rounded-lg border bg-[#00dbe7]/5 border-[#00dbe7]/15 text-[11px] font-mono text-gray-400">
+                                    Adding <span className="text-white font-bold">{newZonesCapacity}</span> new spots to the seating map.
                                 </div>
                             )}
                         </div>
