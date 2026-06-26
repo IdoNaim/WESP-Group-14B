@@ -5,11 +5,12 @@ export interface HistoryOrderDTO {
     userId: string;
     eventId: string;
     companyId: number;
-    purchaseDate: string; 
+    purchaseDate: string;
     price: number;
     seatIds: string[];
     standingAreaQuantities: Record<string, number>;
-    
+    barcodes?: string[];
+
     eventName?: string;
     eventLocation?: string;
     eventImageUrl?: string;

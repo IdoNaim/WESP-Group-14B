@@ -1,10 +1,10 @@
 package com.ticketpurchasingsystem.project.domain.ActiveOrders;
+import java.util.List;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderEvents.*;
-
-import java.util.List;
 
 @Component
 public class ActiveOrderPublisher {
@@ -55,12 +55,15 @@ public class ActiveOrderPublisher {
         eventPublisher.publishEvent(event);
         return event.getResult();
     }
-    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId, int transactionId){
-        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid, companyId, transactionId);
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId, int transactionId, List<BarcodeDTO> barcodes){
+        CompletedOrderEvent event = new CompletedOrderEvent(this, order, amountPaid, companyId, transactionId, barcodes);
         eventPublisher.publishEvent(event);
     }
+    public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId, int transactionId){
+        publishCompletedOrder(order, amountPaid, companyId, transactionId, null);
+    }
     public void publishCompletedOrder(ActiveOrderDTO order, double amountPaid, int companyId){
-        publishCompletedOrder(order, amountPaid, companyId, -1);
+        publishCompletedOrder(order, amountPaid, companyId, -1, null);
     }
     public Integer publishGetCompanyId(String eventId){
         GetCompanyIdEvent event = new GetCompanyIdEvent(this, eventId);

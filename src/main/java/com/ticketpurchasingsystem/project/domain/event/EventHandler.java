@@ -105,10 +105,7 @@ public class EventHandler {
         event.setImageUrl(eventDTO.imageUrl());
 
         try {
-            //add default seating map if not provided
-            SeatingMap seatingMap = new SeatingMap();
-            seatingMap.addStandingArea(eventDTO.eventCapacity(), 0.0);
-            event.setSeatingMap(seatingMap);
+            event.setSeatingMap(new SeatingMap());
             Event savedEvent = eventRepo.save(event);
             eventPublisher.publishEventCreated(savedEvent);
             logger.info("Event created successfully: " + eventDTO.eventName());
@@ -129,7 +126,8 @@ public class EventHandler {
                 minPrice = prices.stream().mapToDouble(Double::doubleValue).min().getAsDouble();
                 maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().getAsDouble();
             }
-            displayCapacity = event.getSeatingMap().getTotalAvailableCapacity();
+            int mapCapacity = event.getSeatingMap().getTotalAvailableCapacity();
+            if (mapCapacity > 0) displayCapacity = mapCapacity;
         }
         return new EventDTO(
                 event.getEventId(),
