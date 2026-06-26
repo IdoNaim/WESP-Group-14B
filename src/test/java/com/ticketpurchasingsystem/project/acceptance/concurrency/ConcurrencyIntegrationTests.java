@@ -230,7 +230,7 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId());
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId(), null);
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();
@@ -243,7 +243,7 @@ public class ConcurrencyIntegrationTests {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId());
+                activeOrderService.completeOrder(paymentGatewayMock, new SessionToken(sessionToken, 1000), new PaymentDetails(100.0, "USD", "4111111111111111", "12", "2028", "Test User", "123", "ID-001"), order.getOrderId(), null);
                 successCount.incrementAndGet();
             } catch (Exception e) {
                 failureCount.incrementAndGet();

@@ -669,7 +669,7 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(50000);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
-            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
             assertThrows(Exception.class, () -> activeOrderService.getActiveOrderInfo(session, order.getOrderId()));
             assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
 
@@ -696,7 +696,7 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(50000);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(List.of(new BarcodeDTO("barcode1")));
 
-            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertDoesNotThrow(() -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(),null));
             HistoryOrderItem historyOrderItem = assertDoesNotThrow(() -> historyOrderRepo.findByOrderId(order.getOrderId()));
             assertNotNull(historyOrderItem);
             HistoryOrderDTO historyOrderDTO = historyOrderItem.makeDTO();
@@ -728,7 +728,7 @@ public class ActiveOrderAcceptanceTests {
             double amountToPay = 100;
             order.setCreatedAt(java.sql.Timestamp.valueOf("1977-10-10 00:00:00"));
             activeOrderRepo.update(new ActiveOrderItem(order));
-            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
             assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
@@ -751,7 +751,7 @@ public class ActiveOrderAcceptanceTests {
             double amountToPay = 100;
             when(paymentGatewayMock.pay(any())).thenReturn(-1);
 
-            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(), null));
             assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
@@ -775,7 +775,7 @@ public class ActiveOrderAcceptanceTests {
             when(paymentGatewayMock.pay(any())).thenReturn(50000);
             when(barcodeGatewayMock.issueBarcodes(any())).thenReturn(null);
 
-            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(),null));
             assertTrue(activeOrderRepo.findById(order.getOrderId()).isEmpty());
             assertEquals(eventService.checkSeatsReserved(sessionToken, order.getOrderId(), order.getEventId(), seatIds), seatIds);
         } catch (Exception e) {
@@ -799,7 +799,7 @@ public class ActiveOrderAcceptanceTests {
             PurchasePolicyDTO newPolicy = new PurchasePolicyDTO(10, eventCapacity, false, 0, 60, true, false);
             eventService.editEventPurchasePolicy(sessionToken, testEvent.eventId(), newPolicy);
 
-            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId()));
+            assertThrows(Exception.class, () -> activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(amountToPay), order.getOrderId(),null));
         } catch (Exception e) {
             fail("got exception : " + e.getMessage());
         }
@@ -884,7 +884,7 @@ public class ActiveOrderAcceptanceTests {
             new Thread(() -> {
                 try {
                     startLatch.await();
-                    activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(100.0), liveOrderId);
+                    activeOrderService.completeOrder(paymentGatewayMock, session, paymentDetailsFor(100.0), liveOrderId, null);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
