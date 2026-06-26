@@ -71,7 +71,12 @@ public class PaymentGateway implements IPaymentGateway {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         body.forEach((k, v) -> form.add(k, String.valueOf(v)));
 
-        return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
+        try {
+            return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
+        } catch (Exception e) {
+            loggerDef.getInstance().error("Payment gateway connection error: " + e.getMessage());
+            throw new RuntimeException("Payment could not be processed. Please check your card details and try again.");
+        }
     }
     private int parseIntResponse(String response) {
         if (response == null) return -1;

@@ -160,7 +160,7 @@ export default function CheckoutPage() {
 
         const profile = await authApi.getCurrentUser(token);
         if (!profile || !profile.userId) {
-          throw new Error('Failed to synchronize authenticated user security context.');
+          throw new Error('Unable to load your account information. Please try logging in again.');
         }
         setUser(profile);
 
@@ -188,7 +188,7 @@ export default function CheckoutPage() {
         ]);
 
         if (!eventMeta) {
-          throw new Error('Target event inventory details could not be parsed.');
+          throw new Error('Could not load event details. Please go back and try again.');
         }
         setEventDetails(eventMeta);
         setSeatingMap(seatConfig);
@@ -205,7 +205,7 @@ export default function CheckoutPage() {
 
       } catch (err: any) {
         console.error('[Checkout Data Hydration Error]:', err);
-        setErrorMessage(err.message || 'An unexpected error occurred while compiling checkout invoice parameters.');
+        setErrorMessage(err.message || 'Something went wrong while loading your order. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -299,7 +299,7 @@ export default function CheckoutPage() {
         setSuccessBarcodes(checkoutResult.barcodes);
         setProcessState('success');
       } else {
-        throw new Error('Transaction authorized but secure ticket barcodes failed to generate.');
+        throw new Error('Payment was processed but your tickets could not be issued. Please contact support.');
       }
 
     } catch (err: any) {
@@ -421,7 +421,7 @@ export default function CheckoutPage() {
         {globalStyles}
         <div className="w-12 h-12 border-4 border-[#c7c6cb] border-t-[#1a1b20] rounded-full animate-spin-slow mb-4"></div>
         <p className="font-sans text-xs tracking-widest text-[#46464b] uppercase font-semibold">
-          Synchronizing Live Order State
+          Loading your order...
         </p>
       </div>
     );
@@ -526,7 +526,7 @@ export default function CheckoutPage() {
       <main className="flex-grow pt-20 pb-20 max-w-[1120px] mx-auto px-4 md:px-12 w-full">
         <div className="mb-6 text-center">
           <div className="text-xl font-bold text-[#191c20] mb-2">SecurePay Checkout Gateway</div>
-          <p className="text-[#46464b] text-sm">Review asset allocation fields prior to closing dynamic checkout parameters</p>
+          <p className="text-[#46464b] text-sm">Review your order and complete your payment details below</p>
         </div>
 
         {/* Countdown Banner */}
@@ -745,7 +745,7 @@ export default function CheckoutPage() {
                     {processState === 'processing' ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Processing Gateway Authorization...</span>
+                        <span>Processing payment...</span>
                       </>
                     ) : (
                       <span>Authorize & Pay ${pricing.total.toFixed(2)}</span>
