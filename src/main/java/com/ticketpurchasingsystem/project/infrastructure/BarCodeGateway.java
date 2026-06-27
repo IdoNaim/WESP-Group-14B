@@ -27,7 +27,7 @@ public class BarCodeGateway implements IBarCodeGateway {
 
     private final RestTemplate restTemplate;
 
-    public BarCodeGateway(@Value("${gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
+    public BarCodeGateway(@Value("${barcode.gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
         this.apiUrl = apiUrl;
         this.restTemplate = restTemplate;
     }

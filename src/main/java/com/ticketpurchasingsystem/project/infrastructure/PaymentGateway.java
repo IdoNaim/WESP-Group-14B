@@ -25,7 +25,7 @@ public class PaymentGateway implements IPaymentGateway {
     private final String apiUrl;
     private final RestTemplate restTemplate;
 
-    public PaymentGateway(@Value("${gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
+    public PaymentGateway(@Value("${payment.gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
         this.apiUrl = apiUrl;
         this.restTemplate = restTemplate;
     }
