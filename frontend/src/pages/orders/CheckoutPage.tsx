@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { activeOrderApi, ActiveOrderDTO, CheckoutRequestDTO } from '../../api/activeOrderApi';
 import { eventApi, EventDTO, SeatingMapDTO, PurchasePolicyDTO } from '../../api/eventsApi';
 import { authApi, UserProfileDTO } from '../../api/authApi';
+import { historyOrderApi } from '../../api/historyOrderApi';
 
 // ─── Route Constants ────────────────────────────────────────────────────────
 const FALLBACK_RESERVE_ROUTE = '/reserve';
@@ -229,6 +230,28 @@ export default function CheckoutPage() {
 
     return () => clearInterval(timer);
   }, [isLoading, errorMessage, timeLeft, processState]);
+
+  // ─── Fetch Completed Order Barcodes Effect ─────────────────────────────────
+  useEffect(() => {
+    const orderId = order?.orderId;
+    if (processState === 'success' && orderId) {
+      async function fetchCompletedOrderBarcodes() {
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
+          if (token && user?.userId) {
+            const historyOrders = await historyOrderApi.getUserOrders(token, user.userId);
+            const matchingOrder = historyOrders.find(o => o.orderId === orderId);
+            if (matchingOrder && matchingOrder.barcodes) {
+              setSuccessBarcodes(matchingOrder.barcodes);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch completed order barcodes:", err);
+        }
+      }
+      fetchCompletedOrderBarcodes();
+    }
+  }, [processState, order?.orderId, user?.userId]);
 
   // ─── Server-Side Expiration Handshake ───────────────────────────────────────
   const handleOrderExpiration = async () => {
