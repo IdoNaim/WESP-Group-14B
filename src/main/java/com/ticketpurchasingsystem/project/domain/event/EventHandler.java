@@ -334,6 +334,8 @@ public class EventHandler {
             for (StandingAreaConfig standingConfig : standingAreas) {
                 map.addStandingArea(standingConfig.getCapacity(), standingConfig.getPrice());
             }
+            event.setEventCapacity(map.getTotalAvailableCapacity());
+
             eventRepo.save(event);
             publishUpdateNotification(eventId, event.getEventName(), "New zones have been added to this event's seating map.");
             logger.info("Successfully added zones to seating map for event ID: " + eventId);
