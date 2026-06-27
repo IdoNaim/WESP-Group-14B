@@ -264,8 +264,6 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
-
-        // 💡 FIX: Teach the Mockito mock to generate a UUID on save, just like Hibernate does!
         when(activeOrderRepoMock.save(any(ActiveOrderItem.class))).thenAnswer(invocation -> {
             ActiveOrderItem item = invocation.getArgument(0);
             try {
@@ -296,8 +294,6 @@ public class ActiveOrderServiceUnitTest {
         when(activeOrderRepoMock.findByUserId(USER_ID)).thenReturn(null);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(EVENT_ID)).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
-
-        // 💡 FIX: Add the same mock behavior here so the service doesn't return a null/empty order structure
         when(activeOrderRepoMock.save(any(ActiveOrderItem.class))).thenAnswer(invocation -> {
             ActiveOrderItem item = invocation.getArgument(0);
             try {
@@ -451,8 +447,6 @@ public class ActiveOrderServiceUnitTest {
         when(authenticationServiceMock.validate(VALID_TOKEN)).thenReturn(true);
         when(activeOrderPublisherMock.publishIsValidEventIDEvent(any())).thenReturn(true);
         when(activeOrderHandlerMock.canCreateActiveOrder(any(ActiveOrderItem.class))).thenReturn(true);
-
-        // CRITICAL FIX: Make the mock handler reject requests if the repo already found an active order
         doAnswer(invocation -> {
             ActiveOrderItem existing = invocation.getArgument(0);
             if (existing != null) {
