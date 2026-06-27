@@ -133,6 +133,7 @@ export default function CheckoutPage() {
   const [timeLeft, setTimeLeft] = useState<number>(900);
 
   const hasCanceledRef = useRef<boolean>(false);
+  const isSubmittingRef = useRef<boolean>(false);
 
   // ─── Financial State ────────────────────────────────────────────────────────
   const [pricing, setPricing] = useState({
@@ -307,6 +308,7 @@ export default function CheckoutPage() {
     } catch (err: any) {
       console.error('[Checkout Execution Failure]:', err);
       setPaymentError(err.message || 'Payment failed. Please check your details and try again.');
+      isSubmittingRef.current = false;
       setProcessState('idle');
     }
   };
@@ -346,10 +348,10 @@ export default function CheckoutPage() {
 
   // ─── Pre-Payment Policy Verification ──────────────────────────────────────
   const handleInitiatePayment = async () => {
-    // Prevent double-submission: if already in flight or done, do nothing
-    if (processState !== 'idle') return;
-
-    // Lock the button immediately — before any awaits
+    // isSubmittingRef is a synchronous lock — guards against double-clicks that
+    // arrive before the React re-render caused by setProcessState has flushed.
+    if (isSubmittingRef.current || processState !== 'idle') return;
+    isSubmittingRef.current = true;
     setProcessState('processing');
     setPaymentError('');
 
@@ -359,6 +361,7 @@ export default function CheckoutPage() {
       const latestEvent = await eventApi.getEvent(token, order.eventId);
       if (latestEvent && latestEvent.isActive === false) {
         setPaymentError('Event got canceled');
+        isSubmittingRef.current = false;
         setProcessState('idle');
         return;
       }
@@ -367,14 +370,15 @@ export default function CheckoutPage() {
     const errors = validatePaymentFields({ cardholderName, cardholderId, cardNumber, expiryDate, cvv });
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      isSubmittingRef.current = false;
       setProcessState('idle');
       return;
     }
     setValidationErrors({});
 
     if (policyRequiresAge(purchasePolicy)) {
-      // Keep processState='processing' so button stays disabled while modal is open.
-      // Age modal cancel must reset it back to idle (see Cancel button onClick below).
+      // Keep isSubmittingRef=true and processState='processing' while modal is open.
+      // The Cancel button resets both; Confirm flows through to handlePayment.
       setIsAgeModalOpen(true);
     } else {
       proceedToValidatePolicyAndPay(null);
@@ -666,7 +670,7 @@ export default function CheckoutPage() {
 
                 {/* Card Number */}
                 <div>
-                  <label className="block text-xs font-semibold tracking-widests text-[#46464b] mb-2 uppercase">Card Number</label>
+                  <label className="block text-xs font-semibold tracking-widest text-[#46464b] mb-2 uppercase">Card Number</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -807,7 +811,7 @@ export default function CheckoutPage() {
             />
             <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => { setIsAgeModalOpen(false); setProcessState('idle'); }}
+                onClick={() => { setIsAgeModalOpen(false); isSubmittingRef.current = false; setProcessState('idle'); }}
                 className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded transition"
               >
                 Cancel
