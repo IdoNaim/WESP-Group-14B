@@ -217,7 +217,7 @@ export default function DashboardPage() {
                   <Link to="/login" className="text-[#3980f4] font-bold hover:underline">
                     Sign in
                   </Link>{' '}
-                  or Suscribe to access your orders, companies, and more.
+                  or Subscribe to access your orders, companies, and more.
                 </p>
               </div>
             </section>
