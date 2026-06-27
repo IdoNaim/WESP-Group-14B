@@ -1287,8 +1287,8 @@ function EventCard({ event, stats, onEdit, onDelete, canManageInventory }: {
     const revenue = event.ticketPrice != null
         ? ticketsSold * event.ticketPrice
         : (stats?.historyRevenue ?? 0);
-    const available = event.eventCapacity;
-    const total = event.eventCapacity + ticketsSold;
+    const available = event.eventCapacity - ticketsSold;
+    const total = event.eventCapacity ;
     const soldPct = total > 0 ? Math.min(100, Math.round((ticketsSold / total) * 100)) : 0;
 
     return (

@@ -175,6 +175,7 @@ public class ConcurrencyIntegrationTests {
                 companyId,
                 eventName,
                 eventCapacity,
+                eventCapacity,
                 eventDate,
                 true,
                 eventLocation,

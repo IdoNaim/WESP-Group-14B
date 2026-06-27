@@ -58,7 +58,7 @@ class SeatingMapPersistenceTest {
         eventService = new EventService(eventRepo, simplePublisher, authService);
 
         // Create the base Event
-        EventDTO newEvent = new EventDTO(null, 42, "DB Test Event", 500, LocalDateTime.now().plusDays(10), true, "test location", null, null, null);
+        EventDTO newEvent = new EventDTO(null, 42, "DB Test Event", 500,500, LocalDateTime.now().plusDays(10), true, "test location", null, null, null);
         PurchasePolicyDTO policy = new PurchasePolicyDTO(1, 10, false, null, null, false, false);
         eventService.createEvent(validToken, newEvent, policy, new ArrayList<>());
 

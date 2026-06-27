@@ -188,6 +188,7 @@ public class InitCommandExecutor {
                                 Integer.parseInt(arg(args, 2)),
                                 arg(args, 3),
                                 Integer.parseInt(arg(args, 4)),
+                                Integer.parseInt(arg(args,4)),
                                 LocalDateTime.parse(arg(args, 5)),
                                 Boolean.parseBoolean(arg(args, 6)),
                                 arg(args, 7),

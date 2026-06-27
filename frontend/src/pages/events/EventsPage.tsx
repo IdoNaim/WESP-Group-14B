@@ -9,7 +9,7 @@ function formatDate(iso: string) {
 }
 
 function availabilityLabel(event: EventDTO): string {
-    const cap = event.eventCapacity;
+    const cap = event.availableTickets;
     if (cap <= 0) return 'SOLD OUT';
     if (cap <= 20) return `${cap} LEFT`;
     return `${cap}+ AV.`;

@@ -134,6 +134,7 @@ public class EventHandler {
                 event.getEventId(),
                 event.getCompanyId(),
                 event.getEventName(),
+                event.getEventCapacity(),
                 displayCapacity,
                 event.getEventDate(),
                 event.isActive(),

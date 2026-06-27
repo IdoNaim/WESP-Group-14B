@@ -175,7 +175,7 @@ const isSoldOut = (eventData?.eventCapacity ?? 1) === 0;
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">group</span>
                         <div>
                             <p className="text-xs uppercase font-bold text-gray-500 mb-1">Tickets Available</p>
-                            <p className="font-bold text-lg">{eventData.eventCapacity} Tickets</p>
+                            <p className="font-bold text-lg">{eventData.availableTickets} Tickets</p>
                         </div>
                     </div>
                 </div>
