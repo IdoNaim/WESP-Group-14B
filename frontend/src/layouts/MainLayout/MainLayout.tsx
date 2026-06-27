@@ -5,7 +5,7 @@ import TopNavbar from "../../components/navigation/TopNavbar/TopNavbar";
 import "./MainLayout.scss";
 
 export default function MainLayout() {
-    const { loading } = useAuth();
+    const { loading, error } = useAuth();
 
     if (loading) {
         return (
@@ -18,6 +18,17 @@ export default function MainLayout() {
                 </div>
             </div>
         )
+    }
+
+    if (error) {
+        return (
+            <div className="main-layout__loading">
+                <div className="main-layout__loading-content">
+                    <div className="main-layout__loading-title">Service Unavailable</div>
+                    <div className="main-layout__loading-subtitle">{error}</div>
+                </div>
+            </div>
+        );
     }
 
     return (

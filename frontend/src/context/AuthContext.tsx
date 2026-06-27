@@ -16,7 +16,8 @@ type AuthContextValue = {
     token: string | null;
     permissions: UserPermissionsDTO | null;
     loading: boolean;
-    
+    error: string | null;
+
     isGuest: boolean;
     isMember: boolean;
     isProductionUser: boolean;
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [permissions, setPermissions] = useState<UserPermissionsDTO | null>(null);
 
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const ensureGuestToken = useCallback(async (): Promise<string> => {
         const response = await authApi.guestEntry();
@@ -57,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const refreshPermissions = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const existingToken = localStorage.getItem(TOKEN_KEY);
 
@@ -65,11 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const currentPermissions = await authApi.getPermissions(existingToken);
                     setPermissions(currentPermissions);
 
-                    if (currentPermissions.userId) {
+                    if (currentPermissions?.userId) {
                         localStorage.setItem(USER_ID_KEY, currentPermissions.userId);
                     }
                     // Reopen the presence channel after a reload if still a member.
-                    if (currentPermissions.state?.toUpperCase() !== 'GUEST') {
+                    if (currentPermissions?.state?.toUpperCase() !== 'GUEST') {
                         connectPresence(existingToken);
                     }
                     return;
@@ -82,21 +85,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const guestPermissions = await authApi.getPermissions(guestToken);
             setPermissions(guestPermissions);
 
-            if (guestPermissions.userId) {
+            if (guestPermissions?.userId) {
                 localStorage.setItem(USER_ID_KEY, guestPermissions.userId);
             }
+        } catch {
+            setPermissions(null);
+            setError('The service is currently unavailable. Please try again later.');
         } finally {
             setLoading(false);
         }
     }, [ensureGuestToken]);
 
     const loginWithToken = useCallback(async (newToken: string, userId: string) => {
-        localStorage.setItem(TOKEN_KEY, newToken);
-
-        if (userId) {
-            localStorage.setItem(USER_ID_KEY, userId);
-        }
-
         setToken(newToken);
 
         // Open the presence channel so an irregular exit (browser X) is detected.
@@ -105,8 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const permissionsResponse = await authApi.getPermissions(newToken);
         setPermissions(permissionsResponse);
 
-        if (permissionsResponse.userId) {
+        // Only persist to localStorage after permissions are confirmed valid.
+        // Persisting before this point would leave a stale token if the call fails.
+        localStorage.setItem(TOKEN_KEY, newToken);
+        if (permissionsResponse?.userId) {
             localStorage.setItem(USER_ID_KEY, permissionsResponse.userId);
+        } else if (userId) {
+            localStorage.setItem(USER_ID_KEY, userId);
         }
     }, []
     );
@@ -145,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             token,
             permissions,
             loading,
+            error,
 
             isGuest,
             isMember,
@@ -156,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ensureGuestToken,
             logout,
         };
-    }, [token, permissions, loading, refreshPermissions, loginWithToken, ensureGuestToken, logout]);
+    }, [token, permissions, loading, error, refreshPermissions, loginWithToken, ensureGuestToken, logout]);
 
     return (
         <AuthContext.Provider value={value}>

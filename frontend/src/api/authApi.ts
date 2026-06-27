@@ -48,9 +48,9 @@ export interface AuthResponse {
     message?: string;
     error?: string;
 }
-export interface PasswordUpdateRequestDTO{
-    currentPassword : string;
-    newPassword : string;
+export interface PasswordUpdateRequestDTO {
+    currentPassword: string;
+    newPassword: string;
 }
 // ==========================================
 // Helper: Header Generator
@@ -110,23 +110,23 @@ export const authApi = {
      * Logs in a user. Requires the current token (guest or existing session) in the header.
      */
     login: async (token: string, data: LoginRequestDTO): Promise<{ token: string; userId: string }> => {
-    let response: Response; 
-    
-    if (data.userId === "admin@gmail.com") {
-        response = await fetch(`${BASE_URL}/admin/login`, {
-            method: 'POST',
-            headers: getHeaders(token),
-            body: JSON.stringify(data),
-        });
-    } else {
-        response = await fetch(`${BASE_URL}/login`, {
-            method: 'POST',
-            headers: getHeaders(token),
-            body: JSON.stringify(data),
-        });
-    }
-    return parseResponse(response);
-},
+        let response: Response;
+
+        if (data.userId === "admin@gmail.com") {
+            response = await fetch(`${BASE_URL}/admin/login`, {
+                method: 'POST',
+                headers: getHeaders(token),
+                body: JSON.stringify(data),
+            });
+        } else {
+            response = await fetch(`${BASE_URL}/login`, {
+                method: 'POST',
+                headers: getHeaders(token),
+                body: JSON.stringify(data),
+            });
+        }
+        return parseResponse(response);
+    },
 
     /**
      * POST /api/identity/logout
@@ -188,22 +188,23 @@ export const authApi = {
             method: 'GET',
             headers: getHeaders(token),
         });
-        
+
         // Await and store the parsed data first
         const permissions: UserPermissionsDTO = await parseResponse(response);
-        
+
         // Print out if isAdmin is true or false
         console.log(`[Permissions API] User is admin: ${permissions.isAdmin}`);
-        
+
+
         // Return the data so the rest of the app can still use it
         return permissions;
     },
 
-    editPassword: async(token: string, data: PasswordUpdateRequestDTO) : Promise<{message : string}> => {
+    editPassword: async (token: string, data: PasswordUpdateRequestDTO): Promise<{ message: string }> => {
         const response = await fetch(`${BASE_URL}/editPassword`, {
             method: 'PUT',
             headers: getHeaders(token),
-            body : JSON.stringify(data),
+            body: JSON.stringify(data),
         });
         return parseResponse(response);
     }

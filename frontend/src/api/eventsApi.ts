@@ -116,7 +116,7 @@ export const eventApi = {
      */
     getAllActiveEvents: async (): Promise<EventDTO[]> => {
         const response = await fetch(`${BASE_URL}/active`, { method: 'GET' });
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error(`Failed to load events (${response.status})`);
         return response.json();
     },
 
@@ -301,7 +301,7 @@ export const eventApi = {
      */
     searchEvents: async (query: string): Promise<EventDTO[]> => {
         const response = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`, { method: 'GET' });
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error(`Search failed (${response.status})`);
         return response.json();
     },
 };
