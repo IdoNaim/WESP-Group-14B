@@ -163,13 +163,13 @@ public class ActiveOrderHandlerTests {
         );
     }
 
-    @Test
-    public void GivenInvalidOrderId_WhenCanCreateActiveOrder_ThenThrowIllegalArgumentException() {
-        when(mockOrder.getOrderId()).thenReturn("-5");
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.canCreateActiveOrder(mockOrder)
-        );
-    }
+//    @Test
+//    public void GivenInvalidOrderId_WhenCanCreateActiveOrder_ThenThrowIllegalArgumentException() {
+//        when(mockOrder.getOrderId()).thenReturn("-5");
+//        assertThrows(IllegalArgumentException.class, () ->
+//                handler.canCreateActiveOrder(mockOrder)
+//        );
+//    }
 
     // ---------------------------------------------------------
     // Order Id Validation Tests

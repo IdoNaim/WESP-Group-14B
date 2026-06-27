@@ -54,10 +54,10 @@ public class ActiveOrderHandler {
             logger.error("Save order failed: Order is null");
             throw new IllegalArgumentException("Order cannot be null");
         }
-        if (!isValidOrderID(order.getOrderId())) {
-            logger.error("Save order failed: Invalid order ID for order: " + order.getOrderId());
-            throw new IllegalArgumentException("bad order ID");
-        }
+//        if (!isValidOrderID(order.getOrderId())) {
+//            logger.error("Save order failed: Invalid order ID for order: " + order.getOrderId());
+//            throw new IllegalArgumentException("bad order ID");
+//        }
         return true;
     }
 

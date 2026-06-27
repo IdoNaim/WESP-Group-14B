@@ -83,8 +83,9 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenActiveOrdersExist_WhenGetAllActiveOrders_ThenAllOrdersAreReturned() {
-        activeOrderRepo.save(new ActiveOrderItem("order-1", "user-1", "event-1"));
-        activeOrderRepo.save(new ActiveOrderItem("order-2", "user-2", "event-1"));
+        // Pass null as the first argument to let Hibernate generate the UUID
+        activeOrderRepo.save(new ActiveOrderItem(null, "user-1", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "user-2", "event-1"));
 
         List<ActiveOrderDTO> result = adminService.getAllActiveOrders(adminToken);
 
@@ -93,11 +94,11 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenAnActiveOrder_WhenGetAllActiveOrders_ThenThatOrderIsIncluded() {
-        activeOrderRepo.save(new ActiveOrderItem("order-1", "user-1", "event-1"));
+        ActiveOrderItem savedOrder = activeOrderRepo.save(new ActiveOrderItem(null, "user-1", "event-1"));
 
         List<ActiveOrderDTO> result = adminService.getAllActiveOrders(adminToken);
 
-        assertTrue(result.stream().anyMatch(o -> "order-1".equals(o.getOrderId())));
+        assertTrue(result.stream().anyMatch(o -> savedOrder.getOrderId().equals(o.getOrderId())));
     }
 
     // ─── getAllHistoryOrders ──────────────────────────────────────────────────
@@ -133,9 +134,9 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenMultipleActiveOrders_WhenConcurrentGetAllActiveOrders_ThenAllAdminsGetConsistentData() throws Exception {
-        activeOrderRepo.save(new ActiveOrderItem("order-itay", "itay", "event-1"));
-        activeOrderRepo.save(new ActiveOrderItem("order-eden", "eden", "event-1"));
-        activeOrderRepo.save(new ActiveOrderItem("order-tomer", "tomer", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "itay", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "eden", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "tomer", "event-1"));
 
         int threadCount = 10;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
@@ -207,8 +208,8 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenAdminAndNonAdmin_WhenConcurrentGetAllActiveOrders_ThenOnlyAdminSucceeds() throws Exception {
-        activeOrderRepo.save(new ActiveOrderItem("order-itay", "itay", "event-1"));
-        activeOrderRepo.save(new ActiveOrderItem("order-eden", "eden", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "itay", "event-1"));
+        activeOrderRepo.save(new ActiveOrderItem(null, "eden", "event-1"));
 
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(2);
