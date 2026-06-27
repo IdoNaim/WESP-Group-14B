@@ -25,6 +25,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 @SpringBootTest
@@ -38,6 +39,8 @@ class ViewEventDetailsAcceptanceTest {
 
     @Autowired
     private IEventRepo eventRepo;
+    @Autowired
+    private IHistoryOrderRepo historyOrderRepo;
 
     @BeforeEach
     void setUp() {
@@ -58,7 +61,7 @@ class ViewEventDetailsAcceptanceTest {
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
         // 3. Setup REAL Service
-        eventService = new EventService(eventRepo, simplePublisher, authService);
+        eventService = new EventService(eventRepo, simplePublisher, authService, historyOrderRepo);
 
         // 4. Seed an event
         EventDTO newEvent = new EventDTO(

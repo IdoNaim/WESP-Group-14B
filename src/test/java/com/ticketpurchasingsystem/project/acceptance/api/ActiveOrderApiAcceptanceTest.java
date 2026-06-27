@@ -104,9 +104,8 @@ class ActiveOrderApiAcceptanceTest {
 
         IEventRepo eventRepo = new EventRepo();
         EventAggregatePublisher eventPublisher = new EventAggregatePublisher(e -> {});
-        eventService = new EventService(eventRepo, eventPublisher, authService);
-
         IHistoryOrderRepo historyRepo = new HistoryOrderRepo();
+        eventService = new EventService(eventRepo, eventPublisher, authService, historyRepo);
         HistoryOrderHandler historyOrderHandler = new HistoryOrderHandler();
         ProductionService productionServiceStub = mock(ProductionService.class);
         HistoryOrderService historyOrderService = new HistoryOrderService(

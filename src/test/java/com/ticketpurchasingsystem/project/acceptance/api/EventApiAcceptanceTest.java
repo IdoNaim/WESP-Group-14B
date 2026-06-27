@@ -32,6 +32,7 @@ import com.ticketpurchasingsystem.project.application.EventService;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 
 /**
@@ -56,7 +57,7 @@ class EventApiAcceptanceTest {
         AuthenticationService authService = mock(AuthenticationService.class);
         when(authService.validate(anyString())).thenReturn(true); // Default to true for these tests
 
-        eventService = new EventService(eventRepo, eventPublisher, authService);
+        eventService = new EventService(eventRepo, eventPublisher, authService, mock(IHistoryOrderRepo.class));
 
         com.ticketpurchasingsystem.project.application.IProductionService productionService = mock(com.ticketpurchasingsystem.project.application.IProductionService.class);
         com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO dummyFounder = new com.ticketpurchasingsystem.project.domain.Utils.MemberInfoDTO(

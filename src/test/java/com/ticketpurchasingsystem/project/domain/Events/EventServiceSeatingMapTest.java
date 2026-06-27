@@ -2,6 +2,7 @@ package com.ticketpurchasingsystem.project.domain.Events;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.EventService;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.event.*;
 
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -35,7 +36,8 @@ public class EventServiceSeatingMapTest {
         eventService = new EventService(
                 mock(IEventRepo.class),
                 mock(EventAggregatePublisher.class),
-                mockAuthService
+                mockAuthService,
+                mock(IHistoryOrderRepo.class)
         );
     }
 

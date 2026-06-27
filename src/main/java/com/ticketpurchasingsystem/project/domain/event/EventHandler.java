@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.HistoryOrderItem;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.Utils.DiscountDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
@@ -25,26 +27,30 @@ public class EventHandler {
     private IEventRepo eventRepo;
     private EventAggregatePublisher eventPublisher;
     private AuthenticationService authenticationService;
+    private IHistoryOrderRepo historyOrderRepo;
 
     private final loggerDef logger = loggerDef.getInstance();
 
     public EventHandler(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
-                        AuthenticationService authenticationService) {
+                        AuthenticationService authenticationService,
+                        IHistoryOrderRepo historyOrderRepo) {
         this.authenticationService = authenticationService;
         this.eventRepo = eventRepo;
         this.eventPublisher = eventPublisher;
+        this.historyOrderRepo = historyOrderRepo;
 
         logger.info("EventHandler instance constructed");
     }
 
     public static EventHandler getInstance(IEventRepo eventRepo,
                                            EventAggregatePublisher eventPublisher,
-                                           AuthenticationService authenticationService) {
+                                           AuthenticationService authenticationService,
+                                           IHistoryOrderRepo historyOrderRepo) {
         if (instance == null) {
             synchronized (EventHandler.class) {
                 if (instance == null) {
-                    instance = new EventHandler(eventRepo, eventPublisher, authenticationService);
+                    instance = new EventHandler(eventRepo, eventPublisher, authenticationService, historyOrderRepo);
                 }
             }
         }
@@ -52,6 +58,7 @@ public class EventHandler {
         instance.eventRepo = eventRepo;
         instance.eventPublisher = eventPublisher;
         instance.authenticationService = authenticationService;
+        instance.historyOrderRepo = historyOrderRepo;
 
         return instance;
     }
@@ -603,21 +610,39 @@ public class EventHandler {
         if (event == null) {
             throw new IllegalArgumentException("Event not found. It may have been removed or the ID is incorrect.");
         }
-        PurchaseContext context = new PurchaseContext(quantity, userAge);
+
+        int alreadyPurchased = 0;
+        try {
+            String userId = authenticationService.getUser(extractToken(sessionToken));
+            if (userId != null && !userId.isEmpty()) {
+                List<HistoryOrderItem> pastOrders = historyOrderRepo.findAllByUserIdAndEventId(userId, eventId);
+                for (HistoryOrderItem past : pastOrders) {
+                    alreadyPurchased += past.getSeatIds() != null ? past.getSeatIds().size() : 0;
+                    for (int qty : past.getStandingAreaQuantities().values()) {
+                        alreadyPurchased += qty;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Could not look up past purchases for policy check: " + e.getMessage());
+        }
+
+        PurchaseContext context = new PurchaseContext(quantity, userAge, alreadyPurchased);
         if (event.getPurchasePolicy().validate(context)) {
             return null;
         }
-        return buildPolicyViolationMessage(event.getPurchasePolicy().getDTO(), quantity, userAge);
+        return buildPolicyViolationMessage(event.getPurchasePolicy().getDTO(), quantity, alreadyPurchased, userAge);
     }
 
-    private String buildPolicyViolationMessage(PurchasePolicyDTO dto, int quantity, int userAge) {
+    private String buildPolicyViolationMessage(PurchasePolicyDTO dto, int quantity, int alreadyPurchased, int userAge) {
         List<String> violations = new ArrayList<>();
 
         // Quantity check — respect OR logic
         if (dto.isQuantityOr() && dto.minTickets() != null && dto.maxTickets() != null) {
-            // OR fails only when the quantity is NOT ≤ max AND NOT ≥ min (the "in-between" gap)
-            if (quantity > dto.maxTickets() && quantity < dto.minTickets()) {
-                violations.add("select up to " + dto.maxTickets() + " ticket(s) or at least " + dto.minTickets() + " ticket(s)");
+            int total = alreadyPurchased + quantity;
+            // OR fails only when total is in the gray zone (> max AND < min)
+            if (total > dto.maxTickets() && total < dto.minTickets()) {
+                violations.add("select up to " + dto.maxTickets() + " ticket(s) or enough to bring your total to at least " + dto.minTickets() + " ticket(s)");
             }
         } else {
             if (dto.minTickets() != null && quantity < dto.minTickets())

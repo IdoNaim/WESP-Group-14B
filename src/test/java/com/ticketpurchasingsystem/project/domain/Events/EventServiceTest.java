@@ -28,6 +28,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.EventDTO;
 import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Maps.AssignedSeat;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
@@ -54,7 +55,7 @@ public class EventServiceTest {
         when(mockAuthService.validate(VALID_TOKEN)).thenReturn(true);
         when(mockAuthService.validate(INVALID_TOKEN)).thenReturn(false);
 
-        eventService = new EventService(mockRepo, mockPublisher, mockAuthService);
+        eventService = new EventService(mockRepo, mockPublisher, mockAuthService, mock(IHistoryOrderRepo.class));
     }
 
     // ================= AUTHENTICATION FAILURE TEST =================
