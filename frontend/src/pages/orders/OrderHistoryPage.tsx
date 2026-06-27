@@ -9,9 +9,9 @@ interface EventDTO {
     companyId: number;
     eventName: string;
     totalTickets: number;
-    eventDate: string;
+    eventDateTime: string;
     isActive: boolean;
-    location: string;
+    eventLocation: string;
     basePrice: number;
 }
 
@@ -226,8 +226,8 @@ export default function OrderHistory() {
                             const hasSeats = order.seatIds && order.seatIds.length > 0;
                             const hasStanding = order.standingAreaQuantities && Object.keys(order.standingAreaQuantities).length > 0;
                             const eventName = order.eventDetails?.eventName || `Event #${order.eventId}`;
-                            const eventDate = order.eventDetails?.eventDate || null;
-                            const eventLocation = order.eventDetails?.location || "Venue TBD";
+                            const eventDate = order.eventDetails?.eventDateTime || null;
+                            const eventLocation = order.eventDetails?.eventLocation || "Venue TBD";
 
                             return (
                                 <div key={order.orderId} className="bg-[#171f33] border border-gray-800 text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all hover:-translate-y-1 hover:border-[#75f5ff]/50 group relative z-10">
@@ -344,7 +344,7 @@ export default function OrderHistory() {
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Event Date</p>
                                     <p className="font-mono text-sm text-[#03dbe7] font-bold">
-                                        {selectedTicket.eventDetails?.eventDate ? formatDate(selectedTicket.eventDetails.eventDate, true) : "TBD"}
+                                        {selectedTicket.eventDetails?.eventDateTime ? formatDate(selectedTicket.eventDetails.eventDateTime, true) : "TBD"}
                                     </p>
                                 </div>
                                 <div>
@@ -353,7 +353,7 @@ export default function OrderHistory() {
                                 </div>
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Location</p>
-                                    <p className="font-mono text-sm text-[#dbe2fd]">{selectedTicket.eventDetails?.location || "TBD Sector / Main Arena"}</p>
+                                    <p className="font-mono text-sm text-[#dbe2fd]">{selectedTicket.eventDetails?.eventLocation || "TBD Sector / Main Arena"}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Purchaser ID</p>

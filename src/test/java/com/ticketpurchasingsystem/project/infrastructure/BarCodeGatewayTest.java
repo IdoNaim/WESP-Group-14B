@@ -123,4 +123,41 @@ class BarCodeGatewayTest {
                 eq(String.class)
         );
     }
+
+    @Test
+    void givenActiveOrderWithMultipleStandingAreaTickets_whenIssuingBarcodes_thenCallGatewayForEachTicketAndReturnAllBarcodes() {
+        when(restTemplate.postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class)))
+                .thenReturn("TIX-S1")
+                .thenReturn("TIX-S2");
+
+        HashMap<String, Integer> standingQuantities = new HashMap<>();
+        standingQuantities.put("GeneralAdmission", 2);
+
+        ActiveOrderDTO order = new ActiveOrderDTO(
+                "order-1", "user-1", "event-1",
+                new Timestamp(System.currentTimeMillis()), List.of(), standingQuantities
+        );
+
+        List<BarcodeDTO> result = barCodeGateway.issueBarcodes(order);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("TIX-S1", result.get(0).getBarcodeValue());
+        assertEquals("TIX-S2", result.get(1).getBarcodeValue());
+
+        verify(restTemplate, times(2)).postForObject(
+                eq(BarCodeGateway.API_URL),
+                argThat(entity -> {
+                    @SuppressWarnings("unchecked")
+                    org.springframework.util.MultiValueMap<String, String> body =
+                            (org.springframework.util.MultiValueMap<String, String>)
+                            ((HttpEntity<?>) entity).getBody();
+                    return body != null &&
+                            "issue_ticket".equals(body.getFirst("action_type")) &&
+                            "GeneralAdmission".equals(body.getFirst("zone")) &&
+                            "1".equals(body.getFirst("quantity"));
+                }),
+                eq(String.class)
+        );
+    }
 }
