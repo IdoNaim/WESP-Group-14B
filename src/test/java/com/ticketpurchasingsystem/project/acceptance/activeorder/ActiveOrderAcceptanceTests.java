@@ -111,6 +111,7 @@ public class ActiveOrderAcceptanceTests {
                 companyId,
                 eventName,
                 eventCapacity,
+                eventCapacity,
                 eventDate,
                 true,
                 eventLocation,

@@ -69,6 +69,7 @@ class ViewEventDetailsAcceptanceTest {
                 42,
                 "Cyberpunk Symphony",
                 500,
+                500,
                 LocalDateTime.now().plusDays(10),
                 true,
                 "test location",

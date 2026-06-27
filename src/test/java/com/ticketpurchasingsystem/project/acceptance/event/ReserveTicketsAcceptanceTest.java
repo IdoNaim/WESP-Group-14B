@@ -67,6 +67,7 @@ class ReserveTicketsAcceptanceTest {
                 42,
                 "Rock Concert",
                 100,
+                100,
                 LocalDateTime.now().plusDays(5),
                 true,
                 "test locaion",

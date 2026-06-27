@@ -106,6 +106,7 @@ export default function EventDetailsPage() {
     };
 
     const isPast = eventData?.eventDateTime ? new Date(eventData.eventDateTime) < new Date() : false;
+const isSoldOut = (eventData?.eventCapacity ?? 1) === 0;
 
     if (isLoading) {
         return (
@@ -185,7 +186,7 @@ export default function EventDetailsPage() {
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">group</span>
                         <div>
                             <p className="text-xs uppercase font-bold text-gray-500 mb-1">Tickets Available</p>
-                            <p className="font-bold text-lg">{eventData.eventCapacity} Tickets</p>
+                            <p className="font-bold text-lg">{eventData.availableTickets} Tickets</p>
                         </div>
                     </div>
                 </div>
@@ -217,6 +218,11 @@ export default function EventDetailsPage() {
                             <span className="material-symbols-outlined">event_busy</span>
                             EVENT CANCELED — NO LONGER AVAILABLE
                         </div>
+                    ) : isSoldOut ? (
+                          <div className="flex items-center gap-2 bg-gray-700/50 text-white px-6 py-4 rounded-lg font-bold border border-gray-600">
+                              <span className="material-symbols-outlined">sell</span>
+                              SOLD OUT
+                          </div>
                     ) : !isAuthorized ? (
                         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-6 py-4 rounded-lg font-bold border border-red-200">
                             <span className="material-symbols-outlined">block</span>

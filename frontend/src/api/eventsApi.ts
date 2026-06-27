@@ -10,6 +10,7 @@ export interface EventDTO {
     companyId?: number;
     eventName: string;
     eventCapacity: number;
+    availableTickets: availableTickets;
     eventDateTime: string; // ISO 8601 e.g. "2026-10-24T21:00:00"
     isActive?: boolean;
     eventLocation?: string | null;

@@ -144,6 +144,7 @@ class ActiveOrderApiAcceptanceTest {
                 1,
                 "Test Event",
                 100,
+                100,
                 LocalDateTime.now().plusDays(30),
                 true,
                 "test location",
