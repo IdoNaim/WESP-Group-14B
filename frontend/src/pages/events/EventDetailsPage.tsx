@@ -147,19 +147,22 @@ export default function EventDetailsPage() {
 
                 <div>
                     <span className="bg-[#03dbe7]/10 text-[#03dbe7] px-3 py-1 rounded text-xs font-mono border border-[#03dbe7]/20 uppercase">
-                        {/* FIXED: Using eventId instead of id */}
                         {eventData.eventId || eventId}
                     </span>
-                    {/* FIXED: Using eventName instead of title */}
                     <h1 className="text-4xl md:text-5xl font-black text-white mt-4 uppercase leading-tight">{eventData.eventName}</h1>
+                    {eventData.eventLocation && (
+                        <p className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
+                            <span className="material-symbols-outlined text-[#03dbe7] text-base">location_on</span>
+                            {eventData.eventLocation}
+                        </p>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-[#171f33] border border-gray-800 p-6 rounded-xl flex items-start gap-4">
                         <span className="material-symbols-outlined text-[#03dbe7] text-3xl">calendar_month</span>
                         <div>
                             <p className="text-xs uppercase font-bold text-gray-500 mb-1">Date & Time</p>
-                            {/* FIXED: Using eventDateTime instead of date, formatted to look nice */}
                             <p className="font-bold text-lg">
                                 {eventData.eventDateTime
                                     ? new Date(eventData.eventDateTime).toLocaleString('en-US', {
@@ -167,6 +170,14 @@ export default function EventDetailsPage() {
                                     })
                                     : 'TBD'}
                             </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#171f33] border border-gray-800 p-6 rounded-xl flex items-start gap-4">
+                        <span className="material-symbols-outlined text-[#03dbe7] text-3xl">location_on</span>
+                        <div>
+                            <p className="text-xs uppercase font-bold text-gray-500 mb-1">Venue</p>
+                            <p className="font-bold text-lg">{eventData.eventLocation || 'TBD'}</p>
                         </div>
                     </div>
 
