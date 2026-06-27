@@ -11,6 +11,13 @@ public class OrRule implements IPurchaseRule {
 
     @Override
     public boolean validate(PurchaseContext context) {
+        int total = context.getAlreadyPurchased() + context.getRequestedAmount();
+        if (component1 instanceof MinTicketsRule && total >= ((MinTicketsRule) component1).getLimit()) {
+            return true;
+        }
+        if (component2 instanceof MinTicketsRule && total >= ((MinTicketsRule) component2).getLimit()) {
+            return true;
+        }
         return component1.validate(context) || component2.validate(context);
     }
     public IPurchaseRule getComponent1() {
@@ -20,6 +27,13 @@ public class OrRule implements IPurchaseRule {
         return component2;
     }
     public boolean validateTicketPolicy(PurchaseContext context){
+        int total = context.getAlreadyPurchased() + context.getRequestedAmount();
+        if (component1 instanceof MinTicketsRule && total >= ((MinTicketsRule) component1).getLimit()) {
+            return true;
+        }
+        if (component2 instanceof MinTicketsRule && total >= ((MinTicketsRule) component2).getLimit()) {
+            return true;
+        }
         return component1.validateTicketPolicy(context) || component2.validateTicketPolicy(context);
     }
 }

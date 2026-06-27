@@ -205,10 +205,12 @@ function StandingZoneCard({
   maxTickets: number | null;
 }) {
   const [inputValue, setInputValue] = useState(String(zone.selected));
+  const [prevSelected, setPrevSelected] = useState(zone.selected);
 
-  useEffect(() => {
+  if (zone.selected !== prevSelected) {
+    setPrevSelected(zone.selected);
     setInputValue(String(zone.selected));
-  }, [zone.selected]);
+  }
 
   const canAdd = zone.selected < zone.available && (maxTickets === null || totalSelected < maxTickets);
   const canRemove = zone.selected > 0;
@@ -246,6 +248,7 @@ function StandingZoneCard({
           <div className="flex items-center gap-2">
             <button
               disabled={!canRemove}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onRemove(zone.id)}
               className="w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-700 flex items-center justify-center text-sm font-bold disabled:opacity-30 hover:bg-gray-100 transition"
             >
@@ -267,6 +270,7 @@ function StandingZoneCard({
             />
             <button
               disabled={!canAdd}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onAdd(zone.id)}
               className="w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-700 flex items-center justify-center text-sm font-bold disabled:opacity-30 hover:bg-gray-100 transition"
             >
@@ -540,6 +544,7 @@ export default function ReserveTicketsPage() {
   const remainingAllowed = effectiveMaxTickets !== null ? Math.max(0, effectiveMaxTickets - alreadyPurchased) : null;
 
   useEffect(() => {
+    let active = true;
     const token = localStorage.getItem("token") ?? "";
 
     authApi.getCurrentUser(token)
@@ -547,6 +552,7 @@ export default function ReserveTicketsPage() {
         return activeOrderApi.getActiveOrderByUserId(token, user.userId).then((activeOrder) => ({ user, activeOrder }));
       })
       .then(({ user, activeOrder }) => {
+        if (!active) return;
         if (!activeOrder) {
           setEventLoading(false);
           setMapLoading(false);
@@ -564,6 +570,7 @@ export default function ReserveTicketsPage() {
 
         historyOrderApi.getUserOrders(token, user.userId)
           .then((pastOrders) => {
+            if (!active) return;
             const count = pastOrders
               .filter((o) => o.eventId === eventId)
               .reduce((sum, o) => {
@@ -577,14 +584,16 @@ export default function ReserveTicketsPage() {
 
         eventApi.getEvent(token, eventId)
           .then((data) => {
+            if (!active) return;
             if (!data) { setEventError(true); return; }
             setEvent(data);
           })
-          .catch(() => setEventError(true))
-          .finally(() => setEventLoading(false));
+          .catch(() => { if (active) setEventError(true); })
+          .finally(() => { if (active) setEventLoading(false); });
 
         eventApi.getEventPurchasePolicy(token, eventId)
           .then((policy) => {
+            if (!active) return;
             if (policy) setPurchasePolicy(policy);
           })
           .catch(() => {});
@@ -592,16 +601,19 @@ export default function ReserveTicketsPage() {
         // Fetch company policy via updated endpoints from purchasePoliciesApi
         eventApi.getEventCompanyId(token, eventId)
           .then((companyId) => {
+            if (!active) return null;
             if (companyId == null) return null;
             return getCompanyPolicyDTO(companyId);
           })
           .then((policy) => {
+            if (!active) return;
             if (policy) setCompanyPurchasePolicy(policy);
           })
           .catch(() => {});
 
         eventApi.getEventSeatingMap(token, eventId)
           .then((mapData) => {
+            if (!active) return;
             if (!mapData) { setMapError(true); return; }
             const { zones: z, standing } = buildZonesFromSeatingMap(mapData, activeOrder);
             setZones(z);
@@ -612,16 +624,19 @@ export default function ReserveTicketsPage() {
           })
           .catch((err) => {
             console.log("seating map error:", err);
-            setMapError(true);
+            if (active) setMapError(true);
           })
-          .finally(() => setMapLoading(false));
+          .finally(() => { if (active) setMapLoading(false); });
       })
       .catch(() => {
+        if (!active) return;
         setEventError(true);
         setMapError(true);
         setEventLoading(false);
         setMapLoading(false);
       });
+
+    return () => { active = false; };
   }, []);
 
   const totalSelected =
@@ -855,12 +870,19 @@ export default function ReserveTicketsPage() {
   };
 
   const proceedToCheckout = async () => {
-    // Validate OR quantity policy: quantity must be ≤ maxTickets OR ≥ minTickets
+    // Validate OR quantity policy: the combined total (past + current order) must be
+    // ≤ maxTickets OR ≥ minTickets. The "gray zone" between them is always blocked.
     if (isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null) {
       const max = mergedPolicy!.maxTickets;
       const min = mergedPolicy!.minTickets;
-      if (totalSelected > max && totalSelected < min) {
-        showBanner("error", `For this event, you must select up to ${max} ticket(s) or at least ${min} ticket(s). You currently have ${totalSelected} selected.`);
+      const totalWithPast = alreadyPurchased + totalSelected;
+      if (totalWithPast > max && totalWithPast < min) {
+        const remaining = Math.max(0, max - alreadyPurchased);
+        const needed = min - totalWithPast;
+        const msg = remaining === 0
+          ? `You have already purchased the maximum of ${max} ticket(s). To buy more, your total must reach at least ${min} ticket(s) — add ${needed} more to this order.`
+          : `Your selection of ${totalSelected} brings your total to ${totalWithPast} ticket(s), which falls between the limits. Keep this order at ${remaining} or fewer ticket(s), or add ${needed} more to reach the ${min}-ticket minimum.`;
+        showBanner("error", msg);
         return;
       }
     }
@@ -1046,12 +1068,22 @@ export default function ReserveTicketsPage() {
 
             <PurchaseRules policy={mergedPolicy} />
 
-            {isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null &&
-              totalSelected > mergedPolicy!.maxTickets && totalSelected < mergedPolicy!.minTickets && (
-              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
-                You have <strong>{totalSelected}</strong> ticket(s) selected. This event requires up to <strong>{mergedPolicy!.maxTickets}</strong> ticket(s) <em>or</em> at least <strong>{mergedPolicy!.minTickets}</strong> ticket(s) per order. Please adjust your selection.
-              </p>
-            )}
+            {isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null && (() => {
+              const _max = mergedPolicy!.maxTickets!;
+              const _min = mergedPolicy!.minTickets!;
+              const _total = alreadyPurchased + totalSelected;
+              if (_total <= _max || _total >= _min) return null;
+              const _remaining = Math.max(0, _max - alreadyPurchased);
+              const _needed = _min - _total;
+              return (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
+                  {_remaining === 0
+                    ? <>You have already purchased the maximum of <strong>{_max}</strong> ticket(s). To buy more, your total must reach at least <strong>{_min}</strong> ticket(s) — add <strong>{_needed}</strong> more to this order.</>
+                    : <>Your selection of <strong>{totalSelected}</strong> brings your total to <strong>{_total}</strong> ticket(s), which falls between the limits. Keep this order at <strong>{_remaining}</strong> or fewer, or add <strong>{_needed}</strong> more to reach the <strong>{_min}</strong>-ticket minimum.</>
+                  }
+                </p>
+              );
+            })()}
             {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
               <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded">
                 You have already purchased the maximum of <strong>{effectiveMaxTickets} ticket(s)</strong> allowed for this event. No further purchases are permitted.
