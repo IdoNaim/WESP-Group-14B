@@ -126,8 +126,9 @@ public class EventHandler {
                 minPrice = prices.stream().mapToDouble(Double::doubleValue).min().getAsDouble();
                 maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().getAsDouble();
             }
-            int mapCapacity = event.getSeatingMap().getTotalAvailableCapacity();
-            if (mapCapacity > 0) displayCapacity = mapCapacity;
+            //int mapCapacity = event.getSeatingMap().getTotalAvailableCapacity();
+            //if (mapCapacity > 0) displayCapacity = mapCapacity;
+            displayCapacity = event.getSeatingMap().getTotalAvailableCapacity();
         }
         return new EventDTO(
                 event.getEventId(),
