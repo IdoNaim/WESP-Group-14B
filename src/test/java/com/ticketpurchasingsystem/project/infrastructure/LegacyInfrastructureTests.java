@@ -39,14 +39,15 @@ public class LegacyInfrastructureTests {
         assertEquals(1, gateway.refund(txId));
         assertTrue(gateway.handshake());
     }
-
     @Test
     public void GivenValidOrderWithSeatsAndStandingAreas_WhenIssueBarcodes_ThenReturnBarcodeForEachTicket() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.postForObject(anyString(), any(), eq(String.class)))
                 .thenReturn("TIX-AAA-0001")
                 .thenReturn("TIX-BBB-0002")
-                .thenReturn("TIX-CCC-0003");
+                .thenReturn("TIX-CCC-0003")
+                .thenReturn("TIX-DDD-0004")
+                .thenReturn("TIX-EEE-0005");
 
         BarCodeGateway gateway = new BarCodeGateway(restTemplate);
 
@@ -59,12 +60,13 @@ public class LegacyInfrastructureTests {
                 new Timestamp(System.currentTimeMillis()), seatIds, standingQuantities);
 
         List<BarcodeDTO> barcodes = gateway.issueBarcodes(order);
-        assertEquals(3, barcodes.size());
+        assertEquals(5, barcodes.size());
         assertEquals("TIX-AAA-0001", barcodes.get(0).getBarcodeValue());
         assertEquals("TIX-BBB-0002", barcodes.get(1).getBarcodeValue());
         assertEquals("TIX-CCC-0003", barcodes.get(2).getBarcodeValue());
+        assertEquals("TIX-DDD-0004", barcodes.get(3).getBarcodeValue());
+        assertEquals("TIX-EEE-0005", barcodes.get(4).getBarcodeValue());
     }
-
     @Test
     public void GivenValidPolicyRequest_WhenValidatePurchase_ThenReturnSuccessResponse() {
         PurchasePolicyService mockService = mock(PurchasePolicyService.class);

@@ -57,23 +57,24 @@ public class BarCodeGateway implements IBarCodeGateway {
             }
             issued.add(new BarcodeDTO(response.trim()));
         }
-
         for (Map.Entry<String, Integer> entry : order.getStandingAreaQuantities().entrySet()) {
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add("action_type", "issue_ticket");
-            form.add("customer_id", order.getUserId());
-            form.add("event_id", order.getEventId());
-            form.add("zone", entry.getKey());
-            form.add("quantity", String.valueOf(entry.getValue()));
+            int qty = entry.getValue();
+            for (int i = 0; i < qty; i++) {
+                MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+                form.add("action_type", "issue_ticket");
+                form.add("customer_id", order.getUserId());
+                form.add("event_id", order.getEventId());
+                form.add("zone", entry.getKey());
+                form.add("quantity", "1");
 
-            String response = post(form);
-            if (response == null || response.trim().equals(FAILURE)) {
-                cancelTickets(issued);
-                return null;
+                String response = post(form);
+                if (response == null || response.trim().equals(FAILURE)) {
+                    cancelTickets(issued);
+                    return null;
+                }
+                issued.add(new BarcodeDTO(response.trim()));
             }
-            issued.add(new BarcodeDTO(response.trim()));
         }
-
         return issued;
     }
 
