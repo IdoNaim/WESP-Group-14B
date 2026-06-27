@@ -6,6 +6,7 @@ import java.util.List;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.EventHandler;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,10 +31,11 @@ public class EventService implements IEventService {
     @Autowired
     public EventService(IEventRepo eventRepo,
                         EventAggregatePublisher eventPublisher,
-                        AuthenticationService authenticationService) {
+                        AuthenticationService authenticationService,
+                        IHistoryOrderRepo historyOrderRepo) {
 
         // Hooks into the EventHandler Singleton using the required components
-        this.eventHandler = EventHandler.getInstance(eventRepo, eventPublisher, authenticationService);
+        this.eventHandler = EventHandler.getInstance(eventRepo, eventPublisher, authenticationService, historyOrderRepo);
 
         logger.info("EventService initialized using EventHandler singleton instance");
     }

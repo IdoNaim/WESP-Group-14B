@@ -26,6 +26,7 @@ import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthServic
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingMap;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.infrastructure.EventRepo;
 import com.ticketpurchasingsystem.project.infrastructure.InMemorySessionRepo.InMemorySessionRepo;
 
@@ -40,6 +41,8 @@ class ReserveTicketsAcceptanceTest {
     private List<String> activeKeysFromMap;
     @Autowired
     private IEventRepo eventRepo;
+    @Autowired
+    private IHistoryOrderRepo historyOrderRepo;
     @BeforeEach
     void setUp() {
         // 1. Setup REAL Authentication with a secure 32-byte key
@@ -56,7 +59,7 @@ class ReserveTicketsAcceptanceTest {
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
         // 3. Setup REAL Service
-        eventService = new EventService(eventRepo, simplePublisher, authService);
+        eventService = new EventService(eventRepo, simplePublisher, authService, historyOrderRepo);
 
 // 4. Create real event with an open policy layout (Min 1, Max 10, Age 0-120)
         EventDTO newEvent = new EventDTO(

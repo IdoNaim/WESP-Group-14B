@@ -22,6 +22,7 @@ import com.ticketpurchasingsystem.project.domain.Utils.PurchasePolicyDTO;
 import com.ticketpurchasingsystem.project.domain.authentication.DomainAuthService;
 import com.ticketpurchasingsystem.project.domain.event.Event;
 import com.ticketpurchasingsystem.project.domain.event.EventAggregatePublisher;
+import com.ticketpurchasingsystem.project.domain.HistoryOrder.IHistoryOrderRepo;
 import com.ticketpurchasingsystem.project.domain.event.IEventRepo;
 import com.ticketpurchasingsystem.project.domain.event.Maps.SeatingAreaConfig;
 import com.ticketpurchasingsystem.project.domain.event.Maps.StandingAreaConfig;
@@ -39,6 +40,8 @@ class SeatingMapPersistenceTest {
 
     @Autowired
     private IEventRepo eventRepo;
+    @Autowired
+    private IHistoryOrderRepo historyOrderRepo;
 
     @Autowired
     private EntityManager entityManager;
@@ -55,7 +58,7 @@ class SeatingMapPersistenceTest {
         ApplicationEventPublisher dummySpringPublisher = event -> {};
         EventAggregatePublisher simplePublisher = new EventAggregatePublisher(dummySpringPublisher);
 
-        eventService = new EventService(eventRepo, simplePublisher, authService);
+        eventService = new EventService(eventRepo, simplePublisher, authService, historyOrderRepo);
 
         // Create the base Event
         EventDTO newEvent = new EventDTO(null, 42, "DB Test Event", 500, LocalDateTime.now().plusDays(10), true, "test location", null, null, null);

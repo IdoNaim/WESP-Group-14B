@@ -193,23 +193,42 @@ function StandingZoneCard({
   zone,
   onAdd,
   onRemove,
+  onSetQuantity,
   totalSelected,
   maxTickets,
 }: {
   zone: StandingZone;
   onAdd: (id: string) => void;
   onRemove: (id: string) => void;
+  onSetQuantity: (id: string, qty: number) => void;
   totalSelected: number;
   maxTickets: number | null;
 }) {
+  const [inputValue, setInputValue] = useState(String(zone.selected));
+  const [prevSelected, setPrevSelected] = useState(zone.selected);
+
+  if (zone.selected !== prevSelected) {
+    setPrevSelected(zone.selected);
+    setInputValue(String(zone.selected));
+  }
+
   const canAdd = zone.selected < zone.available && (maxTickets === null || totalSelected < maxTickets);
   const canRemove = zone.selected > 0;
   const isActive = zone.selected > 0;
 
+  const commitInput = () => {
+    const parsed = parseInt(inputValue, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      setInputValue(String(zone.selected));
+      return;
+    }
+    onSetQuantity(zone.id, parsed);
+  };
+
   return (
     <div className="flex-1">
       <div
-        className={`relative w-full h-28 rounded border-2 border-dashed transition-all
+        className={`relative w-full h-32 rounded border-2 border-dashed transition-all
           ${isActive ? "border-blue-400 bg-blue-50/40" : "border-gray-300 bg-gray-50"}
         `}
         style={{
@@ -229,16 +248,29 @@ function StandingZoneCard({
           <div className="flex items-center gap-2">
             <button
               disabled={!canRemove}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onRemove(zone.id)}
               className="w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-700 flex items-center justify-center text-sm font-bold disabled:opacity-30 hover:bg-gray-100 transition"
             >
               −
             </button>
-            <span className="text-sm font-semibold w-4 text-center text-[#0A192F]">
-              {zone.selected}
-            </span>
+            <input
+              type="number"
+              min={0}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onBlur={commitInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  commitInput();
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className="w-12 text-center text-sm font-semibold text-[#0A192F] border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
             <button
               disabled={!canAdd}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onAdd(zone.id)}
               className="w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-700 flex items-center justify-center text-sm font-bold disabled:opacity-30 hover:bg-gray-100 transition"
             >
@@ -498,11 +530,21 @@ export default function ReserveTicketsPage() {
     };
   })();
 
-  const effectiveMaxTickets = mergedPolicy?.maxTickets ?? null;
+  // When the policy is an OR condition (e.g. "≤2 OR ≥100 tickets"), there is no
+  // hard upper cap from the UI's perspective — the user must reach minTickets if
+  // they've passed maxTickets. We lift the cap and validate at checkout instead.
+  const isOrQuantityPolicy = !!(
+    mergedPolicy?.isQuantityOr &&
+    mergedPolicy.minTickets != null &&
+    mergedPolicy.maxTickets != null
+  );
+
+  const effectiveMaxTickets = isOrQuantityPolicy ? null : (mergedPolicy?.maxTickets ?? null);
 
   const remainingAllowed = effectiveMaxTickets !== null ? Math.max(0, effectiveMaxTickets - alreadyPurchased) : null;
 
   useEffect(() => {
+    let active = true;
     const token = localStorage.getItem("token") ?? "";
 
     authApi.getCurrentUser(token)
@@ -510,6 +552,7 @@ export default function ReserveTicketsPage() {
         return activeOrderApi.getActiveOrderByUserId(token, user.userId).then((activeOrder) => ({ user, activeOrder }));
       })
       .then(({ user, activeOrder }) => {
+        if (!active) return;
         if (!activeOrder) {
           setEventLoading(false);
           setMapLoading(false);
@@ -527,6 +570,7 @@ export default function ReserveTicketsPage() {
 
         historyOrderApi.getUserOrders(token, user.userId)
           .then((pastOrders) => {
+            if (!active) return;
             const count = pastOrders
               .filter((o) => o.eventId === eventId)
               .reduce((sum, o) => {
@@ -540,14 +584,16 @@ export default function ReserveTicketsPage() {
 
         eventApi.getEvent(token, eventId)
           .then((data) => {
+            if (!active) return;
             if (!data) { setEventError(true); return; }
             setEvent(data);
           })
-          .catch(() => setEventError(true))
-          .finally(() => setEventLoading(false));
+          .catch(() => { if (active) setEventError(true); })
+          .finally(() => { if (active) setEventLoading(false); });
 
         eventApi.getEventPurchasePolicy(token, eventId)
           .then((policy) => {
+            if (!active) return;
             if (policy) setPurchasePolicy(policy);
           })
           .catch(() => { });
@@ -555,16 +601,19 @@ export default function ReserveTicketsPage() {
         // Fetch company policy via updated endpoints from purchasePoliciesApi
         eventApi.getEventCompanyId(token, eventId)
           .then((companyId) => {
+            if (!active) return null;
             if (companyId == null) return null;
             return getCompanyPolicyDTO(companyId);
           })
           .then((policy) => {
+            if (!active) return;
             if (policy) setCompanyPurchasePolicy(policy);
           })
           .catch(() => { });
 
         eventApi.getEventSeatingMap(token, eventId)
           .then((mapData) => {
+            if (!active) return;
             if (!mapData) { setMapError(true); return; }
             const { zones: z, standing } = buildZonesFromSeatingMap(mapData, activeOrder);
             setZones(z);
@@ -575,16 +624,19 @@ export default function ReserveTicketsPage() {
           })
           .catch((err) => {
             console.log("seating map error:", err);
-            setMapError(true);
+            if (active) setMapError(true);
           })
-          .finally(() => setMapLoading(false));
+          .finally(() => { if (active) setMapLoading(false); });
       })
       .catch(() => {
+        if (!active) return;
         setEventError(true);
         setMapError(true);
         setEventLoading(false);
         setMapLoading(false);
       });
+
+    return () => { active = false; };
   }, []);
 
   const totalSelected =
@@ -717,6 +769,51 @@ export default function ReserveTicketsPage() {
     });
   }, []);
 
+  const handleStandingSetQuantity = useCallback(
+    (zoneId: string, newQty: number) => {
+      const zone = standingZones.find((z) => z.id === zoneId);
+      if (!zone) return;
+
+      const otherStandingSelected = standingZones
+        .filter((z) => z.id !== zoneId)
+        .reduce((sum, z) => sum + z.selected, 0);
+      const seatedSelected = zones.reduce(
+        (acc, z) => acc + z.seats.filter((s) => s.status === "selected").length,
+        0
+      );
+      const totalOthers = otherStandingSelected + seatedSelected;
+
+      const maxForZone =
+        remainingAllowed !== null
+          ? Math.min(zone.available, Math.max(0, remainingAllowed - totalOthers))
+          : zone.available;
+
+      const clamped = Math.max(0, Math.min(newQty, maxForZone));
+
+      setStandingZones((prev) =>
+        prev.map((z) => (z.id === zoneId ? { ...z, selected: clamped } : z))
+      );
+      setOrderItems((prev) => {
+        if (clamped === 0) return prev.filter((i) => i.id !== zoneId);
+        const existing = prev.find((i) => i.id === zoneId);
+        if (existing) {
+          return prev.map((i) => (i.id === zoneId ? { ...i, qty: clamped } : i));
+        }
+        return [
+          ...prev,
+          {
+            id: zone.id,
+            label: zone.name,
+            detail: "Standing • General Admission",
+            qty: clamped,
+            unitPrice: zone.price,
+          },
+        ];
+      });
+    },
+    [standingZones, zones, remainingAllowed]
+  );
+
   const handleRemoveItem = useCallback((id: string) => {
     setOrderItems((prev) => prev.filter((i) => i.id !== id));
     setZones((prev) =>
@@ -773,6 +870,23 @@ export default function ReserveTicketsPage() {
   };
 
   const proceedToCheckout = async () => {
+    // Validate OR quantity policy: the combined total (past + current order) must be
+    // ≤ maxTickets OR ≥ minTickets. The "gray zone" between them is always blocked.
+    if (isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null) {
+      const max = mergedPolicy!.maxTickets;
+      const min = mergedPolicy!.minTickets;
+      const totalWithPast = alreadyPurchased + totalSelected;
+      if (totalWithPast > max && totalWithPast < min) {
+        const remaining = Math.max(0, max - alreadyPurchased);
+        const needed = min - totalWithPast;
+        const msg = remaining === 0
+          ? `You have already purchased the maximum of ${max} ticket(s). To buy more, your total must reach at least ${min} ticket(s) — add ${needed} more to this order.`
+          : `Your selection of ${totalSelected} brings your total to ${totalWithPast} ticket(s), which falls between the limits. Keep this order at ${remaining} or fewer ticket(s), or add ${needed} more to reach the ${min}-ticket minimum.`;
+        showBanner("error", msg);
+        return;
+      }
+    }
+
     if (!purchasePolicy && totalSelected < 1) {
       showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
       return;
@@ -966,6 +1080,7 @@ export default function ReserveTicketsPage() {
                             zone={zone}
                             onAdd={handleStandingAdd}
                             onRemove={handleStandingRemove}
+                            onSetQuantity={handleStandingSetQuantity}
                             totalSelected={totalSelected}
                             maxTickets={remainingAllowed}
                           />
@@ -979,6 +1094,22 @@ export default function ReserveTicketsPage() {
 
             <PurchaseRules policy={mergedPolicy} />
 
+            {isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null && (() => {
+              const _max = mergedPolicy!.maxTickets!;
+              const _min = mergedPolicy!.minTickets!;
+              const _total = alreadyPurchased + totalSelected;
+              if (_total <= _max || _total >= _min) return null;
+              const _remaining = Math.max(0, _max - alreadyPurchased);
+              const _needed = _min - _total;
+              return (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
+                  {_remaining === 0
+                    ? <>You have already purchased the maximum of <strong>{_max}</strong> ticket(s). To buy more, your total must reach at least <strong>{_min}</strong> ticket(s) — add <strong>{_needed}</strong> more to this order.</>
+                    : <>Your selection of <strong>{totalSelected}</strong> brings your total to <strong>{_total}</strong> ticket(s), which falls between the limits. Keep this order at <strong>{_remaining}</strong> or fewer, or add <strong>{_needed}</strong> more to reach the <strong>{_min}</strong>-ticket minimum.</>
+                  }
+                </p>
+              );
+            })()}
             {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
               <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded">
                 You have already purchased the maximum of <strong>{effectiveMaxTickets} ticket(s)</strong> allowed for this event. No further purchases are permitted.
