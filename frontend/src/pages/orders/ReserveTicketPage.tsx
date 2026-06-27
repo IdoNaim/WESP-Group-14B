@@ -115,7 +115,7 @@ function buildZonesFromSeatingMap(
   const standing: StandingZone[] = dto.standingAreas.map((a) => ({
     id: a.areaId,
     name: a.areaId,
-    available: a.availableSeats,
+    available: a.availableSeats + (activeStandingMap.get(a.areaId) ?? 0),
     capacity: a.capacity,
     price: a.priceForTicket,
     selected: activeStandingMap.get(a.areaId) ?? 0,
