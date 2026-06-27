@@ -5,6 +5,7 @@ import com.ticketpurchasingsystem.project.Controllers.AuthController;
 import com.ticketpurchasingsystem.project.Controllers.apidto.LoginRequestDTO;
 import com.ticketpurchasingsystem.project.Controllers.apidto.RegisterRequestDTO;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
+import com.ticketpurchasingsystem.project.application.UserService.AdminProperties;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.User.UserGroupDiscount;
@@ -59,7 +60,7 @@ class AuthApiAcceptanceTest {
                 UserHandler userHandler = new UserHandler();
                 ApplicationEventPublisher noopPublisher = mock();
                 UserPublisher userPublisher = new UserPublisher(noopPublisher);
-                userService = new UserService(userRepo, userHandler, authService, userPublisher);
+                userService = new UserService(userRepo, userHandler, authService, userPublisher, new AdminProperties("admin-1", "Admin", "admin@gmail.com", "admin123"));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(userService, authService, userRepo)).build();
                 objectMapper = new ObjectMapper();

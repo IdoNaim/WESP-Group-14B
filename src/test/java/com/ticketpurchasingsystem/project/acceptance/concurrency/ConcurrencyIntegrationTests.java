@@ -29,6 +29,7 @@ import com.ticketpurchasingsystem.project.application.IEventService;
 import com.ticketpurchasingsystem.project.application.IHistoryOrderService;
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.application.ProductionService;
+import com.ticketpurchasingsystem.project.application.UserService.AdminProperties;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
@@ -108,7 +109,7 @@ public class ConcurrencyIntegrationTests {
         authenticationService = new AuthenticationService(domainAuthService, sessionRepo);
         UserHandler userHandler = new UserHandler();
         UserPublisher userPublisher = new UserPublisher(event -> {});
-        userService = new UserService(userRepo, userHandler, authenticationService, userPublisher);
+        userService = new UserService(userRepo, userHandler, authenticationService, userPublisher, new AdminProperties("admin-1", "Admin", "admin@gmail.com", "admin123"));
 
         // Event Setup
         eventRepo = new EventRepo();

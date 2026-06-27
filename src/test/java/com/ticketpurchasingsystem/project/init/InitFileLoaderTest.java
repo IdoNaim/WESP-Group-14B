@@ -2,6 +2,7 @@ package com.ticketpurchasingsystem.project.init;
 
 import com.ticketpurchasingsystem.project.Controllers.AuthController;
 import com.ticketpurchasingsystem.project.application.*;
+import com.ticketpurchasingsystem.project.application.UserService.AdminProperties;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.Production.ManagerPermission;
@@ -61,7 +62,7 @@ class InitFileLoaderTest {
     private static final String SECRET = "my-super-secret-key-for-testing!";
 
     @Spy
-    private UserService userService = new UserService(userRepo,userHandler, authenticationService,userPublisher);
+    private UserService userService = new UserService(userRepo, userHandler, authenticationService, userPublisher, new AdminProperties("admin-1", "Admin", "admin@gmail.com", "admin123"));
     @Mock private ProductionService productionService;
     @Mock private EventService eventService;
     @Mock private HistoryOrderService historyOrderService;

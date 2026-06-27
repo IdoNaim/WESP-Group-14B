@@ -12,6 +12,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import com.ticketpurchasingsystem.project.application.IBarCodeGateway;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.ActiveOrderDTO;
 import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
@@ -20,12 +22,13 @@ import com.ticketpurchasingsystem.project.infrastructure.logging.loggerDef;
 @Component
 public class BarCodeGateway implements IBarCodeGateway {
 
-    static final String API_URL = "https://damp-lynna-wsep-1984852e.koyeb.app/";
+    private final String apiUrl;
     private static final String FAILURE = "-1";
 
     private final RestTemplate restTemplate;
 
-    public BarCodeGateway(RestTemplate restTemplate) {
+    public BarCodeGateway(@Value("${gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
+        this.apiUrl = apiUrl;
         this.restTemplate = restTemplate;
     }
 
@@ -96,7 +99,7 @@ public class BarCodeGateway implements IBarCodeGateway {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
+            return restTemplate.postForObject(apiUrl, new HttpEntity<>(form, headers), String.class);
         } catch (Exception e) {
             loggerDef.getInstance().error("Network error calling external BarCodeGateway: " + e.getMessage());
             return null;

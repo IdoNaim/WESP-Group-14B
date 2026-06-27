@@ -23,6 +23,8 @@ import com.ticketpurchasingsystem.project.domain.ActiveOrders.BarcodeDTO;
 @ExtendWith(MockitoExtension.class)
 class BarCodeGatewayTest {
 
+    private static final String TEST_URL = "https://damp-lynna-wsep-1984852e.koyeb.app/";
+
     @Mock
     private RestTemplate restTemplate;
 
@@ -30,12 +32,12 @@ class BarCodeGatewayTest {
 
     @BeforeEach
     void setUp() {
-        barCodeGateway = new BarCodeGateway(restTemplate);
+        barCodeGateway = new BarCodeGateway(TEST_URL, restTemplate);
     }
 
     @Test
     void givenValidActiveOrder_whenIssuingBarcodesAndAllRequestsSucceed_thenAllBarcodesAreReturned() {
-        when(restTemplate.postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class)))
+        when(restTemplate.postForObject(eq(TEST_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("TIX-111")
                 .thenReturn("TIX-222");
 
@@ -55,12 +57,12 @@ class BarCodeGatewayTest {
         assertEquals("TIX-111", result.get(0).getBarcodeValue());
         assertEquals("TIX-222", result.get(1).getBarcodeValue());
 
-        verify(restTemplate, times(2)).postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class));
+        verify(restTemplate, times(2)).postForObject(eq(TEST_URL), any(HttpEntity.class), eq(String.class));
     }
 
     @Test
     void givenValidActiveOrder_whenASeatingRequestFails_thenReturnsNullAndCancelsAlreadyIssuedTickets() {
-        when(restTemplate.postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class)))
+        when(restTemplate.postForObject(eq(TEST_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("TIX-111")
                 .thenReturn("-1");
 
@@ -75,7 +77,7 @@ class BarCodeGatewayTest {
         assertNull(result);
         // Verify cancel ticket was triggered for TIX-111
         verify(restTemplate).postForObject(
-                eq(BarCodeGateway.API_URL),
+                eq(TEST_URL),
                 argThat(entity -> {
                     @SuppressWarnings("unchecked")
                     org.springframework.util.MultiValueMap<String, String> body =
@@ -91,7 +93,7 @@ class BarCodeGatewayTest {
 
     @Test
     void givenExternalNetworkTimeout_whenIssuingBarcodes_thenReturnNull() {
-        when(restTemplate.postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class)))
+        when(restTemplate.postForObject(eq(TEST_URL), any(HttpEntity.class), eq(String.class)))
                 .thenThrow(new RestClientException("Connection Timeout"));
 
         List<String> seatIds = List.of("VIP_1_1");
@@ -110,7 +112,7 @@ class BarCodeGatewayTest {
         barCodeGateway.cancelTickets(List.of(new BarcodeDTO("TIX-999")));
 
         verify(restTemplate).postForObject(
-                eq(BarCodeGateway.API_URL),
+                eq(TEST_URL),
                 argThat(entity -> {
                     @SuppressWarnings("unchecked")
                     org.springframework.util.MultiValueMap<String, String> body =
@@ -126,7 +128,7 @@ class BarCodeGatewayTest {
 
     @Test
     void givenActiveOrderWithMultipleStandingAreaTickets_whenIssuingBarcodes_thenCallGatewayForEachTicketAndReturnAllBarcodes() {
-        when(restTemplate.postForObject(eq(BarCodeGateway.API_URL), any(HttpEntity.class), eq(String.class)))
+        when(restTemplate.postForObject(eq(TEST_URL), any(HttpEntity.class), eq(String.class)))
                 .thenReturn("TIX-S1")
                 .thenReturn("TIX-S2");
 
@@ -146,7 +148,7 @@ class BarCodeGatewayTest {
         assertEquals("TIX-S2", result.get(1).getBarcodeValue());
 
         verify(restTemplate, times(2)).postForObject(
-                eq(BarCodeGateway.API_URL),
+                eq(TEST_URL),
                 argThat(entity -> {
                     @SuppressWarnings("unchecked")
                     org.springframework.util.MultiValueMap<String, String> body =

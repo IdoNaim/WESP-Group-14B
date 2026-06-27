@@ -27,18 +27,21 @@ public class UserService implements IUserService {
     private final UserHandler userHandler;
     private final AuthenticationService authenticationService;
     private final UserPublisher userPublisher;
+    private final AdminProperties adminProperties;
 
     @Autowired
-    public UserService(IUserRepo userRepo, UserHandler userHandler, AuthenticationService authenticationService, UserPublisher userPublisher) {
+    public UserService(IUserRepo userRepo, UserHandler userHandler, AuthenticationService authenticationService, UserPublisher userPublisher,
+                       AdminProperties adminProperties) {
         this.userRepo = userRepo;
         this.userHandler = userHandler;
         this.authenticationService = authenticationService;
         this.userPublisher = userPublisher;
+        this.adminProperties = adminProperties;
 
         // Seed the default admin once. SystemAdminService also seeds "admin-1" at
         // startup, so guard on existence to avoid a duplicate insert against the DB repo.
-        if (userRepo.findByID("admin-1") == null) {
-            UserInfo newUser = userHandler.registerUser("admin-1", "Admin", "admin@gmail.com", "admin123", UserGroupDiscount.NONE);
+        if (userRepo.findByID(adminProperties.id()) == null) {
+            UserInfo newUser = userHandler.registerUser(adminProperties.id(), adminProperties.name(), adminProperties.email(), adminProperties.password(), UserGroupDiscount.NONE);
             if (newUser != null) {
                 newUser.setAdmin(true);
                 userRepo.store(newUser);
@@ -273,7 +276,7 @@ public class UserService implements IUserService {
             UserInfo guestInfo = userRepo.findByID(guestId);
 
             userHandler.validateGuest(guestInfo);
-            UserInfo userInfo = userRepo.findByID("admin-1");
+            UserInfo userInfo = userRepo.findByID(adminProperties.id());
             System.out.println("searched admin");
             userHandler.validateUserFound(userInfo);
             System.out.println("found admin");
@@ -286,8 +289,8 @@ public class UserService implements IUserService {
 
             String newSessionTokenStr = null;
             // validate user exists
-            if(userId.equals("admin@gmail.com") && password.equals("admin123")){
-                newSessionTokenStr = authenticationService.login("admin-1", "admin");
+            if(userId.equals(adminProperties.email()) && password.equals(adminProperties.password())){
+                newSessionTokenStr = authenticationService.login(adminProperties.id(), "admin");
             }else{
                 throw new RuntimeException("Failed to log in user "+ userId);
             }
