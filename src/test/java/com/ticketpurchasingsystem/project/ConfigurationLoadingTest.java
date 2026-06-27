@@ -121,7 +121,13 @@ class ConfigurationLoadingTest {
                         "spring.security.user.password=valid-password-12345",
                         "spring.profiles.active=test",
                         "spring.datasource.url=jdbc:h2:mem:testdb_valid;DB_CLOSE_DELAY=-1",
-                        "init.file=empty_init.txt"
+                        "init.file=empty_init.txt",
+                        "payment.gateway.api.url=https://damp-lynna-wsep-1984852e.koyeb.app/",
+                        "barcode.gateway.api.url=https://damp-lynna-wsep-1984852e.koyeb.app/",
+                        "admin.id=admin-1",
+                        "admin.name=Admin",
+                        "admin.email=admin@gmail.com",
+                        "admin.password=admin123"
                 )
                 .run(context -> {
                     assertThat(context).hasNotFailed();

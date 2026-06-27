@@ -13,6 +13,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import com.ticketpurchasingsystem.project.application.IPaymentGateway;
 import com.ticketpurchasingsystem.project.application.PaymentDetails;
 
@@ -20,11 +22,11 @@ import com.ticketpurchasingsystem.project.application.PaymentDetails;
 @Profile("!dev")
 public class PaymentGateway implements IPaymentGateway {
 
-    static final String API_URL = "https://damp-lynna-wsep-1984852e.koyeb.app/";
-
+    private final String apiUrl;
     private final RestTemplate restTemplate;
 
-    public PaymentGateway(RestTemplate restTemplate) {
+    public PaymentGateway(@Value("${payment.gateway.api.url}") String apiUrl, RestTemplate restTemplate) {
+        this.apiUrl = apiUrl;
         this.restTemplate = restTemplate;
     }
 
@@ -72,7 +74,7 @@ public class PaymentGateway implements IPaymentGateway {
         body.forEach((k, v) -> form.add(k, String.valueOf(v)));
 
         try {
-            return restTemplate.postForObject(API_URL, new HttpEntity<>(form, headers), String.class);
+            return restTemplate.postForObject(apiUrl, new HttpEntity<>(form, headers), String.class);
         } catch (Exception e) {
             loggerDef.getInstance().error("Payment gateway connection error: " + e.getMessage());
             throw new RuntimeException("Payment could not be processed. Please check your card details and try again.");

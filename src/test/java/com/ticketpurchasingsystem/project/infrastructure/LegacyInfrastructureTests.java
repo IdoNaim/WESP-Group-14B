@@ -30,7 +30,7 @@ public class LegacyInfrastructureTests {
                 .thenReturn("1")      // refund
                 .thenReturn("OK");    // handshake
 
-        PaymentGateway gateway = new PaymentGateway(restTemplate);
+        PaymentGateway gateway = new PaymentGateway("https://damp-lynna-wsep-1984852e.koyeb.app/", restTemplate);
         PaymentDetails details = new PaymentDetails(100.0, "USD", "4111111111111111",
                 "12", "2028", "John Doe", "123", "ID-001");
 
@@ -49,7 +49,7 @@ public class LegacyInfrastructureTests {
                 .thenReturn("TIX-DDD-0004")
                 .thenReturn("TIX-EEE-0005");
 
-        BarCodeGateway gateway = new BarCodeGateway(restTemplate);
+        BarCodeGateway gateway = new BarCodeGateway("https://damp-lynna-wsep-1984852e.koyeb.app/", restTemplate);
 
         // seat IDs must follow zone_row_seat format used by AssignedSeat
         List<String> seatIds = List.of("0_1_1", "0_1_2");

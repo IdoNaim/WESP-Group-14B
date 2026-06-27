@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ticketpurchasingsystem.project.application.AuthenticationService;
 import com.ticketpurchasingsystem.project.application.SystemAdminService;
 import com.ticketpurchasingsystem.project.application.UserService.UserApplicationListener;
+import com.ticketpurchasingsystem.project.application.UserService.AdminProperties;
 import com.ticketpurchasingsystem.project.application.UserService.UserPublisher;
 import com.ticketpurchasingsystem.project.application.UserService.UserService;
 import com.ticketpurchasingsystem.project.domain.Production.ProductionEvents.IsUserRegisteredEvent;
@@ -48,7 +49,7 @@ class UserListenerIsRegisteredTests {
 
     @BeforeEach
     void setUp() {
-        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo),userPublisher ));
+        listener = new UserApplicationListener(new UserService(userRepo, userHandler, new AuthenticationService(domainAuthService, sessionRepo), userPublisher, new AdminProperties("admin-1", "Admin", "admin@gmail.com", "admin123")));
     }
 
     @Test
