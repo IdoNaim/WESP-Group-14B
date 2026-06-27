@@ -612,17 +612,46 @@ public class EventHandler {
 
     private String buildPolicyViolationMessage(PurchasePolicyDTO dto, int quantity, int userAge) {
         List<String> violations = new ArrayList<>();
-        if (dto.minTickets() != null && quantity < dto.minTickets())
-            violations.add("minimum " + dto.minTickets() + " ticket(s) required");
-        if (dto.maxTickets() != null && quantity > dto.maxTickets())
-            violations.add("maximum " + dto.maxTickets() + " ticket(s) allowed");
-        if (dto.minAge() != null && userAge < dto.minAge())
-            violations.add("minimum age " + dto.minAge() + " required");
-        if (dto.maxAge() != null && userAge > dto.maxAge())
-            violations.add("maximum age " + dto.maxAge() + " required");
+
+        // Quantity check — respect OR logic
+        if (dto.isQuantityOr() && dto.minTickets() != null && dto.maxTickets() != null) {
+            // OR fails only when the quantity is NOT ≤ max AND NOT ≥ min (the "in-between" gap)
+            if (quantity > dto.maxTickets() && quantity < dto.minTickets()) {
+                violations.add("select up to " + dto.maxTickets() + " ticket(s) or at least " + dto.minTickets() + " ticket(s)");
+            }
+        } else {
+            if (dto.minTickets() != null && quantity < dto.minTickets())
+                violations.add("a minimum of " + dto.minTickets() + " ticket(s) is required");
+            if (dto.maxTickets() != null && quantity > dto.maxTickets())
+                violations.add("a maximum of " + dto.maxTickets() + " ticket(s) is allowed");
+        }
+
+        // Age check — respect OR logic
+        if (dto.isAgeOr() && dto.minAge() != null && dto.maxAge() != null) {
+            // OR fails only when neither condition is satisfied (age is in the gap)
+            if (userAge < dto.minAge() && userAge > dto.maxAge()) {
+                violations.add("attendees must be under " + dto.maxAge() + " or at least " + dto.minAge() + " years old");
+            }
+        } else {
+            if (dto.minAge() != null && userAge < dto.minAge())
+                violations.add("attendees must be at least " + dto.minAge() + " years old");
+            if (dto.maxAge() != null && userAge > dto.maxAge())
+                violations.add("attendees must be under " + dto.maxAge() + " years old");
+        }
+
         if (violations.isEmpty())
-            return "Purchase policy requirements not met.";
-        return "Purchase policy violated: " + String.join(", ", violations) + ".";
+            return "Your order does not meet the event's purchase requirements. Please review the purchase rules and try again.";
+
+        if (violations.size() == 1) {
+            String v = violations.get(0);
+            return Character.toUpperCase(v.charAt(0)) + v.substring(1) + ".";
+        }
+
+        StringBuilder sb = new StringBuilder("Your order could not be completed:\n");
+        for (String v : violations) {
+            sb.append("• ").append(Character.toUpperCase(v.charAt(0))).append(v.substring(1)).append(".\n");
+        }
+        return sb.toString().trim();
     }
 
     public List<EventDTO> searchActiveEventsByText(String query) {

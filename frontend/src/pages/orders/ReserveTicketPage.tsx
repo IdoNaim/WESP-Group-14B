@@ -193,23 +193,40 @@ function StandingZoneCard({
   zone,
   onAdd,
   onRemove,
+  onSetQuantity,
   totalSelected,
   maxTickets,
 }: {
   zone: StandingZone;
   onAdd: (id: string) => void;
   onRemove: (id: string) => void;
+  onSetQuantity: (id: string, qty: number) => void;
   totalSelected: number;
   maxTickets: number | null;
 }) {
+  const [inputValue, setInputValue] = useState(String(zone.selected));
+
+  useEffect(() => {
+    setInputValue(String(zone.selected));
+  }, [zone.selected]);
+
   const canAdd = zone.selected < zone.available && (maxTickets === null || totalSelected < maxTickets);
   const canRemove = zone.selected > 0;
   const isActive = zone.selected > 0;
 
+  const commitInput = () => {
+    const parsed = parseInt(inputValue, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      setInputValue(String(zone.selected));
+      return;
+    }
+    onSetQuantity(zone.id, parsed);
+  };
+
   return (
     <div className="flex-1">
       <div
-        className={`relative w-full h-28 rounded border-2 border-dashed transition-all
+        className={`relative w-full h-32 rounded border-2 border-dashed transition-all
           ${isActive ? "border-blue-400 bg-blue-50/40" : "border-gray-300 bg-gray-50"}
         `}
         style={{
@@ -234,9 +251,20 @@ function StandingZoneCard({
             >
               −
             </button>
-            <span className="text-sm font-semibold w-4 text-center text-[#0A192F]">
-              {zone.selected}
-            </span>
+            <input
+              type="number"
+              min={0}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onBlur={commitInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  commitInput();
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className="w-12 text-center text-sm font-semibold text-[#0A192F] border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
             <button
               disabled={!canAdd}
               onClick={() => onAdd(zone.id)}
@@ -498,7 +526,16 @@ export default function ReserveTicketsPage() {
     };
   })();
 
-  const effectiveMaxTickets = mergedPolicy?.maxTickets ?? null;
+  // When the policy is an OR condition (e.g. "≤2 OR ≥100 tickets"), there is no
+  // hard upper cap from the UI's perspective — the user must reach minTickets if
+  // they've passed maxTickets. We lift the cap and validate at checkout instead.
+  const isOrQuantityPolicy = !!(
+    mergedPolicy?.isQuantityOr &&
+    mergedPolicy.minTickets != null &&
+    mergedPolicy.maxTickets != null
+  );
+
+  const effectiveMaxTickets = isOrQuantityPolicy ? null : (mergedPolicy?.maxTickets ?? null);
 
   const remainingAllowed = effectiveMaxTickets !== null ? Math.max(0, effectiveMaxTickets - alreadyPurchased) : null;
 
@@ -717,6 +754,51 @@ export default function ReserveTicketsPage() {
     });
   }, []);
 
+  const handleStandingSetQuantity = useCallback(
+    (zoneId: string, newQty: number) => {
+      const zone = standingZones.find((z) => z.id === zoneId);
+      if (!zone) return;
+
+      const otherStandingSelected = standingZones
+        .filter((z) => z.id !== zoneId)
+        .reduce((sum, z) => sum + z.selected, 0);
+      const seatedSelected = zones.reduce(
+        (acc, z) => acc + z.seats.filter((s) => s.status === "selected").length,
+        0
+      );
+      const totalOthers = otherStandingSelected + seatedSelected;
+
+      const maxForZone =
+        remainingAllowed !== null
+          ? Math.min(zone.available, Math.max(0, remainingAllowed - totalOthers))
+          : zone.available;
+
+      const clamped = Math.max(0, Math.min(newQty, maxForZone));
+
+      setStandingZones((prev) =>
+        prev.map((z) => (z.id === zoneId ? { ...z, selected: clamped } : z))
+      );
+      setOrderItems((prev) => {
+        if (clamped === 0) return prev.filter((i) => i.id !== zoneId);
+        const existing = prev.find((i) => i.id === zoneId);
+        if (existing) {
+          return prev.map((i) => (i.id === zoneId ? { ...i, qty: clamped } : i));
+        }
+        return [
+          ...prev,
+          {
+            id: zone.id,
+            label: zone.name,
+            detail: "Standing • General Admission",
+            qty: clamped,
+            unitPrice: zone.price,
+          },
+        ];
+      });
+    },
+    [standingZones, zones, remainingAllowed]
+  );
+
   const handleRemoveItem = useCallback((id: string) => {
     setOrderItems((prev) => prev.filter((i) => i.id !== id));
     setZones((prev) =>
@@ -773,6 +855,16 @@ export default function ReserveTicketsPage() {
   };
 
   const proceedToCheckout = async () => {
+    // Validate OR quantity policy: quantity must be ≤ maxTickets OR ≥ minTickets
+    if (isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null) {
+      const max = mergedPolicy!.maxTickets;
+      const min = mergedPolicy!.minTickets;
+      if (totalSelected > max && totalSelected < min) {
+        showBanner("error", `For this event, you must select up to ${max} ticket(s) or at least ${min} ticket(s). You currently have ${totalSelected} selected.`);
+        return;
+      }
+    }
+
     if (!purchasePolicy && totalSelected < 1) {
       showBanner("error", "Policy Violation: You must select at least 1 ticket when no custom policy is defined.");
       return;
@@ -940,6 +1032,7 @@ export default function ReserveTicketsPage() {
                             zone={zone}
                             onAdd={handleStandingAdd}
                             onRemove={handleStandingRemove}
+                            onSetQuantity={handleStandingSetQuantity}
                             totalSelected={totalSelected}
                             maxTickets={remainingAllowed}
                           />
@@ -953,6 +1046,12 @@ export default function ReserveTicketsPage() {
 
             <PurchaseRules policy={mergedPolicy} />
 
+            {isOrQuantityPolicy && mergedPolicy!.maxTickets != null && mergedPolicy!.minTickets != null &&
+              totalSelected > mergedPolicy!.maxTickets && totalSelected < mergedPolicy!.minTickets && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded">
+                You have <strong>{totalSelected}</strong> ticket(s) selected. This event requires up to <strong>{mergedPolicy!.maxTickets}</strong> ticket(s) <em>or</em> at least <strong>{mergedPolicy!.minTickets}</strong> ticket(s) per order. Please adjust your selection.
+              </p>
+            )}
             {effectiveMaxTickets !== null && alreadyPurchased >= effectiveMaxTickets && (
               <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded">
                 You have already purchased the maximum of <strong>{effectiveMaxTickets} ticket(s)</strong> allowed for this event. No further purchases are permitted.

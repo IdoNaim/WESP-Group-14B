@@ -319,11 +319,13 @@ export default function CheckoutPage() {
       try {
         const policyViolation = await eventApi.validatePurchasePolicy(token, order.eventId, totalTicketsCount, age ?? 0);
         if (policyViolation) {
-          setPaymentError(`Policy Violation: ${policyViolation}`);
+          setPaymentError(policyViolation);
+          setProcessState('idle');
           return;
         }
       } catch (err: any) {
-        setPaymentError(err.message || "Failed to validate event purchase policy.");
+        setPaymentError("We couldn't verify your order against the event's purchase policy. Please try again.");
+        setProcessState('idle');
         return;
       }
     }
@@ -621,9 +623,16 @@ export default function CheckoutPage() {
 
               {/* Top-level payment error from API */}
               {paymentError && (
-                <div className="mb-6 flex items-start gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
-                  <span className="material-symbols-outlined text-red-500 shrink-0 text-base mt-0.5">error</span>
-                  <span>{paymentError}</span>
+                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="material-symbols-outlined text-red-500 text-lg shrink-0">block</span>
+                    <p className="text-sm font-bold text-red-800">Order could not be completed</p>
+                  </div>
+                  <div className="ml-7 text-sm text-red-700 space-y-0.5">
+                    {paymentError.split('\n').map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
                 </div>
               )}
 
