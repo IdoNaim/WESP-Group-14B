@@ -202,9 +202,9 @@ export default function EventDetailsPage() {
 
                 <div className="bg-[#eeefff] text-[#171f33] p-8 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
-                        <p className="text-sm uppercase font-bold opacity-60 mb-1">Standard Admission</p>
+                        <p className="text-sm uppercase font-bold opacity-60 mb-1">price</p>
                         {/* FIXED: Using ticketPrice instead of price */}
-                        <p className="text-4xl font-mono font-black">{eventData.ticketPrice ? `$${eventData.ticketPrice}` : 'TBD'}</p>
+                        <p className="text-4xl font-mono font-black">{eventData.minZonePrice && eventData.maxZonePrice ? `$${eventData.minZonePrice} - $${eventData.maxZonePrice}` : 'TBD'}</p>
                     </div>
 
                     {isPast ? (
