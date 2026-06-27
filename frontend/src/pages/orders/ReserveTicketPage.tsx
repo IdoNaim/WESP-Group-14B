@@ -90,8 +90,8 @@ function buildZonesFromSeatingMap(
       const status: SeatStatus = activeSeatIds.has(s.id)
         ? "selected"
         : s.isBooked
-        ? "taken"
-        : "available";
+          ? "taken"
+          : "available";
       return [
         {
           id: s.id,
@@ -536,7 +536,7 @@ export default function ReserveTicketsPage() {
               }, 0);
             setAlreadyPurchased(count);
           })
-          .catch(() => {});
+          .catch(() => { });
 
         eventApi.getEvent(token, eventId)
           .then((data) => {
@@ -550,7 +550,7 @@ export default function ReserveTicketsPage() {
           .then((policy) => {
             if (policy) setPurchasePolicy(policy);
           })
-          .catch(() => {});
+          .catch(() => { });
 
         // Fetch company policy via updated endpoints from purchasePoliciesApi
         eventApi.getEventCompanyId(token, eventId)
@@ -561,7 +561,7 @@ export default function ReserveTicketsPage() {
           .then((policy) => {
             if (policy) setCompanyPurchasePolicy(policy);
           })
-          .catch(() => {});
+          .catch(() => { });
 
         eventApi.getEventSeatingMap(token, eventId)
           .then((mapData) => {
@@ -778,12 +778,39 @@ export default function ReserveTicketsPage() {
       return;
     }
 
+
+    if (effectiveMaxTickets !== null && currentOrder?.eventId) {
+      const token = localStorage.getItem("token") ?? "";
+      try {
+        const user = await authApi.getCurrentUser(token);
+        const pastOrders = await historyOrderApi.getUserOrders(token, user.userId);
+        const freshCount = pastOrders
+          .filter((o) => o.eventId === currentOrder.eventId)
+          .reduce((sum, o) => {
+            const seats = o.seatIds?.length ?? 0;
+            const standing = Object.values(o.standingAreaQuantities ?? {}).reduce((a, b) => a + b, 0);
+            return sum + seats + standing;
+          }, 0);
+        setAlreadyPurchased(freshCount);
+
+        if (freshCount + totalSelected > effectiveMaxTickets) {
+          const remaining = Math.max(0, effectiveMaxTickets - freshCount);
+          const msg = remaining === 0
+            ? `You have already purchased the maximum of ${effectiveMaxTickets} ticket(s) allowed for this event.`
+            : `You can only add ${remaining} more ticket(s) for this event (limit is ${effectiveMaxTickets}), but you have ${totalSelected} selected.`;
+          showBanner("error", msg);
+          return;
+        }
+      } catch {
+        // If the re-fetch fails, continue — the server enforces the limit too
+      }
+    }
+
     const isSuccess = await handleReserveTickets();
     if (isSuccess) {
       navigate(checkoutWindowURL);
-    } else {
-      showBanner("error", "Unable to reserve tickets for checkout. Please review your selection and try again.");
     }
+
   };
 
   return (
@@ -794,11 +821,10 @@ export default function ReserveTicketsPage() {
       <main className="flex-grow mx-auto w-full px-12 py-8" style={{ maxWidth: 1280 }}>
         {banner && (
           <div
-            className={`mb-5 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-              banner.type === "success"
-                ? "bg-green-50 border border-green-200 text-green-800"
-                : "bg-red-50 border border-red-200 text-red-800"
-            }`}
+            className={`mb-5 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${banner.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+              }`}
           >
             {banner.type === "success" ? (
               <svg className="w-5 h-5 text-green-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">

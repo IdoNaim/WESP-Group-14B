@@ -40,7 +40,7 @@ export default function OrderHistory() {
         const initUser = async () => {
             try {
                 const token = localStorage.getItem('token');
-                if (!token) throw { status: 401, message: 'You are not logged in.' };
+                if (!token) throw new Error('You are not logged in.');
 
                 const [profile, perms] = await Promise.all([
                     authApi.getCurrentUser(token),
@@ -54,7 +54,8 @@ export default function OrderHistory() {
                 if (compIds.length > 0) setSelectedCompanyId(compIds[0]);
 
             } catch (err: any) {
-                setError({ status: err.status || 401, message: err.message || "Failed to authenticate." });
+                setError({ status: err.status || 401, message: err.message || "Please log in to view your orders." });
+                setIsLoading(false);
             }
         };
         initUser();

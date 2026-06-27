@@ -31,22 +31,26 @@ export default function EventsPage() {
     const searchQuery = searchParams.get('search') ?? '';
 
     const [searchInput, setSearchInput] = useState(searchQuery);
-    
+
     const [events, setEvents] = useState<EventDTO[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setLoading(true);
+        setError(null);
+        const onSuccess = (list: EventDTO[] | null) => {
+            setEvents(list ?? []);
+            setLoading(false);
+        };
+        const onError = () => {
+            setError('We are having trouble reaching the server. Please check your internet connection and try again.');
+            setLoading(false);
+        };
         if (searchQuery) {
-            eventApi.searchEvents(searchQuery).then(list => {
-                setEvents(list);
-                setLoading(false);
-            });
+            eventApi.searchEvents(searchQuery).then(onSuccess).catch(onError);
         } else {
-            eventApi.getAllActiveEvents().then(list => {
-                setEvents(list);
-                setLoading(false);
-            });
+            eventApi.getAllActiveEvents().then(onSuccess).catch(onError);
         }
     }, [searchQuery]);
 
@@ -108,6 +112,18 @@ export default function EventsPage() {
                     <div className="flex justify-center py-24">
                         <span className="material-symbols-outlined animate-spin text-4xl text-[#03dbe7]">refresh</span>
                     </div>
+                ) : error ? (
+                    <div className="text-center py-20">
+                        <span className="material-symbols-outlined text-4xl text-red-500 mb-4 block">wifi_off</span>
+                        <p className="text-xl font-bold text-white mb-2">Events couldn't be loaded</p>
+                        <p className="text-sm text-gray-400 mb-6">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-[#03dbe7] text-[#00363a] px-6 py-2 rounded-lg font-bold text-sm tracking-widest hover:bg-[#75f5ff] transition-all"
+                        >
+                            TRY AGAIN
+                        </button>
+                    </div>
                 ) : events.length === 0 ? (
                     <div className="text-center py-20 text-gray-400">
                         <p className="text-2xl font-bold mb-2">{searchQuery ? 'No events found' : 'No events yet'}</p>
@@ -115,81 +131,82 @@ export default function EventsPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-{events.map(event => {
+                        {events.map(event => {
                             const isPast = event.eventDateTime ? new Date(event.eventDateTime) < new Date() : false;
                             return (
-                            <div key={event.eventId}
-                                className={`bg-[#171f33] border text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all group ${isPast ? 'border-gray-700 opacity-60' : 'border-gray-800 hover:border-[#75f5ff]/50 hover:-translate-y-1'}`}>
+                                <div key={event.eventId}
+                                    className={`bg-[#171f33] border text-[#dbe2fd] rounded-xl overflow-hidden flex flex-col shadow-xl transform transition-all group ${isPast ? 'border-gray-700 opacity-60' : 'border-gray-800 hover:border-[#75f5ff]/50 hover:-translate-y-1'}`}>
 
-                                {/* Image or placeholder */}
-                                <div className="h-48 relative overflow-hidden bg-[#0f1627]">
-                                    {event.imageUrl ? (
-                                        <img
-                                            src={event.imageUrl}
-                                            alt={event.eventName}
-                                            className={`w-full h-full object-cover transition-transform duration-500 ${isPast ? 'grayscale' : 'group-hover:scale-105'}`}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-6xl text-gray-700">event</span>
-                                        </div>
-                                    )}
-                                    {isPast ? (
-                                        <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-gray-700 text-gray-300">
-                                            Past
-                                        </div>
-                                    ) : event.isActive && (
-                                        <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-[#03dbe7] text-[#00363a]">
-                                            Active
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="p-5 flex-1 flex flex-col">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-xl font-bold leading-tight uppercase">{event.eventName}</h3>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 mb-4 text-gray-400">
-                                        {event.eventLocation ? (
-                                            <>
-                                                <span className="material-symbols-outlined text-sm">location_on</span>
-                                                <p className="text-sm">{event.eventLocation}</p>
-                                            </>
-                                        ) : event.eventDateTime ? (
-                                            <>
-                                                <span className="material-symbols-outlined text-sm">calendar_today</span>
-                                                <p className="text-sm">{formatDate(event.eventDateTime)}</p>
-                                            </>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="mt-auto space-y-4">
-                                        <div className="flex justify-between items-end border-t border-gray-800 pt-4">
-                                            <div>
-                                                <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Price</p>
-                                                <p className="font-mono text-lg font-bold text-[#03dbe7]">
-                                                    {priceDisplay(event)}
-                                                </p>
+                                    {/* Image or placeholder */}
+                                    <div className="h-48 relative overflow-hidden bg-[#0f1627]">
+                                        {event.imageUrl ? (
+                                            <img
+                                                src={event.imageUrl}
+                                                alt={event.eventName}
+                                                className={`w-full h-full object-cover transition-transform duration-500 ${isPast ? 'grayscale' : 'group-hover:scale-105'}`}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-6xl text-gray-700">event</span>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Availability</p>
-                                                <p className={`font-mono ${event.eventCapacity <= 20 ? 'text-red-500 font-bold' : ''}`}>
-                                                    {availabilityLabel(event)}
-                                                </p>
+                                        )}
+                                        {isPast ? (
+                                            <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-gray-700 text-gray-300">
+                                                Past
                                             </div>
+                                        ) : event.isActive && (
+                                            <div className="absolute top-4 left-4 px-3 py-1 rounded text-xs font-mono uppercase tracking-widest font-bold bg-[#03dbe7] text-[#00363a]">
+                                                Active
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="p-5 flex-1 flex flex-col">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="text-xl font-bold leading-tight uppercase">{event.eventName}</h3>
                                         </div>
 
-                                        <Link
-                                            to={`/events/${event.eventId}`}
-                                            className="w-full flex justify-center py-3 rounded-lg font-bold text-sm tracking-widest active:scale-95 transition-all shadow-md bg-[#2563eb] text-[#eeefff] border-t border-white/20"
-                                        >
-                                            VIEW DETAILS
-                                        </Link>
+                                        <div className="flex items-center gap-2 mb-4 text-gray-400">
+                                            {event.eventLocation ? (
+                                                <>
+                                                    <span className="material-symbols-outlined text-sm">location_on</span>
+                                                    <p className="text-sm">{event.eventLocation}</p>
+                                                </>
+                                            ) : event.eventDateTime ? (
+                                                <>
+                                                    <span className="material-symbols-outlined text-sm">calendar_today</span>
+                                                    <p className="text-sm">{formatDate(event.eventDateTime)}</p>
+                                                </>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="mt-auto space-y-4">
+                                            <div className="flex justify-between items-end border-t border-gray-800 pt-4">
+                                                <div>
+                                                    <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Price</p>
+                                                    <p className="font-mono text-lg font-bold text-[#03dbe7]">
+                                                        {priceDisplay(event)}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] uppercase font-bold mb-1 text-gray-400">Availability</p>
+                                                    <p className={`font-mono ${event.eventCapacity <= 20 ? 'text-red-500 font-bold' : ''}`}>
+                                                        {availabilityLabel(event)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <Link
+                                                to={`/events/${event.eventId}`}
+                                                className="w-full flex justify-center py-3 rounded-lg font-bold text-sm tracking-widest active:scale-95 transition-all shadow-md bg-[#2563eb] text-[#eeefff] border-t border-white/20"
+                                            >
+                                                VIEW DETAILS
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );})}
+                            );
+                        })}
                     </div>
                 )}
             </main>
