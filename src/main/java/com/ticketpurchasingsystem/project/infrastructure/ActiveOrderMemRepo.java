@@ -23,15 +23,12 @@ public class ActiveOrderMemRepo implements IActiveOrderRepo {
             throw new IllegalArgumentException("tried to save null active order");
         }
 
-        // 💡 FIX FOR TEST SUITE NPEs: Simulate Hibernate's @GeneratedValue UUID behavior
         if (order.getOrderId() == null) {
             try {
                 java.lang.reflect.Field idField = order.getClass().getDeclaredField("orderId");
                 idField.setAccessible(true);
                 idField.set(order, java.util.UUID.randomUUID().toString());
             } catch (Exception e) {
-                // Note: If ActiveOrderItem has a standard setter, you can replace the
-                // reflection block above with a simple: order.setOrderId(java.util.UUID.randomUUID().toString());
                 throw new RuntimeException("Failed to inject simulated UUID for test environment", e);
             }
         }

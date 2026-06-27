@@ -143,9 +143,8 @@ public class ActiveOrderService implements IActiveOrderService {
         activeOrderHandler.canCreateActiveOrder(orderItem);
 
         logger.info("Saving order: " + orderItem.getOrderId());
-        activeOrderRepo.save(orderItem);
         logger.info("Successfully created pending order: " + " for user: " + userId);
-        return orderItem;
+        return activeOrderRepo.save(orderItem);
     }
 
     @Override

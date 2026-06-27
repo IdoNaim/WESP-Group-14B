@@ -94,12 +94,10 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenAnActiveOrder_WhenGetAllActiveOrders_ThenThatOrderIsIncluded() {
-        // 💡 Capture the saved instance containing the generated UUID
         ActiveOrderItem savedOrder = activeOrderRepo.save(new ActiveOrderItem(null, "user-1", "event-1"));
 
         List<ActiveOrderDTO> result = adminService.getAllActiveOrders(adminToken);
 
-        // 💡 Assert against the actual generated ID
         assertTrue(result.stream().anyMatch(o -> savedOrder.getOrderId().equals(o.getOrderId())));
     }
 
@@ -136,7 +134,6 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenMultipleActiveOrders_WhenConcurrentGetAllActiveOrders_ThenAllAdminsGetConsistentData() throws Exception {
-        // 💡 Pass null for the ID to let Hibernate handle generation and optimistic lock versioning
         activeOrderRepo.save(new ActiveOrderItem(null, "itay", "event-1"));
         activeOrderRepo.save(new ActiveOrderItem(null, "eden", "event-1"));
         activeOrderRepo.save(new ActiveOrderItem(null, "tomer", "event-1"));
@@ -211,7 +208,6 @@ class AdminAcceptanceTests {
 
     @Test
     void GivenAdminAndNonAdmin_WhenConcurrentGetAllActiveOrders_ThenOnlyAdminSucceeds() throws Exception {
-        // 💡 Pass null here as well
         activeOrderRepo.save(new ActiveOrderItem(null, "itay", "event-1"));
         activeOrderRepo.save(new ActiveOrderItem(null, "eden", "event-1"));
 
